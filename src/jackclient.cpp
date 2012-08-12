@@ -17,7 +17,7 @@
  */
 
 #ifndef _GNU_SOURCE
-  #define _GNU_SOURCE //for popen2
+  #define _GNU_SOURCE //for pipe2
   #include <unistd.h>
 #endif //_GNU_SOURCE
 #include <fcntl.h>
