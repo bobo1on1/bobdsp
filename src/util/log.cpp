@@ -159,6 +159,9 @@ void PrintLog (const char* fmt, const char* function, LogLevel loglevel, ...)
   {
     g_logbuffsize = neededbuffsize + 1;
     g_logbuff = (char*)(realloc(g_logbuff, g_logbuffsize)); //resize the buffer to the needed size
+
+    va_end(args); //need to reinit or we will crash
+    va_start(args, loglevel);
     vsnprintf(g_logbuff, g_logbuffsize, fmt, args);         //write to the buffer again
   }
   
