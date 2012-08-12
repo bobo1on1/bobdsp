@@ -175,36 +175,29 @@ void CPortConnector::ConnectPorts(const char** ports)
 void CPortConnector::DisconnectPorts(const char** ports)
 {
   //build up a list of jack port connections
-  list< pair<string, string> > connectionlist; //pair.first = output port, pair.second = input port
+  vector< pair<string, string> > connectionlist; //pair.first = output port, pair.second = input port
   for (const char** portname = ports; *portname != NULL; portname++)
   {
     const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
     int  portflags = jack_port_flags(jackport);
-    bool isinput   = (portflags & JackPortIsInput) == JackPortIsInput;
+    
+    //only check input ports, since every connection is between an input and output port
+    //we will get all connections this way
+    if (!((portflags & JackPortIsInput) == JackPortIsInput))
+        continue;
 
     const char** connections = jack_port_get_all_connections(m_client, jackport);
     if (connections)
     {
-      if (isinput)
-      {
-        for (const char** con = connections; *con != NULL; con++)
-          connectionlist.push_back(make_pair(*con, *portname));
-      }
-      else
-      {
-        for (const char** con = connections; *con != NULL; con++)
-          connectionlist.push_back(make_pair(*portname, *con));
-      }
+      for (const char** con = connections; *con != NULL; con++)
+        connectionlist.push_back(make_pair(*con, *portname));
+
       jack_free((void*)connections);
     }
   }
 
-  //every connection will be in the list twice, get rid of the copies
-  connectionlist.sort();
-  connectionlist.unique();
-
   //match every connection to our regexes in m_connections
-  for (list< pair<string, string> >::iterator con = connectionlist.begin(); con != connectionlist.end(); con++)
+  for (vector< pair<string, string> >::iterator con = connectionlist.begin(); con != connectionlist.end(); con++)
   {
     LogDebug("\"%s\" is connected to \"%s\"", con->first.c_str(), con->second.c_str());
 
