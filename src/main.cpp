@@ -514,6 +514,7 @@ bool name ## _loadfailed = false;\
 if (!name)\
 {\
   name ## _loadfailed = true;\
+  (void) name ## _loadfailed ;\
   if (mandatory)\
   {\
     LogError("<" #name "> element missing");\
@@ -532,6 +533,7 @@ else if (!name->GetText() || strlen(name->GetText()) == 0)\
 LOADELEMENT(element, name, mandatory);\
 type name ## _p = default;\
 bool name ## _parsefailed = false;\
+(void) name ## _parsefailed;\
 if (!name ## _loadfailed)\
 {\
   if (!parsefunc(name->GetText(), name ## _p) || !postcheck(name ## _p))\
@@ -695,7 +697,7 @@ CLadspaPlugin* SearchLadspaPlugin(vector<CLadspaPlugin*> plugins, int64_t unique
   CLadspaPlugin* ladspaplugin = NULL;
   for (vector<CLadspaPlugin*>::iterator it = plugins.begin(); it != plugins.end(); it++)
   {
-    if (uniqueid == (*it)->UniqueID() && strcmp((*it)->Label(), label) == 0)
+    if (uniqueid == (int64_t)(*it)->UniqueID() && strcmp((*it)->Label(), label) == 0)
     {
       ladspaplugin = (*it);
       break;
