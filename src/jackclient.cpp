@@ -310,11 +310,11 @@ void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, i
 
 void CJackClient::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
-  //message to the mainloop that a port has been connected
   if (connect)
-  {
-    m_portconnected = true;
-    CheckMessages();
-  }
+    m_portconnected = true; //message the main loop to check if a port should be disconnected
+  else
+    m_portregistered = true; //message to the main loop to check if a port should be connected
+
+  CheckMessages();
 }
 
