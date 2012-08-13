@@ -241,7 +241,7 @@ void CBobDSP::SetupSignals()
 }
 
 void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout,
-                     std::vector< std::pair<int, CJackClient*> > pipes)
+                              std::vector< std::pair<int, CJackClient*> >& pipes)
 {
   unsigned int nrfds = pipes.size();
   pollfd* fds = (pollfd*)malloc(nrfds * sizeof(pollfd));

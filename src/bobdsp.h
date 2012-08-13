@@ -49,7 +49,7 @@ class CBobDSP
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout,
-                         std::vector< std::pair<int, CJackClient*> > pipes);
+                         std::vector< std::pair<int, CJackClient*> >& pipes);
     void ProcessSignalfd();
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
