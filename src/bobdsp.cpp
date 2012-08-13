@@ -51,7 +51,7 @@ CBobDSP::~CBobDSP()
 {
 }
 
-void CBobDSP::Process()
+void CBobDSP::Setup()
 {
   //set up locked memory for better realtime performance
   SetupRT(1024 * 1024 * 10); //10 mb
@@ -82,7 +82,10 @@ void CBobDSP::Process()
 
   //set up signal handlers
   SetupSignals();
+}
 
+void CBobDSP::Process()
+{
   Log("Starting %zu jack client(s)", m_clients.size());
 
   //set up timestamp so we connect on the first iteration
@@ -130,7 +133,10 @@ void CBobDSP::Process()
 
     LogDebug("main loop woke up");
   }
+}
 
+void CBobDSP::Cleanup()
+{
   Log("Stopping %zu jack client(s)", m_clients.size());
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     delete *it;

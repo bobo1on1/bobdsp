@@ -21,7 +21,11 @@
 int main (int argc, char *argv[])
 {
   CBobDSP bobdsp(argc, argv);
+
+  bobdsp.Setup();
   bobdsp.Process();
+  bobdsp.Cleanup();
+
   return 0;
 }
 

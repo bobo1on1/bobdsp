@@ -36,7 +36,9 @@ class CBobDSP
     CBobDSP(int argc, char *argv[]);
     ~CBobDSP();
 
+    void Setup();
     void Process();
+    void Cleanup();
 
   private:
 
