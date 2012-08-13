@@ -233,14 +233,10 @@ void CPortConnector::DisconnectPorts(const char** ports)
     {
       int returnv = jack_disconnect(m_client, con->first.c_str(), con->second.c_str());
       if (returnv == 0)
-      {
         Log("Disconnected port \"%s\" from port \"%s\"", con->first.c_str(), con->second.c_str());
-      }
       else
-      {
         LogError("Error %i disconnecting port \"%s\" from port \"%s\": \"%s\"",
                   returnv, con->first.c_str(), con->second.c_str(), GetErrno().c_str());
-      }
     }
   }
 }
