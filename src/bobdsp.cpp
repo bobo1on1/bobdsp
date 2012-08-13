@@ -265,7 +265,7 @@ void CBobDSP::SetupSignals()
 void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout)
 {
   unsigned int nrfds = 0;
-  pollfd* fds        = NULL;
+  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 1) * sizeof(pollfd));
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -273,7 +273,6 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     if (pipe != -1)
     {
       nrfds++;
-      fds = (pollfd*)realloc(fds, nrfds * sizeof(pollfd));
       fds[nrfds - 1].fd     = pipe;
       fds[nrfds - 1].events = POLLIN;
     }
@@ -282,7 +281,6 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
   if (m_signalfd != -1)
   {
     nrfds++;
-    fds = (pollfd*)realloc(fds, nrfds * sizeof(pollfd));
     fds[nrfds - 1].fd = m_signalfd;
     fds[nrfds - 1].events = POLLIN;
   }
@@ -290,8 +288,8 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
   if (nrfds == 0)
   {
     LogDebug("no file descriptors to wait on");
-    sleep(1);
     free(fds);
+    sleep(1);
     return;
   }
   else
