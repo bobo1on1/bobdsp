@@ -265,6 +265,10 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     free(fds);
     return;
   }
+  else
+  {
+    LogDebug("Waiting on %i file descriptors", nrfds);
+  }
 
   int timeout;
   if (usetimeout)
