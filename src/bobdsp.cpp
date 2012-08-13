@@ -356,7 +356,10 @@ void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)
   //try to get paths from the LADSPA_PATH environment variable
   //paths are separated by colons
   const char* ladspaptr = getenv("LADSPA_PATH");
-  LogDebug("LADSPA_PATH = \"%s\"", ladspaptr ? ladspaptr : "NULL");
+  if (ladspaptr)
+    LogDebug("LADSPA_PATH = \"%s\"", ladspaptr);
+  else
+    LogDebug("LADSPA_PATH not set");
 
   if (ladspaptr)
   {

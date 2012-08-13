@@ -69,7 +69,7 @@ void CLadspaPlugin::GetPlugins(std::string path, std::vector<CLadspaPlugin*>& pl
     void* handle = dlopen((string(path) + entry->d_name).c_str(), RTLD_LAZY);
     if (handle == NULL)
     {
-      Log("Unable to load %s: %s", entry->d_name, dlerror());
+      LogError("Unable to load %s: %s", entry->d_name, dlerror());
       continue;
     }
 
