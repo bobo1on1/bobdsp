@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <malloc.h>
 #include <poll.h>
+#include <unistd.h>
 #include <signal.h>
 #include <sys/mman.h>
 #include <sys/signalfd.h>
@@ -43,7 +44,29 @@ CBobDSP::CBobDSP(int argc, char *argv[])
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0)
+    {
       g_printdebuglevel = true;
+    }
+    else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--fork") == 0)
+    {
+      g_logtostderr = false;
+      if (fork())
+        exit(0);
+    }
+    else
+    {
+      printf(
+             "\n"
+             "usage: bobdsp [OPTION]\n"
+             "\n"
+             "  options:\n"
+             "\n"
+             "    -d, --debug  enable debug logging\n"
+             "    -f, --fork   daemonize, suppresses logging to stderr\n"
+             "\n"
+             );
+      exit(0);
+    }
   }
 }
 
