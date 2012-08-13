@@ -142,7 +142,7 @@ int main (int argc, char *argv[])
     if (triedconnect)
       lastconnect = GetTimeUs();
 
-    //a client connected, or a port callback was called
+    //if a client connected, or a port callback was called
     //process port connections, if it fails try again in 10 seconds
     portconnector.Process(portregistered, portconnected);
 
