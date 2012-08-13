@@ -38,4 +38,55 @@
 #undef DECLARATION
 #undef TYPECOUNT
 
+//so, I tried to make something to load elements from xml, without having to enter the element name several times
+//and it turned into this ugly pile of macros, meh it works
+#define LOADELEMENT(element, name, mandatory) TiXmlElement* name = element->FirstChildElement(#name);\
+bool name ## _loadfailed = false;\
+if (!name)\
+{\
+  name ## _loadfailed = true;\
+  (void) name ## _loadfailed ;\
+  if (mandatory)\
+  {\
+    LogError("<" #name "> element missing");\
+    loadfailed = true;\
+  }\
+}\
+else if (!name->GetText() || strlen(name->GetText()) == 0)\
+{\
+  name ## _loadfailed = true;\
+  LogError("<" #name "> element empty");\
+  if (mandatory)\
+    loadfailed = true;\
+}\
+
+#define PARSEELEMENT(element, name, mandatory, default, type, parsefunc, postcheck)\
+LOADELEMENT(element, name, mandatory);\
+type name ## _p = default;\
+bool name ## _parsefailed = false;\
+(void) name ## _parsefailed;\
+if (!name ## _loadfailed)\
+{\
+  if (!parsefunc(name->GetText(), name ## _p) || !postcheck(name ## _p))\
+  {\
+    LogError("Invalid value %s for element <" #name ">", name->GetText());\
+    name ## _parsefailed = true;\
+    name ## _p = default;\
+    if (mandatory)\
+      loadfailed = true;\
+  }\
+}
+
+#define POSTCHECK_NONE(value) (true)
+#define POSTCHECK_ONEORHIGHER(value) (value >= 1)
+
+#define MANDATORY true
+#define OPTIONAL  false
+
+#define LOADFLOATELEMENT(element, name, mandatory, default, postcheck)\
+PARSEELEMENT(element, name, mandatory, default, double, StrToFloat, postcheck);
+
+#define LOADINTELEMENT(element, name, mandatory, default, postcheck)\
+PARSEELEMENT(element, name, mandatory, default, int64_t, StrToInt, postcheck);
+
 #endif //INCLTINYXML_H
