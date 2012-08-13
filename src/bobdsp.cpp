@@ -91,7 +91,6 @@ void CBobDSP::Process()
   bool portconnected  = false;
   while(!m_stop)
   {
-    vector< pair<int, CJackClient*> > pipes;
     bool triedconnect = false;
     bool allconnected = true;
 
@@ -117,11 +116,6 @@ void CBobDSP::Process()
             portregistered = true;
         }
       }
-
-      //save msgpipes and CJackClient* so we can read and process them later
-      int msgpipe = (*it)->MsgPipe();
-      if (msgpipe != -1)
-        pipes.push_back(make_pair(msgpipe, *it));
     }
 
     if (triedconnect)
@@ -132,8 +126,7 @@ void CBobDSP::Process()
     m_portconnector.Process(portregistered, portconnected);
 
     //process messages, blocks if there's nothing to do
-    ProcessMessages(portregistered, portconnected,
-                    !allconnected || portregistered || portconnected, pipes);
+    ProcessMessages(portregistered, portconnected, !allconnected || portregistered || portconnected);
 
     LogDebug("main loop woke up");
   }
@@ -240,16 +233,21 @@ void CBobDSP::SetupSignals()
     LogError("sigpocmask: %s", GetErrno().c_str());
 }
 
-void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout,
-                              std::vector< std::pair<int, CJackClient*> >& pipes)
+void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout)
 {
-  unsigned int nrfds = pipes.size();
-  pollfd* fds = (pollfd*)malloc(nrfds * sizeof(pollfd));
+  unsigned int nrfds = 0;
+  pollfd* fds        = NULL;
 
-  for (unsigned int i = 0; i < pipes.size(); i++)
+  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
-    fds[i].fd = pipes[i].first;
-    fds[i].events = POLLIN;
+    int pipe = (*it)->MsgPipe();
+    if (pipe != -1)
+    {
+      nrfds++;
+      fds = (pollfd*)realloc(fds, nrfds * sizeof(pollfd));
+      fds[nrfds - 1].fd     = pipe;
+      fds[nrfds - 1].events = POLLIN;
+    }
   }
 
   if (m_signalfd != -1)
@@ -287,25 +285,25 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     USleep(1000);
 
     //check events of all clients
-    for (vector< pair<int, CJackClient*> >::iterator it = pipes.begin(); it != pipes.end(); it++)
+    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
       uint8_t msg;
-      while ((msg = it->second->GetMessage()) != MsgNone)
+      while ((msg = (*it)->GetMessage()) != MsgNone)
       {
         if (msg == MsgPortRegistered)
         {
-          LogDebug("got message MsgPortRegistered from client \"%s\"", it->second->Name().c_str());
+          LogDebug("got message MsgPortRegistered from client \"%s\"", (*it)->Name().c_str());
           portregistered = true;
         }
         else if (msg == MsgPortConnected)
         {
-          LogDebug("got message MsgPortConnected from client \"%s\"", it->second->Name().c_str());
+          LogDebug("got message MsgPortConnected from client \"%s\"", (*it)->Name().c_str());
           portconnected = true;
         }
         else if (msg == MsgExited)
-          LogDebug("got message MsgExited from client \"%s\"", it->second->Name().c_str());
+          LogDebug("got message MsgExited from client \"%s\"", (*it)->Name().c_str());
         else
-          LogDebug("got message %i from client \"%s\"", msg, it->second->Name().c_str());
+          LogDebug("got message %i from client \"%s\"", msg, (*it)->Name().c_str());
       }
     }
 
