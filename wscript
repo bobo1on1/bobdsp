@@ -15,33 +15,33 @@ def options(opt):
 def configure(conf):
   conf.load('compiler_cxx')
 
-  conf.check(header_name='stdio.h')
-  conf.check(header_name='stdint.h')
-  conf.check(header_name='stdlib.h')
-  conf.check(header_name='stdarg.h')
-  conf.check(header_name='inttypes.h')
-  conf.check(header_name='string.h')
-  conf.check(header_name='time.h')
-  conf.check(header_name='sys/stat.h')
-  conf.check(header_name='sys/time.h')
-  conf.check(header_name='locale.h')
-  conf.check(header_name='errno.h')
-  conf.check(header_name='math.h')
   conf.check(header_name='assert.h')
-  conf.check(header_name='pthread.h')
   conf.check(header_name='dirent.h')
   conf.check(header_name='dlfcn.h')
-  conf.check(header_name='ladspa.h')
-  conf.check(header_name='tinyxml.h')
-  conf.check(header_name='jack/jack.h')
-  conf.check(header_name='signal.h')
-  conf.check(header_name='unistd.h')
-  conf.check(header_name='sys/mman.h')
-  conf.check(header_name='malloc.h')
+  conf.check(header_name='errno.h')
   conf.check(header_name='fcntl.h')
-  conf.check(header_name='sys/signalfd.h')
-  conf.check(header_name='poll.h')
+  conf.check(header_name='inttypes.h')
+  conf.check(header_name='jack/jack.h')
+  conf.check(header_name='ladspa.h')
+  conf.check(header_name='locale.h')
+  conf.check(header_name='malloc.h')
+  conf.check(header_name='math.h')
   conf.check(header_name='pcrecpp.h')
+  conf.check(header_name='poll.h')
+  conf.check(header_name='pthread.h')
+  conf.check(header_name='signal.h')
+  conf.check(header_name='stdarg.h')
+  conf.check(header_name='stdint.h')
+  conf.check(header_name='stdio.h')
+  conf.check(header_name='stdlib.h')
+  conf.check(header_name='string.h')
+  conf.check(header_name='sys/mman.h')
+  conf.check(header_name='sys/signalfd.h')
+  conf.check(header_name='sys/stat.h')
+  conf.check(header_name='sys/time.h')
+  conf.check(header_name='time.h')
+  conf.check(header_name='tinyxml.h')
+  conf.check(header_name='unistd.h')
 
   conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
   conf.check(lib='m', uselib_store='m', mandatory=False)
@@ -58,12 +58,12 @@ def configure(conf):
 
 def build(bld):
   bld.program(source='src/main.cpp\
-                      src/ladspaplugin.cpp\
                       src/jackclient.cpp\
                       src/ladspainstance.cpp\
+                      src/ladspaplugin.cpp\
                       src/portconnector.cpp\
-                      src/util/log.cpp\
                       src/util/condition.cpp\
+                      src/util/log.cpp\
                       src/util/misc.cpp\
                       src/util/mutex.cpp\
                       src/util/timeutils.cpp',
