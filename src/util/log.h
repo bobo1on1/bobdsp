@@ -31,7 +31,7 @@ enum LogLevel
 //this has to be a macro, because we want __PRETTY_FUNCTION__
 #define Log(fmt, ...) PrintLog(fmt, __PRETTY_FUNCTION__, LogLevelBasic, ##__VA_ARGS__)
 #define LogError(fmt, ...) PrintLog(fmt, __PRETTY_FUNCTION__, LogLevelError, ##__VA_ARGS__)
-#define LogDebug(fmt, ...) PrintLog(fmt, __PRETTY_FUNCTION__, LogLevelDebug, ##__VA_ARGS__)
+#define LogDebug(fmt, ...) g_printdebuglevel ? PrintLog(fmt, __PRETTY_FUNCTION__, LogLevelDebug, ##__VA_ARGS__) : (void)0
 
 void PrintLog (const char* fmt, const char* function, LogLevel loglevel, ...) __attribute__ ((format (printf, 1, 4)));
 void SetLogFile(std::string logfile);
