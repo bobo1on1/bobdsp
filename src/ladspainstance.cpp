@@ -101,7 +101,7 @@ bool CLadspaInstance::Connect()
   m_handle = m_descriptor->instantiate(m_descriptor, m_samplerate);
   if (!m_handle)
   {
-    LogError("Instatiate of client \"%s\" plugin \"%s\" failed", m_name.c_str(), m_plugin->Label());
+    LogError("Instantiate of client \"%s\" plugin \"%s\" failed", m_name.c_str(), m_plugin->Label());
     return false;
   }
 
