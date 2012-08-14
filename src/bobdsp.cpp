@@ -40,6 +40,8 @@ CBobDSP::CBobDSP(int argc, char *argv[])
   m_stop     = false;
   m_signalfd = -1;
 
+  bool dofork = false;
+
   //parse commandline options
   for (int i = 1; i < argc; i++)
   {
@@ -49,16 +51,7 @@ CBobDSP::CBobDSP(int argc, char *argv[])
     }
     else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--fork") == 0)
     {
-      g_logtostderr = false;
-      //prevent libjack from writing to stderr
-      fclose(stderr);
-      stderr = fopen("/dev/null", "w");
-      //close stdout just in case
-      fclose(stdout);
-      stdout = fopen("/dev/null", "w");
-
-      if (fork())
-        exit(0);
+      dofork = true;
     }
     else
     {
@@ -74,6 +67,22 @@ CBobDSP::CBobDSP(int argc, char *argv[])
              );
       exit(0);
     }
+  }
+
+  if (dofork)
+  {
+    g_logtostderr = false;
+    //prevent libjack from writing to stderr
+    fclose(stderr);
+    stderr = fopen("/dev/null", "w");
+    LogDebug("stderr now has file descriptor %i", fileno(stderr));
+    //close stdout just in case
+    fclose(stdout);
+    stdout = fopen("/dev/null", "w");
+    LogDebug("stdout now has file descriptor %i", fileno(stdout));
+
+    if (fork())
+      exit(0);
   }
 }
 
