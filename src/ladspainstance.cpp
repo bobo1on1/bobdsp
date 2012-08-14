@@ -113,10 +113,9 @@ bool CLadspaInstance::Connect()
     {
       if (LADSPA_IS_PORT_OUTPUT(p))
       {
+        //only allocate a value for the output port
+        //since any call to push_back might do a realloc, and invalidate the pointer
         m_controloutputs.push_back(make_pair(m_plugin->PortName(port), 0.0f));
-        //compiler bug? if we push into the vector this way, 
-        //on gcc 4.4.3 &(m_controloutputs.back().second) returns the wrong pointer
-        //m_descriptor->connect_port(m_handle, port, &(m_controloutputs.back().second));
       }
       else
       {
@@ -132,7 +131,7 @@ bool CLadspaInstance::Connect()
     }
   }
 
-  //connect output control ports here, workaround for compiler bug
+  //connect output control ports here, since the vector size won't change
   vector<portvalue>::iterator it = m_controloutputs.begin();
   for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
   {
