@@ -50,6 +50,13 @@ CBobDSP::CBobDSP(int argc, char *argv[])
     else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--fork") == 0)
     {
       g_logtostderr = false;
+      //prevent libjack from writing to stderr
+      fclose(stderr);
+      stderr = fopen("/dev/null", "w");
+      //close stdout just in case
+      fclose(stdout);
+      stdout = fopen("/dev/null", "w");
+
       if (fork())
         exit(0);
     }
