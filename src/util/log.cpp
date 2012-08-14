@@ -113,8 +113,10 @@ string PruneFunction(string function)
   size_t parenpos = function.find('(');
   size_t spacepos = function.rfind(' ', parenpos);
 
-  if (parenpos == string::npos || spacepos == string::npos)
+  if (parenpos == string::npos)
     return function;
+  else if (spacepos == string::npos) //when called from a constructor, there's no return value, thus no space
+    return function.substr(0, parenpos);
   else
     return function.substr(spacepos + 1, parenpos - spacepos - 1);
 }
