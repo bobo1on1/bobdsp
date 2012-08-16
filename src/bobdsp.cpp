@@ -81,10 +81,20 @@ CBobDSP::CBobDSP(int argc, char *argv[])
   {
     g_logtostderr = false;
 
-    //route stdout to our log
-    RoutePipe(stdout, m_stdout);
-    //route stderr to our log
-    RoutePipe(stderr, m_stderr);
+    if (g_printdebuglevel)
+    {
+      //route stdout to our log
+      RoutePipe(stdout, m_stdout);
+      //route stderr to our log
+      RoutePipe(stderr, m_stderr);
+    }
+    else
+    {
+      fclose(stdout);
+      stdout = fopen("/dev/null", "w");
+      fclose(stderr);
+      stderr = fopen("/dev/null", "w");
+    }
 
     if (fork())
       exit(0);
