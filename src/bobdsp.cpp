@@ -293,6 +293,8 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
     return;
   }
 
+  //close the FILE* first, then call dup
+  //this will make sure that the dup will return 1 for stdout and 2 for stderr
   fclose(file);
   int fd = dup(pipefds[1]);
   if (fd == -1)
