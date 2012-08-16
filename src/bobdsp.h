@@ -47,11 +47,15 @@ class CBobDSP
     std::vector<CJackClient*>   m_clients;
     CPortConnector              m_portconnector;
     int                         m_signalfd;
+    int                         m_stdout[2];
+    int                         m_stderr[2];
 
     void SetupRT(int64_t memsize);
     void SetupSignals();
+    void RoutePipe(FILE*& file, int* pipe);
     void ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout);
     void ProcessSignalfd();
+    void ProcessStdFd(const char* name, int fd);
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadPluginsFromFile();

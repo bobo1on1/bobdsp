@@ -16,6 +16,12 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef _GNU_SOURCE
+  #define _GNU_SOURCE //for pipe2
+  #include <unistd.h>
+#endif //_GNU_SOURCE
+#include <fcntl.h>
+
 #include "bobdsp.h"
 
 #include <cstring>
@@ -39,6 +45,8 @@ CBobDSP::CBobDSP(int argc, char *argv[])
 {
   m_stop     = false;
   m_signalfd = -1;
+  m_stdout[0] = m_stdout[1] = -1;
+  m_stderr[0] = m_stderr[1] = -1;
 
   bool dofork = false;
 
@@ -72,14 +80,11 @@ CBobDSP::CBobDSP(int argc, char *argv[])
   if (dofork)
   {
     g_logtostderr = false;
-    //prevent libjack from writing to stderr
-    fclose(stderr);
-    stderr = fopen("/dev/null", "w");
-    LogDebug("stderr now has file descriptor %i", fileno(stderr));
-    //close stdout just in case
-    fclose(stdout);
-    stdout = fopen("/dev/null", "w");
-    LogDebug("stdout now has file descriptor %i", fileno(stdout));
+
+    //route stdout to our log
+    RoutePipe(stdout, m_stdout);
+    //route stderr to our log
+    RoutePipe(stderr, m_stderr);
 
     if (fork())
       exit(0);
@@ -278,10 +283,33 @@ void CBobDSP::SetupSignals()
     LogError("sigpocmask: %s", GetErrno().c_str());
 }
 
+void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
+{
+  int returnv = pipe2(pipefds, O_NONBLOCK);
+  if (returnv == -1)
+  {
+    LogError("making pipe: %s", GetErrno().c_str());
+    pipefds[0] = pipefds[1] = -1;
+    return;
+  }
+
+  fclose(file);
+  int fd = dup(pipefds[1]);
+  if (fd == -1)
+  {
+    LogError("dup: %s", GetErrno().c_str());
+    return;
+  }
+
+  file = fdopen(fd, "w");
+  if (!file)
+    LogError("fdopen: %s", GetErrno().c_str());
+}
+
 void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout)
 {
   unsigned int nrfds = 0;
-  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 1) * sizeof(pollfd));
+  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 3) * sizeof(pollfd));
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -294,11 +322,31 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     }
   }
 
+  int stdoutnr = -1;
+  if (m_stdout[0] != -1)
+  {
+    nrfds++;
+    fds[nrfds - 1].fd = m_stdout[0];
+    fds[nrfds - 1].events = POLLIN;
+    stdoutnr = nrfds - 1;
+  }
+
+  int stderrnr = -1;
+  if (m_stderr[0] != -1)
+  {
+    nrfds++;
+    fds[nrfds - 1].fd = m_stderr[0];
+    fds[nrfds - 1].events = POLLIN;
+    stderrnr = nrfds - 1;
+  }
+
+  int signalfdnr = -1;
   if (m_signalfd != -1)
   {
     nrfds++;
     fds[nrfds - 1].fd = m_signalfd;
     fds[nrfds - 1].events = POLLIN;
+    signalfdnr = nrfds - 1;
   }
 
   if (nrfds == 0)
@@ -355,7 +403,16 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     }
 
     //check for signals
-    ProcessSignalfd();
+    if (signalfdnr != -1 && (fds[signalfdnr].revents & POLLIN))
+      ProcessSignalfd();
+    
+    //check stdout pipe
+    if (stdoutnr != -1 && (fds[stdoutnr].revents & POLLIN))
+      ProcessStdFd("stdout", m_stdout[0]);
+
+    //check stderr pipe
+    if (stderrnr != -1 && (fds[stderrnr].revents & POLLIN))
+      ProcessStdFd("stderr", m_stderr[0]);
   }
 
   free(fds);
@@ -386,6 +443,20 @@ void CBobDSP::ProcessSignalfd()
       LogDebug("caught signal %i", siginfo.ssi_signo);
     }
   }
+}
+
+void CBobDSP::ProcessStdFd(const char* name, int fd)
+{
+  int returnv;
+  char buf[1024];
+  string logstr;
+  while ((returnv = read(fd, buf, sizeof(buf) - 1)) > 0)
+  {
+    buf[returnv] = 0;
+    logstr += buf;
+  }
+
+  LogDebug("%s: %s", name, logstr.c_str());
 }
 
 void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)
