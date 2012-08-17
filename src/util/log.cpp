@@ -38,6 +38,7 @@ using namespace std;
 bool g_logtostderr = true;
 bool g_printlogtofile = true;
 bool g_printdebuglevel = false;
+string g_logfilename;
 
 //as pointers, so we can allocate these after the locked memory is set up
 static CMutex*   g_logmutex;
@@ -103,6 +104,8 @@ bool InitLog(string filename, ofstream& logfile)
   }
 
   Log("successfully set up logfile %s", fullpath.c_str());
+
+  g_logfilename = fullpath;
 
   return true;
 }

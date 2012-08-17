@@ -104,3 +104,20 @@ std::string PutSlashAtEnd(const std::string& path)
     return path;
 }
 
+std::string RemoveSlashAtEnd(const std::string& path)
+{
+  if (path.length() > 0 && path[path.length() - 1] == '/')
+    return path.substr(0, path.length() - 1);
+  else
+    return path;
+}
+
+std::string FileNameExtension(const std::string& path)
+{
+  size_t pos = path.rfind('.');
+  if (pos == string::npos || pos >= path.length() - 1)
+    return "";
+  else
+    return path.substr(pos + 1);
+}
+

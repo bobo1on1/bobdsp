@@ -41,7 +41,8 @@
 
 using namespace std;
 
-CBobDSP::CBobDSP(int argc, char *argv[])
+CBobDSP::CBobDSP(int argc, char *argv[]):
+  m_httpserver(*this)
 {
   m_stop     = false;
   m_signalfd = -1;
@@ -151,6 +152,17 @@ void CBobDSP::Process()
     bool triedconnect = false;
     bool allconnected = true;
 
+    //check if we need to start the http server
+    if (!m_httpserver.IsStarted())
+    {
+      allconnected = false; //use 10 second timeout in ProcessMessages()
+      if (GetTimeUs() - lastconnect >= CONNECTINTERVAL)
+      {
+        m_httpserver.Start();
+        triedconnect = true; //update timestamp
+      }
+    }
+
     for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
       //check if the jack thread has failed
@@ -200,6 +212,8 @@ void CBobDSP::Cleanup()
 
   if (m_signalfd != -1)
     close(m_signalfd);
+
+  m_httpserver.Stop();
 }
 
 //based on https://rt.wiki.kernel.org/index.php/Dynamic_memory_allocation_example
@@ -440,8 +454,11 @@ void CBobDSP::ProcessSignalfd()
   if (returnv == -1 && errno != EAGAIN)
   {
     LogError("reading signals fd: %s", GetErrno().c_str());
-    close(m_signalfd);
-    m_signalfd = -1;
+    if (errno != EINTR)
+    {
+      close(m_signalfd);
+      m_signalfd = -1;
+    }
   }
   else if (returnv > 0)
   {
@@ -457,7 +474,7 @@ void CBobDSP::ProcessSignalfd()
   }
 }
 
-void CBobDSP::ProcessStdFd(const char* name, int fd)
+void CBobDSP::ProcessStdFd(const char* name, int& fd)
 {
   int returnv;
   char buf[1024];
@@ -468,7 +485,18 @@ void CBobDSP::ProcessStdFd(const char* name, int fd)
     logstr += buf;
   }
 
-  LogDebug("%s: %s", name, logstr.c_str());
+  if (!logstr.empty())
+    LogDebug("%s: %s", name, logstr.c_str());
+
+  if (returnv == -1 && errno != EAGAIN)
+  {
+    LogError("reading %s fd: \"%s\"", name, GetErrno().c_str());
+    if (errno != EINTR)
+    {
+      close(fd);
+      fd = -1;
+    }
+  }
 }
 
 void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)

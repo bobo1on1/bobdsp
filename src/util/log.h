@@ -39,5 +39,6 @@ void SetLogFile(std::string logfile);
 extern bool g_logtostderr;
 extern bool g_printlogtofile;
 extern bool g_printdebuglevel;
+extern std::string g_logfilename;
 
 #endif //LOG

@@ -55,6 +55,7 @@ class CJackClient
 
   private:
     bool           m_connected;
+    bool           m_wasconnected;
     jack_client_t* m_client;
     CLadspaPlugin* m_plugin;
     std::string    m_name;

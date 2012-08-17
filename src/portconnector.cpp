@@ -67,6 +67,51 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
+//todo: might need to escape some strings here?
+std::string CPortConnector::ConnectionsToJSON()
+{
+  string json;
+  json += "{\n";
+  json += "  connections:{\n";
+  json += "    connection:[\n";
+
+  //TODO: add a mutex here
+  for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
+  {
+    json += "      {\n";
+    json += "        out:'";
+    json += it->out;
+    json += "',\n";
+
+    json += "        in:'";
+    json += it->in;
+    json += "',\n";
+    
+    json += "        disconnect:'";
+    if (it->indisconnect && it->outdisconnect)
+      json += "both";
+    else if (it->indisconnect)
+      json += "in";
+    else if (it->outdisconnect)
+      json += "out";
+    else
+      json += "none";
+
+    json += "'\n";
+
+    if (it == m_connections.end() - 1)
+      json += "      }\n";
+    else
+      json += "      },\n";
+  }
+
+  json += "    ]\n";
+  json += "  }\n";
+  json += "}";
+
+  return json;
+}
+
 void CPortConnector::Process(bool& portregistered, bool& portconnected)
 {
   if (!portregistered && !portconnected)

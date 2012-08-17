@@ -24,6 +24,7 @@
 
 #include "util/inclstdint.h"
 #include "util/misc.h"
+#include "util/timeutils.h"
 #include "util/log.h"
 
 #include "jackclient.h"
@@ -42,6 +43,7 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_controlinputs   = controlinputs;
   m_client          = NULL;
   m_connected       = false;
+  m_wasconnected    = true;
   m_exitstatus      = (jack_status_t)0;
   m_clientprefix    = clientprefix;
   m_portprefix      = portprefix;
@@ -75,6 +77,8 @@ bool CJackClient::Connect()
   m_connected = ConnectInternal();
   if (!m_connected)
     Disconnect();
+  else
+    m_wasconnected = true;
 
   return m_connected;
 }
@@ -95,7 +99,11 @@ bool CJackClient::ConnectInternal()
   m_client = jack_client_open(name.substr(0, jack_client_name_size() + 1).c_str(), JackNoStartServer, NULL);
   if (m_client == NULL)
   {
-    LogError("Client \"%s\" error connecting to jackd: \"%s\"", m_name.c_str(), GetErrno().c_str());
+    if (m_wasconnected || g_printdebuglevel)
+    {
+      LogError("Client \"%s\" error connecting to jackd: \"%s\"", m_name.c_str(), GetErrno().c_str());
+      m_wasconnected = false; //only print this to the log once
+    }
     return false;
   }
 
@@ -224,9 +232,12 @@ bool CJackClient::WriteMessage(uint8_t msg)
   if (returnv == -1 && errno != EAGAIN)
   {
     LogError("Client \"%s\" error writing msg %i to pipe: \"%s\"", m_name.c_str(), msg, GetErrno().c_str());
-    close(m_pipe[1]);
-    m_pipe[1] = -1;
-    return true; //pipe broken
+    if (errno != EINTR)
+    {
+      close(m_pipe[1]);
+      m_pipe[1] = -1;
+      return true; //pipe broken
+    }
   }
 
   return false; //need to try again
@@ -246,8 +257,11 @@ ClientMessage CJackClient::GetMessage()
   else if (returnv == -1 && errno != EAGAIN)
   {
     LogError("Client \"%s\" error reading msg from pipe: \"%s\"", m_name.c_str(), GetErrno().c_str());
-    close(m_pipe[0]);
-    m_pipe[0] = -1;
+    if (errno != EINTR)
+    {
+      close(m_pipe[0]);
+      m_pipe[0] = -1;
+    }
   }
 
   return MsgNone;
@@ -283,8 +297,18 @@ void CJackClient::PJackInfoShutdownCallback(jack_status_t code, const char *reas
   m_exitstatus = code;
 
   //send message to the main loop
-  if (!WriteMessage(MsgExited))
-    LogError("Client \"%s\" unable to write exit msg to pipe", m_name.c_str());
+  //try for one second to make sure it gets there
+  int64_t start = GetTimeUs();
+  do
+  {
+    if (WriteMessage(MsgExited))
+      return;
+
+    USleep(100); //don't busy spin
+  }
+  while (GetTimeUs() - start < 1000000);
+
+  LogError("Client \"%s\" unable to write exit msg to pipe", m_name.c_str());
 }
 
 void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg)

@@ -29,6 +29,7 @@
 #include "ladspaplugin.h"
 #include "jackclient.h"
 #include "portconnector.h"
+#include "httpserver.h"
 
 class CBobDSP
 {
@@ -40,6 +41,8 @@ class CBobDSP
     void Process();
     void Cleanup();
 
+    CPortConnector& PortConnector() { return m_portconnector; }
+
   private:
 
     bool                        m_stop;
@@ -49,13 +52,14 @@ class CBobDSP
     int                         m_signalfd;
     int                         m_stdout[2];
     int                         m_stderr[2];
+    CHttpServer                 m_httpserver;
 
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
     void ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout);
     void ProcessSignalfd();
-    void ProcessStdFd(const char* name, int fd);
+    void ProcessStdFd(const char* name, int& fd);
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadPluginsFromFile();

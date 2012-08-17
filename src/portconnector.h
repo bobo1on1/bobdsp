@@ -45,6 +45,8 @@ class CPortConnector
 
     void Process(bool& portregistered, bool& portconnected);
 
+    std::string ConnectionsToJSON();
+
   private:
     std::vector<portconnection> m_connections;
 
