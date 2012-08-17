@@ -65,6 +65,7 @@ def configure(conf):
 def build(bld):
   bld.program(source='src/main.cpp\
                       src/bobdsp.cpp\
+                      src/httpserver.cpp\
                       src/jackclient.cpp\
                       src/ladspainstance.cpp\
                       src/ladspaplugin.cpp\
