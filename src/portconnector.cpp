@@ -72,22 +72,22 @@ std::string CPortConnector::ConnectionsToJSON()
 {
   string json;
   json += "{\n";
-  json += "  connections:{\n";
-  json += "    connection:[\n";
+  json += "  \"connections\":{\n";
+  json += "    \"connection\":[\n";
 
   //TODO: add a mutex here
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
     json += "      {\n";
-    json += "        out:'";
-    json += it->out;
-    json += "',\n";
+    json += "        \"out\":\"";
+    json += JSONEscape(it->out);
+    json += "\",\n";
 
-    json += "        in:'";
-    json += it->in;
-    json += "',\n";
+    json += "        \"in\":\"";
+    json += JSONEscape(it->in);
+    json += "\",\n";
     
-    json += "        disconnect:'";
+    json += "        \"disconnect\":\"";
     if (it->indisconnect && it->outdisconnect)
       json += "both";
     else if (it->indisconnect)
@@ -97,7 +97,7 @@ std::string CPortConnector::ConnectionsToJSON()
     else
       json += "none";
 
-    json += "'\n";
+    json += "\"\n";
 
     if (it == m_connections.end() - 1)
       json += "      }\n";

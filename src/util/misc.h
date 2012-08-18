@@ -39,6 +39,7 @@ bool GetHomePath(std::string& homepath);
 std::string PutSlashAtEnd(const std::string& path);
 std::string RemoveSlashAtEnd(const std::string& path);
 std::string FileNameExtension(const std::string& path);
+std::string JSONEscape(const std::string& json);
 
 template <class Value>
 inline std::string ToString(Value value)
