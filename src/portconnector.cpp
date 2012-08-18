@@ -68,7 +68,6 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
-//todo: might need to escape some strings here?
 std::string CPortConnector::ConnectionsToJSON()
 {
   string json;
