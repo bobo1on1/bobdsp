@@ -17,6 +17,7 @@
  */
 
 #include "util/misc.h"
+#include <utility>
 #include <list>
 #include <errno.h>
 #include <pcrecpp.h>

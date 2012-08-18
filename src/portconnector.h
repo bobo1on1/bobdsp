@@ -19,7 +19,6 @@
 #ifndef PORTCONNECTOR_H
 #define PORTCONNECTOR_H
 
-#include <utility>
 #include <string>
 #include <vector>
 #include <jack/jack.h>
