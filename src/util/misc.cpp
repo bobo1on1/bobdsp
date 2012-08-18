@@ -20,6 +20,7 @@
 #include <locale.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <ctype.h>
 #include "misc.h"
 
 using namespace std;
@@ -140,5 +141,14 @@ std::string JSONEscape(const std::string& json)
   }
 
   return jsonout;
+}
+
+std::string ToLower(const std::string& in)
+{
+  string out;
+  for (string::const_iterator it = in.begin(); it != in.end(); it++)
+    out += (char)tolower(*it);
+
+  return out;
 }
 
