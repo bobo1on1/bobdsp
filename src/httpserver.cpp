@@ -141,6 +141,10 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
       mime = "text/html";
     else if (extension == "js")
       mime = "application/javascript";
+    else if (extension == "css")
+      mime = "text/css";
+    else if (extension == "png")
+      mime = "image.png";
     else
       mime = "text/plain";
   }
