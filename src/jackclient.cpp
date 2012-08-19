@@ -18,8 +18,8 @@
 
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE //for pipe2
-  #include <unistd.h>
 #endif //_GNU_SOURCE
+#include <unistd.h>
 #include <fcntl.h>
 
 #include "util/inclstdint.h"
