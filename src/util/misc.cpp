@@ -122,27 +122,6 @@ std::string FileNameExtension(const std::string& path)
     return path.substr(pos + 1);
 }
 
-std::string JSONEscape(const std::string& json)
-{
-  size_t pos = 0;
-  string jsonout = json;
-  while((pos = jsonout.find_first_of("\"\\/", pos)) != string::npos)
-  {
-    string strreplace;
-    if (jsonout[pos] == '"')
-      strreplace = "\\\"";
-    else if (jsonout[pos] == '\\')
-      strreplace = "\\\\";
-    else if (jsonout[pos] == '/')
-      strreplace = "\\/";
-
-    jsonout.replace(pos, 1, strreplace);
-    pos += strreplace.length();
-  }
-
-  return jsonout;
-}
-
 std::string ToLower(const std::string& in)
 {
   string out;

@@ -335,7 +335,7 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout)
 {
   unsigned int nrfds = 0;
-  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 3) * sizeof(pollfd));
+  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 4) * sizeof(pollfd));
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -348,31 +348,18 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     }
   }
 
-  int stdoutnr = -1;
-  if (m_stdout[0] != -1)
-  {
-    nrfds++;
-    fds[nrfds - 1].fd = m_stdout[0];
-    fds[nrfds - 1].events = POLLIN;
-    stdoutnr = nrfds - 1;
-  }
+  int pipes[4] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe() };
+  int pipenrs[4] = { -1, -1, -1, -1 };
 
-  int stderrnr = -1;
-  if (m_stderr[0] != -1)
+  for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
   {
-    nrfds++;
-    fds[nrfds - 1].fd = m_stderr[0];
-    fds[nrfds - 1].events = POLLIN;
-    stderrnr = nrfds - 1;
-  }
-
-  int signalfdnr = -1;
-  if (m_signalfd != -1)
-  {
-    nrfds++;
-    fds[nrfds - 1].fd = m_signalfd;
-    fds[nrfds - 1].events = POLLIN;
-    signalfdnr = nrfds - 1;
+    if (pipes[i] != -1)
+    {
+      fds[nrfds].fd = pipes[i];
+      fds[nrfds].events = POLLIN;
+      pipenrs[i] = nrfds;
+      nrfds++;
+    }
   }
 
   if (nrfds == 0)
@@ -427,18 +414,29 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
           LogDebug("got message %i from client \"%s\"", msg, (*it)->Name().c_str());
       }
     }
-
-    //check for signals
-    if (signalfdnr != -1 && (fds[signalfdnr].revents & POLLIN))
-      ProcessSignalfd();
     
     //check stdout pipe
-    if (stdoutnr != -1 && (fds[stdoutnr].revents & POLLIN))
+    if (pipenrs[0] != -1 && (fds[pipenrs[0]].revents & POLLIN))
       ProcessStdFd("stdout", m_stdout[0]);
 
     //check stderr pipe
-    if (stderrnr != -1 && (fds[stderrnr].revents & POLLIN))
+    if (pipenrs[1] != -1 && (fds[pipenrs[1]].revents & POLLIN))
       ProcessStdFd("stderr", m_stderr[0]);
+
+    //check for signals
+    if (pipenrs[2] != -1 && (fds[pipenrs[2]].revents & POLLIN))
+      ProcessSignalfd();
+
+    if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
+    {
+      uint8_t msg;
+      while ((msg = m_httpserver.GetMessage()) != MsgNone)
+      {
+        //TODO: somehow disconnect connections that got removed
+        if (msg == MsgPortsUpdated)
+          portregistered = portconnected= true;
+      }
+    }
   }
 
   free(fds);
@@ -861,44 +859,7 @@ bool CBobDSP::LoadConnectionsFromFile()
     return false;
   }
 
-  for (TiXmlElement* xmlconnection = root->FirstChildElement("connection"); xmlconnection != NULL;
-       xmlconnection = xmlconnection->NextSiblingElement("connection"))
-  {
-    LogDebug("Read <connection> element");
-
-    bool loadfailed = false;
-
-    LOADELEMENT(xmlconnection, in, MANDATORY);
-    LOADELEMENT(xmlconnection, out, MANDATORY);
-    LOADELEMENT(xmlconnection, disconnect, OPTIONAL);
-
-    if (loadfailed)
-      continue;
-
-    LogDebug("in:\"%s\" out:\"%s\"", in->GetText(), out->GetText());
-
-    portconnection connection;
-    connection.in = in->GetText();
-    connection.out = out->GetText();
-    connection.indisconnect = false;
-    connection.outdisconnect = false;
-
-    if (!disconnect_loadfailed)
-    {
-      LogDebug("disconnect: \"%s\"", disconnect->GetText());
-      string strdisconnect = disconnect->GetText();
-      if (strdisconnect == "in")
-        connection.indisconnect = true;
-      else if (strdisconnect == "out")
-        connection.outdisconnect = true;
-      else if (strdisconnect == "both")
-        connection.indisconnect = connection.outdisconnect = true;
-      else if (strdisconnect != "none")
-        LogError("Invalid value \"%s\" for element <disconnect>", strdisconnect.c_str());
-    }
-
-    m_portconnector.AddConnection(connection);
-  }
+  m_portconnector.ConnectionsFromXML(root);
 
   return true;
 }

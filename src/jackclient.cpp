@@ -27,6 +27,7 @@
 #include "util/timeutils.h"
 #include "util/log.h"
 
+#include "bobdsp.h"
 #include "jackclient.h"
 
 using namespace std;

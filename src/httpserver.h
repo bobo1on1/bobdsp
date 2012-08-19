@@ -50,10 +50,16 @@ class CHttpServer
     bool IsStarted() { return m_daemon != NULL; }
     void Stop();
 
+    int  MsgPipe() { return m_pipe[0]; }
+    ClientMessage GetMessage();
+
   private:
     struct MHD_Daemon* m_daemon;
     int                m_port;
     CBobDSP&           m_bobdsp;
+    int                m_pipe[2];
+
+    void WriteMessage(uint8_t message);
 
     static int AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                    const char *url, const char *method,

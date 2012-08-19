@@ -26,14 +26,6 @@
 #include "ladspaplugin.h"
 #include "ladspainstance.h"
 
-enum ClientMessage
-{
-  MsgNone,
-  MsgExited,
-  MsgPortRegistered,
-  MsgPortConnected,
-};
-
 class CJackClient
 {
   public:

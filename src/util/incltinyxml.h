@@ -28,6 +28,8 @@
 #define DECLARATION TINYXML_DECLARATION
 #define TYPECOUNT   TINYXML_TYPECOUNT
 
+#define TIXML_USE_STL
+
 #include <tinyxml.h>
 
 #undef DOCUMENT

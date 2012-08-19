@@ -26,6 +26,15 @@
 #include <string>
 #include <utility>
 
+enum ClientMessage
+{
+  MsgNone,
+  MsgExited,
+  MsgPortRegistered,
+  MsgPortConnected,
+  MsgPortsUpdated,
+};
+
 #include "ladspaplugin.h"
 #include "jackclient.h"
 #include "portconnector.h"

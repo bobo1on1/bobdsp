@@ -1,7 +1,7 @@
 /*
  * bobdsp
  * Copyright (C) Bob 2012
- * 
+ *
  * bobdsp is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
@@ -18,11 +18,12 @@
 
 #include "util/misc.h"
 #include <utility>
-#include <list>
 #include <errno.h>
 #include <pcrecpp.h>
+
 #include "portconnector.h"
 #include "util/log.h"
+#include "util/lock.h"
 
 using namespace std;
 
@@ -35,11 +36,6 @@ CPortConnector::CPortConnector()
 CPortConnector::~CPortConnector()
 {
   Disconnect();
-}
-
-void CPortConnector::AddConnection(portconnection& connection)
-{
-  m_connections.push_back(connection);
 }
 
 bool CPortConnector::Connect()
@@ -68,48 +64,159 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
+bool CPortConnector::ConnectionsFromXML(TiXmlElement* root)
+{
+  std::vector<portconnection> connections;
+
+  bool valid = true;
+
+  for (TiXmlElement* xmlconnection = root->FirstChildElement("connection"); xmlconnection != NULL;
+       xmlconnection = xmlconnection->NextSiblingElement("connection"))
+  {
+    LogDebug("Read <connection> element");
+
+    bool loadfailed = false;
+
+    LOADELEMENT(xmlconnection, in, MANDATORY);
+    LOADELEMENT(xmlconnection, out, MANDATORY);
+    LOADELEMENT(xmlconnection, disconnect, OPTIONAL);
+
+    if (loadfailed)
+    {
+      valid = false;
+      continue;
+    }
+
+    LogDebug("in:\"%s\" out:\"%s\"", in->GetText(), out->GetText());
+
+    portconnection connection;
+    connection.in = in->GetText();
+    connection.out = out->GetText();
+    connection.indisconnect = false;
+    connection.outdisconnect = false;
+
+    if (!disconnect_loadfailed)
+    {
+      LogDebug("disconnect: \"%s\"", disconnect->GetText());
+      string strdisconnect = disconnect->GetText();
+      if (strdisconnect == "in")
+        connection.indisconnect = true;
+      else if (strdisconnect == "out")
+        connection.outdisconnect = true;
+      else if (strdisconnect == "both")
+        connection.indisconnect = connection.outdisconnect = true;
+      else if (strdisconnect != "none")
+      {
+        LogError("Invalid value \"%s\" for element <disconnect>", strdisconnect.c_str());
+        valid = false;
+      }
+    }
+
+    if (valid)
+      connections.push_back(connection);
+  }
+
+  if (valid)
+  {
+    CLock lock(m_mutex);
+    m_connections = connections;
+  }
+
+  return valid;
+}
+
+bool CPortConnector::ConnectionsFromJSON(const std::string& json)
+{
+  TiXmlElement* root = JSONXML::JSONToXML(json);
+
+  bool success = false;
+
+  TiXmlNode* child = root->FirstChildElement();
+  if (child && child->Type() == TiXmlNode::TINYXML_ELEMENT)
+    success = ConnectionsFromXML(child->ToElement());
+
+  delete root;
+  return success;
+}
+
+#define YAJLSTRING(str) (const unsigned char*)(str), strlen((str))
+
 std::string CPortConnector::ConnectionsToJSON()
 {
   string json;
-  json += "{\n";
-  json += "  \"connections\":{\n";
-  json += "    \"connection\":[\n";
 
-  //TODO: add a mutex here
+#if YAJL_MAJOR == 2
+  yajl_gen handle = yajl_gen_alloc(NULL);
+  yajl_gen_config(handle, yajl_gen_beautify, 1);
+  yajl_gen_config(handle, yajl_gen_indent_string, "  ");
+#else
+  yajl_gen_config yajlconfig;
+  yajlconfig.beautify = 1;
+  yajlconfig.indentString = "  ";
+  yajl_gen handle = yajl_gen_alloc(&yajlconfig, NULL);
+#endif
+
+  yajl_gen_map_open(handle);
+  yajl_gen_string(handle, YAJLSTRING("connections"));
+  yajl_gen_map_open(handle);
+  yajl_gen_string(handle, YAJLSTRING("connection"));
+  yajl_gen_array_open(handle);
+
+  CLock lock(m_mutex);
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
-    json += "      {\n";
-    json += "        \"out\":\"";
-    json += JSONEscape(it->out);
-    json += "\",\n";
+    yajl_gen_map_open(handle);
+    yajl_gen_string(handle, YAJLSTRING("out"));
+    yajl_gen_string(handle, YAJLSTRING(it->out.c_str()));
+    yajl_gen_string(handle, YAJLSTRING("in"));
+    yajl_gen_string(handle, YAJLSTRING(it->in.c_str()));
+    yajl_gen_string(handle, YAJLSTRING("disconnect"));
+    yajl_gen_string(handle, YAJLSTRING(it->DisconnectStr()));
 
-    json += "        \"in\":\"";
-    json += JSONEscape(it->in);
-    json += "\",\n";
-    
-    json += "        \"disconnect\":\"";
-    if (it->indisconnect && it->outdisconnect)
-      json += "both";
-    else if (it->indisconnect)
-      json += "in";
-    else if (it->outdisconnect)
-      json += "out";
-    else
-      json += "none";
-
-    json += "\"\n";
-
-    if (it == m_connections.end() - 1)
-      json += "      }\n";
-    else
-      json += "      },\n";
+    yajl_gen_map_close(handle);
   }
+  lock.Leave();
 
-  json += "    ]\n";
-  json += "  }\n";
-  json += "}";
+  yajl_gen_array_close(handle);
+  yajl_gen_map_close(handle);
+  yajl_gen_map_close(handle);
+
+  const unsigned char* str;
+  YAJLSTRINGLEN length;
+  yajl_gen_get_buf(handle, &str, &length);
+  json = string((const char *)str, length);
+
+  yajl_gen_clear(handle);
+  yajl_gen_free(handle);
 
   return json;
+}
+
+TiXmlElement* CPortConnector::ConnectionsToXML()
+{
+  TiXmlElement* root = new TiXmlElement("connections");
+
+  CLock lock(m_mutex);
+  for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
+  {
+    TiXmlElement out("out");
+    out.InsertEndChild(TiXmlText(it->out));
+
+    TiXmlElement in("in");
+    in.InsertEndChild(TiXmlText(it->in));
+
+    TiXmlElement disconnect("disconnect");
+    disconnect.InsertEndChild(TiXmlText(it->DisconnectStr()));
+
+    TiXmlElement connection("connection");
+    connection.InsertEndChild(out);
+    connection.InsertEndChild(in);
+    connection.InsertEndChild(disconnect);
+
+    root->InsertEndChild(connection);
+  }
+
+  return root;
 }
 
 void CPortConnector::Process(bool& portregistered, bool& portconnected)
@@ -184,8 +291,13 @@ void CPortConnector::ConnectPorts(const char** ports)
 
     const char** inport = portname;
 
+    //copy the connections, so we don't deadlock the httpserver if this thread hangs when talking to jackd
+    CLock lock(m_mutex);
+    vector<portconnection> connections = m_connections;
+    lock.Leave();
+
     //check if the input port name matches an <in> regex
-    for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
+    for (vector<portconnection>::iterator it = connections.begin(); it != connections.end(); it++)
     {
       pcrecpp::RE inputre(it->in);
       if (!inputre.FullMatch(*inport))
@@ -204,6 +316,9 @@ void CPortConnector::ConnectPorts(const char** ports)
 
         LogDebug("Regex \"%s\" matches output port \"%s\"", it->out.c_str(), *outport);
 
+        if (jack_port_connected_to(jackportout, *inport))
+          continue; //alread connected
+
         //if there's a match, connect
         int returnv = jack_connect(m_client, *outport, *inport);
         if (returnv == 0)
@@ -214,7 +329,6 @@ void CPortConnector::ConnectPorts(const char** ports)
       }
     }
   }
-
 }
 
 void CPortConnector::DisconnectPorts(const char** ports)
@@ -248,6 +362,7 @@ void CPortConnector::DisconnectPorts(const char** ports)
 
     bool matched    = false;
     bool disconnect = false;
+    CLock lock(m_mutex);
     for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
     {
       pcrecpp::RE outre(it->out);
@@ -272,6 +387,7 @@ void CPortConnector::DisconnectPorts(const char** ports)
         disconnect = true;
       }
     }
+    lock.Leave();
 
     //disconnect connection if marked as such, and if there wasn't a full match
     if (disconnect && !matched)

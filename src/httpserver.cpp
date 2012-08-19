@@ -16,11 +16,15 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "bobdsp.h"
 #include "httpserver.h"
 #include "util/log.h"
 #include "util/misc.h"
-#include "bobdsp.h"
 
+#ifndef _GNU_SOURCE
+  #define _GNU_SOURCE //for pipe2
+#endif //_GNU_SOURCE
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
@@ -31,6 +35,12 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
 {
   m_daemon = NULL;
   m_port = 8080; //TODO: make configurable
+
+  if (pipe2(m_pipe, O_NONBLOCK) == -1)
+  {
+    LogError("creating msg pipe for httpserver: %s", GetErrno().c_str());
+    m_pipe[0] = m_pipe[1] = -1;
+  }
 }
 
 CHttpServer::~CHttpServer()
@@ -66,6 +76,50 @@ void CHttpServer::Stop()
   }
 }
 
+ClientMessage CHttpServer::GetMessage()
+{
+  if (m_pipe[0] == -1)
+    return MsgNone;
+
+  uint8_t msg;
+  int returnv = read(m_pipe[0], &msg, 1);
+  if (returnv == 1)
+  {
+    return (ClientMessage)msg;
+  }
+  else if (returnv == -1 && errno != EAGAIN)
+  {
+    LogError("httpserver error reading msg from pipe: \"%s\"", GetErrno().c_str());
+    if (errno != EINTR)
+    {
+      close(m_pipe[0]);
+      m_pipe[0] = -1;
+    }
+  }
+
+  return MsgNone;
+}
+
+void CHttpServer::WriteMessage(uint8_t msg)
+{
+  if (m_pipe[1] == -1)
+    return; //can't write
+
+  int returnv = write(m_pipe[1], &msg, 1);
+  if (returnv == 1)
+    return; //write successful
+
+  if (returnv == -1)
+  {
+    LogError("httpserver error writing msg %i to pipe: \"%s\"", msg, GetErrno().c_str());
+    if (errno != EINTR && errno != EAGAIN)
+    {
+      close(m_pipe[1]); //pipe broken, close it
+      m_pipe[1] = -1;
+    }
+  }
+}
+
 int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,
                                     const char *url, const char *method,
                                     const char *version, const char *upload_data,
@@ -92,6 +146,33 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       //TODO: add some security, since now you can download every file
       return CreateFileDownloadResponse(connection, string("html") + strurl);
+    }
+  }
+  else if (strcmp(method, "POST") == 0)
+  {
+    LogDebug("upload_data_size: %zi", *upload_data_size);
+
+    if (strurl == "/connections")
+    {
+      if (!*con_cls) //on the first call, just alloc a string
+      {
+        *con_cls = new string();
+        return MHD_YES;
+      }
+      else if (*upload_data_size) //on every next call with data, process
+      {
+        ((string*)*con_cls)->append(upload_data, *upload_data_size);
+        *upload_data_size = 0; //signal that we processed this data
+        return MHD_YES; //TODO: add some maximum data size so a client can't make us run out of mem
+      }
+      else //no more POST data, handle, delete and reply
+      {
+        LogDebug("%s", ((string*)*con_cls)->c_str());
+        httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(*((string*)*con_cls));
+        httpserver->WriteMessage(MsgPortsUpdated); //tell the main loop to check the port connections
+        delete ((string*)*con_cls);
+        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
+      }
     }
   }
 

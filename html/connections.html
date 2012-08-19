@@ -1,22 +1,159 @@
 <!DOCTYPE html>
- <html lang="en">
- <head>
-   <meta charset="utf-8">
-   <title>Connection settings</title>
- </head>
- <body>
-   <script src="jquery-1.8.0.js"></script>
-   <script>
-     $(document).ready(function(){
-         $.getJSON('./connections', ParseConnections);
-     });
-     function ParseConnections(data) {
-       for (var i in data.connections.connection)
-       {
-          $("#test").append(data.connections.connection[i].out + '<br>');
-       }
-     }
-   </script>
-     <div id="test"> </div>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Connection settings</title>
+    <link type="text/css" href="css/dot-luv/jquery-ui-1.8.23.custom.css" rel="stylesheet" />
+    <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
+    <script type="text/javascript" src="js/jquery-ui-1.8.23.custom.min.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+  </head>
+
+  <body>
+
+    <script>
+      $(document).ready(function()
+      {
+        //get jack connections
+        $.getJSON('./connections', ParseConnections);
+
+        //when the reset button is clicked, get the jack connections again
+        $("#reset").click(function()
+        {
+          $.getJSON('./connections', ParseConnections);
+        });
+
+        $("#addnew").click(function()
+        {
+          AddRow($("#connections"), "", "", "none", true);
+        });
+
+        $("#apply").click(function()
+        {
+          var connections = {"connection": []};
+
+          for (var i = 1; i < $("#connections").get(0).rows.length; i++)
+          {
+            var inputs = $("#connections").get(0).rows[i].getElementsByTagName("input");
+            var intxt;
+            var outtxt;
+            for (var j = 0; j < inputs.length; j++)
+            {
+              if (inputs[j].name == "out")
+                outtxt = inputs[j].value;
+              else if (inputs[j].name == "in")
+                intxt = inputs[j].value;
+            }
+
+            if (outtxt == "" || intxt == "")
+              continue; //empty is invalid
+
+            var select = $("#connections").get(0).rows[i].getElementsByTagName("select");
+
+            connections.connection[i - 1] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
+          }
+
+          $("#test").html(JSON.stringify({"connections" : connections}));
+          $.post("./connections", JSON.stringify({"connections" : connections}), ParseConnections);
+
+        });
+
+      });
+
+      function ParseConnections(data)
+      {
+        //if this is called from the reset button callback, the table needs to be cleared first
+        $("#connections").empty();
+
+        //add header
+        $("#connections").append("<tr><th>out</th><th>in</th><th>disconnect</th>");
+
+        if (data.connections.connection.length == 0)
+        {
+          //no data, add empty row
+          AddRow($("#connections"), "", "", "none", true);
+        }
+        else
+        {
+          //make a textbox for the out and in regexes, and make an edit button
+          for (var i = 0; i < data.connections.connection.length; i++)
+            AddRow($("#connections"), data.connections.connection[i].in, data.connections.connection[i].out,
+                data.connections.connection[i].disconnect, false);
+        }
+      }
+
+      function AddRow(table, instr, outstr, disconnect, editable)
+      {
+        var readonly;
+        if (editable)
+          readonly = "";
+        else
+          readonly = "readonly=\"readonly\"";
+
+        var outtext = "<input type=\"text\" name=\"out\" size=50 " + readonly + " value=\"" + outstr + "\"/>";
+        var intext  = "<input type=\"text\" name=\"in\"  size=50 " + readonly + " value=\"" + instr  + "\"/>";
+        var editbutton = "<button type=\"button\" id=\"editbutton\" onclick=\"SetMutable(this.parentNode.parentNode)\">Edit</button>";
+        var removebutton = "<button type=\"button\" id=\"removebutton\" onclick=\"Remove(this.parentNode.parentNode)\">Remove</button>";
+
+        var disconnectstr = "<select>";
+        var disconnectopts = ["none", "in", "out", "both"];
+        for (var j = 0; j < disconnectopts.length; j++)
+          disconnectstr += AddOption(disconnectopts[j], disconnect, editable);
+
+        disconnectstr += "</select>";
+
+        table.append("<tr><td>" + outtext + "&rarr;</td><td>" + intext + "</td><td>" + disconnectstr +
+                     "</td><td>" + editbutton + removebutton + "</td></tr>");
+      }
+
+      function AddOption(name, disconnect, editable)
+      {
+        var str = "<option value=\"" + name + "\"";
+
+        if (name == disconnect)
+          str += "selected=\"selected\"";
+        else if (!editable)
+          str += "disabled=\"disabled\"";
+
+        str += ">" + name + "</option>";
+
+        return str;
+      }
+
+      function SetMutable(it)
+      {
+        var inputs = it.getElementsByTagName("input");
+        for (var i = 0; i < inputs.length; i++)
+          inputs[i].removeAttribute("readonly");
+
+        var selects = it.getElementsByTagName("select");
+        for (var i = 0; i < selects.length; i++)
+        {
+          var options = selects[i].getElementsByTagName("option");
+          for (var j = 0; j < options.length; j++)
+           options[j].removeAttribute("disabled");
+        }
+      }
+
+      function Remove(it)
+      {
+        //if there's only one entry left (plus the header), add an empty row
+        if (it.parentNode.rows.length == 2)
+          AddRow($("#connections"), "", "", "none", true);
+
+        it.parentNode.deleteRow(it.rowIndex);
+      }
+
+    </script>
+
+    <table id="connections" border="0"></table>
+    <br>
+    <button type="button" id="reset">Reset</button>
+    <button type="button" id="addnew">Add new</button>
+    <button type="button" id="apply">Apply</button>
+    <br>
+    <div id="test"></div>
+
  </body>
+
  </html>

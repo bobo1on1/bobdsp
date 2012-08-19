@@ -40,6 +40,9 @@ def configure(conf):
   conf.check(header_name='time.h')
   conf.check(header_name='tinyxml.h')
   conf.check(header_name='unistd.h')
+  conf.check(header_name='yajl/yajl_gen.h')
+  conf.check(header_name='yajl/yajl_parse.h')
+  conf.check(header_name='yajl/yajl_version.h', mandatory=False)
 
 #microhttpd.h needs these
   conf.check(header_name='stdarg.h', auto_add_header_name=True)
@@ -55,6 +58,7 @@ def configure(conf):
   conf.check(lib='jack', uselib_store='jack')
   conf.check(lib='pcrecpp', uselib_store='pcrecpp')
   conf.check(lib='microhttpd', uselib_store='microhttpd')
+  conf.check(lib='yajl', uselib_store='yajl')
 
   conf.check(function_name='clock_gettime', header_name='time.h', mandatory=False)
   conf.check(function_name='clock_gettime', header_name='time.h', lib='rt', uselib_store='rt', mandatory=False,
@@ -71,11 +75,12 @@ def build(bld):
                       src/ladspaplugin.cpp\
                       src/portconnector.cpp\
                       src/util/condition.cpp\
+                      src/util/JSONXML.cpp\
                       src/util/log.cpp\
                       src/util/misc.cpp\
                       src/util/mutex.cpp\
                       src/util/timeutils.cpp',
-              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd'],        
+              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g',
               target='bobdsp')

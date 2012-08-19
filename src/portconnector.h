@@ -22,13 +22,29 @@
 #include <string>
 #include <vector>
 #include <jack/jack.h>
+#include "util/JSONXML.h"
+#include "util/incltinyxml.h"
+#include "util/mutex.h"
 
-struct portconnection
+class portconnection
 {
-  std::string in;
-  std::string out;
-  bool indisconnect;
-  bool outdisconnect;
+  public:
+    std::string in;
+    std::string out;
+    bool indisconnect;
+    bool outdisconnect;
+
+    const char* DisconnectStr()
+    {
+      if (outdisconnect && indisconnect)
+        return "both";
+      else if (outdisconnect)
+        return "out";
+      else if (indisconnect)
+        return "in";
+      else
+        return "none";
+    }
 };
 
 class CPortConnector
@@ -37,17 +53,19 @@ class CPortConnector
     CPortConnector();
     ~CPortConnector();
 
-    void AddConnection(portconnection& connection);
-
     bool Connect();
     void Disconnect();
 
     void Process(bool& portregistered, bool& portconnected);
 
-    std::string ConnectionsToJSON();
+    bool          ConnectionsFromXML(TiXmlElement* root);
+    bool          ConnectionsFromJSON(const std::string& json);
+    std::string   ConnectionsToJSON();
+    TiXmlElement* ConnectionsToXML();
 
   private:
     std::vector<portconnection> m_connections;
+    CMutex                      m_mutex;
 
     jack_client_t* m_client;
     bool           m_connected;
