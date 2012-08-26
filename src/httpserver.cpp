@@ -158,7 +158,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   return returnv;
 }
 
-HTSIZE CHttpServer::FileReadCallback(void *cls, uint64_t pos, char *buf, HTSIZE max)
+RETHTSIZE CHttpServer::FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max)
 {
   int fd = *(int*)cls;
 

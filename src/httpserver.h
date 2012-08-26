@@ -27,9 +27,15 @@
 #include <microhttpd.h>
 
 #if (MHD_VERSION >= 0x00090200)
-#define HTSIZE ssize_t
+  #define RETHTSIZE ssize_t
+  #if (MHD_VERSION >= 0x00091400) //TODO: check if this version check is ok
+    #define ARGHTSIZE size_t
+  #else
+    #define ARGHTSIZE ssize_t
+  #endif
 #else
-#define HTSIZE int
+  #define RETHTSIZE int
+  #define ARGHTSIZE int
 #endif
 
 class CBobDSP;
@@ -54,10 +60,10 @@ class CHttpServer
                                    const char *version, const char *upload_data,
                                    size_t *upload_data_size, void **con_cls);
 
-    static int    CreateErrorResponse(struct MHD_Connection *connection, int errorcode);
-    static int    CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename, const char* mime = NULL);
-    static HTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, HTSIZE max);
-    static void   FileReadFreeCallback(void* cls);
+    static int       CreateErrorResponse(struct MHD_Connection *connection, int errorcode);
+    static int       CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename, const char* mime = NULL);
+    static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
+    static void      FileReadFreeCallback(void* cls);
 
     static int    CreateJSONDownloadResponse(struct MHD_Connection* connection, const std::string& json);
 };
