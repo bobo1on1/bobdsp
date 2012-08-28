@@ -118,7 +118,26 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root)
 
   if (valid)
   {
+    //save any connections that were removed, so we can disconnect those ports
     CLock lock(m_mutex);
+    for (vector<portconnection>::iterator oldit = m_connections.begin(); oldit != m_connections.end(); oldit++)
+    {
+      bool found = false;
+      for (vector<portconnection>::iterator newit = connections.begin(); newit != connections.end(); newit++)
+      {
+        if (*oldit == *newit)
+        {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+      {
+        m_removed.push_back(*oldit);
+        LogDebug("removed connection out:\"%s\" in:\"%s\" disconnect:\"%s\"",
+            oldit->out.c_str(), oldit->in.c_str(), oldit->DisconnectStr());
+      }
+    }
     m_connections = connections;
   }
 
@@ -355,25 +374,26 @@ void CPortConnector::DisconnectPorts(const char** ports)
     }
   }
 
-  //match every connection to our regexes in m_connections
+  //copy the connections and removed connections, this is to avoid a race condition
+  CLock lock(m_mutex);
+  vector<portconnection> connections = m_connections;
+  vector<portconnection> removed = m_removed;
+  m_removed.clear();
+  lock.Leave();
+
+  //match every connection to our regexes in connections
   for (vector< pair<string, string> >::iterator con = connectionlist.begin(); con != connectionlist.end(); con++)
   {
     LogDebug("\"%s\" is connected to \"%s\"", con->first.c_str(), con->second.c_str());
 
     bool matched    = false;
     bool disconnect = false;
-    CLock lock(m_mutex);
-    for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
+    lock.Enter();
+    for (vector<portconnection>::iterator it = connections.begin(); it != connections.end(); it++)
     {
-      pcrecpp::RE outre(it->out);
-      bool outmatch = outre.FullMatch(con->first);
-      if (outmatch)
-        LogDebug("Regex \"%s\" matches output port \"%s\"", it->out.c_str(), con->first.c_str());
-
-      pcrecpp::RE inre(it->in);
-      bool inmatch = inre.FullMatch(con->second);
-      if (inmatch)
-        LogDebug("Regex \"%s\" matches input port \"%s\"", it->in.c_str(), con->second.c_str());
+      bool outmatch;
+      bool inmatch;
+      MatchConnection(it, con, outmatch, inmatch, false);
 
       if (inmatch && outmatch)
       {
@@ -389,6 +409,20 @@ void CPortConnector::DisconnectPorts(const char** ports)
     }
     lock.Leave();
 
+    //check if we need to disconnect a removed connection
+    for (vector<portconnection>::iterator it = removed.begin(); it != removed.end(); it++)
+    {
+      bool outmatch;
+      bool inmatch;
+      MatchConnection(it, con, outmatch, inmatch, true);
+
+      if (inmatch && outmatch)
+      {
+        disconnect = true; //full match on a removed connection, disconnect
+        break;
+      }
+    }
+
     //disconnect connection if marked as such, and if there wasn't a full match
     if (disconnect && !matched)
     {
@@ -400,5 +434,19 @@ void CPortConnector::DisconnectPorts(const char** ports)
                   returnv, con->first.c_str(), con->second.c_str(), GetErrno().c_str());
     }
   }
+}
+
+void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vector< pair<string, string> >::iterator& con,
+                                     bool& outmatch, bool& inmatch, bool removed)
+{
+  pcrecpp::RE outre(it->out);
+  outmatch = outre.FullMatch(con->first);
+  if (outmatch)
+    LogDebug("Regex \"%s\" matches%soutput port \"%s\"", it->out.c_str(), con->first.c_str(), removed ? " removed " : " ");
+
+  pcrecpp::RE inre(it->in);
+  inmatch = inre.FullMatch(con->second);
+  if (inmatch)
+    LogDebug("Regex \"%s\" matches%sinput port \"%s\"", it->in.c_str(), con->second.c_str(), removed ? " removed " : " ");
 }
 

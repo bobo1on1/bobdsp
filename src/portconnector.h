@@ -45,6 +45,11 @@ class portconnection
       else
         return "none";
     }
+
+    bool operator==(portconnection& rhs)
+    {
+      return (out == rhs.out && in == rhs.in);
+    }
 };
 
 class CPortConnector
@@ -65,6 +70,7 @@ class CPortConnector
 
   private:
     std::vector<portconnection> m_connections;
+    std::vector<portconnection> m_removed;
     CMutex                      m_mutex;
 
     jack_client_t* m_client;
@@ -75,6 +81,8 @@ class CPortConnector
 
     void ConnectPorts(const char** ports);
     void DisconnectPorts(const char** ports);
+    void MatchConnection(std::vector<portconnection>::iterator& it, std::vector< std::pair<std::string, std::string> >::iterator& con,
+                         bool& outmatch, bool& inmatch, bool removed);
 };
 
 #endif //PORTCONNECTOR_H
