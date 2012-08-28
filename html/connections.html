@@ -32,6 +32,7 @@
         {
           var connections = {"connection": []};
 
+          var it = 0;
           for (var i = 1; i < $("#connections").get(0).rows.length; i++)
           {
             var inputs = $("#connections").get(0).rows[i].getElementsByTagName("input");
@@ -50,7 +51,7 @@
 
             var select = $("#connections").get(0).rows[i].getElementsByTagName("select");
 
-            connections.connection[i - 1] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
+            connections.connection[it++] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
           }
 
           $("#test").html(JSON.stringify({"connections" : connections}));
