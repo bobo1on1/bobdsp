@@ -410,16 +410,19 @@ void CPortConnector::DisconnectPorts(const char** ports)
     lock.Leave();
 
     //check if we need to disconnect a removed connection
-    for (vector<portconnection>::iterator it = removed.begin(); it != removed.end(); it++)
+    if (!matched)
     {
-      bool outmatch;
-      bool inmatch;
-      MatchConnection(it, con, outmatch, inmatch, true);
-
-      if (inmatch && outmatch)
+      for (vector<portconnection>::iterator it = removed.begin(); it != removed.end(); it++)
       {
-        disconnect = true; //full match on a removed connection, disconnect
-        break;
+        bool outmatch;
+        bool inmatch;
+        MatchConnection(it, con, outmatch, inmatch, true);
+
+        if (inmatch && outmatch)
+        {
+          disconnect = true; //full match on a removed connection, disconnect
+          break;
+        }
       }
     }
 
