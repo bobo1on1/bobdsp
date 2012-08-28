@@ -427,6 +427,7 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
     if (pipenrs[2] != -1 && (fds[pipenrs[2]].revents & POLLIN))
       ProcessSignalfd();
 
+    //check for message from the http server
     if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
     {
       uint8_t msg;
