@@ -166,7 +166,12 @@ int JSONXML::EndArray(void* ctx)
   {
     TiXmlNode* child = element->LastChild();
     if (child)
-      child->SetUserData((void*)0); //tell StartMap that the array has ended
+    {
+      if ((int)child->GetUserData() == 1)
+        element->RemoveChild(child); //array with 0 elements, remove
+      else
+        child->SetUserData((void*)0); //tell StartMap that the array has ended
+    }
   }
 
   return 1;
