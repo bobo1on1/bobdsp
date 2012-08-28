@@ -16,6 +16,7 @@ def configure(conf):
   conf.load('compiler_cxx')
 
   conf.check(header_name='assert.h')
+  conf.check(header_name='ctype.h')
   conf.check(header_name='dirent.h')
   conf.check(header_name='dlfcn.h')
   conf.check(header_name='errno.h')

@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <pthread.h>
+#include <ctype.h>
 
 void PrintError(const std::string& error);
 bool GetWord(std::string& data, std::string& word);
@@ -171,6 +172,9 @@ inline bool StrToBool(const std::string& data, bool& value)
   if (!GetWord(data2, word))
     return false;
   
+  for (std::string::iterator it = word.begin(); it != word.end(); it++)
+    *it = tolower(*it);
+
   if (word == "1" || word == "true" || word == "on" || word == "yes")
   {
     value = true;
