@@ -17,6 +17,15 @@
         //get jack connections
         $.getJSON('./connections', ParseConnections);
 
+        //tell bobdsp to reload the connections from connections.xml
+        $("#reload").click(function()
+        {
+          var postjson = JSON.stringify({"reload" : "true"});
+
+          $("#test").html(postjson);
+          $.post("./connections", postjson, ParseConnections);
+        });
+
         //when the reset button is clicked, get the jack connections again
         $("#reset").click(function()
         {
@@ -160,6 +169,7 @@
 
     <table id="connections" border="0"></table>
     <br>
+    <button type="button" id="reload">Reload</button>
     <button type="button" id="reset">Reset</button>
     <button type="button" id="addnew">Add new</button>
     <button type="button" id="apply">Apply</button>

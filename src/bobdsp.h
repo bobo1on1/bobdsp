@@ -53,6 +53,7 @@ class CBobDSP
     CPortConnector& PortConnector() { return m_portconnector; }
 
     bool SaveConnectionsToFile(TiXmlElement* connections);
+    bool LoadConnectionsFromFile();
 
   private:
 
@@ -78,8 +79,6 @@ class CBobDSP
     bool LoadPortsFromPlugin(TiXmlElement* plugin, std::vector<portvalue>& portvalues);
     CLadspaPlugin* SearchLadspaPlugin(std::vector<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
     bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
-    bool LoadConnectionsFromFile();
-
 };
 
 #endif //BOBDSP_H
