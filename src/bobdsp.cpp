@@ -63,6 +63,24 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     {
       dofork = true;
     }
+    else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0)
+    {
+      if (i == argc - 1)
+      {
+        printf("Error: option %s requires an argument\n", argv[i]);
+        exit(1);
+      }
+
+      i++;
+      int port;
+      if (!StrToInt(argv[i], port) || port < 0 || port > 65535)
+      {
+        printf("Error: invalid argument %s for option %s\n", argv[i], argv[i - 1]);
+        exit(1);
+      }
+
+      m_httpserver.SetPort(port);
+    }
     else
     {
       printf(
@@ -71,8 +89,9 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
              "\n"
              "  options:\n"
              "\n"
-             "    -d, --debug  enable debug logging\n"
-             "    -f, --fork   daemonize, suppresses logging to stderr\n"
+             "    -d, --debug       enable debug logging\n"
+             "    -f, --fork        daemonize, suppresses logging to stderr\n"
+             "    -p, --port [PORT] set the port for the http server\n"
              "\n"
              );
       exit(0);

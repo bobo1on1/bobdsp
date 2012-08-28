@@ -34,7 +34,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_bobdsp(bobdsp)
 {
   m_daemon = NULL;
-  m_port = 8080; //TODO: make configurable
+  m_port = 8080;
 
   if (pipe2(m_pipe, O_NONBLOCK) == -1)
   {

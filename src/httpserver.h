@@ -46,6 +46,8 @@ class CHttpServer
     CHttpServer(CBobDSP& bobdsp);
     ~CHttpServer();
 
+    void SetPort(int port) { m_port = port; }
+
     bool Start();
     bool IsStarted() { return m_daemon != NULL; }
     void Stop();
