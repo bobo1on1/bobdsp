@@ -26,6 +26,8 @@
 #include "util/incltinyxml.h"
 #include "util/mutex.h"
 
+class CBobDSP;
+
 class portconnection
 {
   public:
@@ -55,7 +57,7 @@ class portconnection
 class CPortConnector
 {
   public:
-    CPortConnector();
+    CPortConnector(CBobDSP& bobdsp);
     ~CPortConnector();
 
     bool Connect();
@@ -73,6 +75,7 @@ class CPortConnector
     std::vector<portconnection> m_removed;
     CMutex                      m_mutex;
 
+    CBobDSP&       m_bobdsp;
     jack_client_t* m_client;
     bool           m_connected;
 

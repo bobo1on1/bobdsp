@@ -30,36 +30,47 @@
 
         $("#apply").click(function()
         {
-          var connections = {"connection": []};
+          PostConnections(false);
+        });
 
-          var it = 0;
-          for (var i = 1; i < $("#connections").get(0).rows.length; i++)
-          {
-            var inputs = $("#connections").get(0).rows[i].getElementsByTagName("input");
-            var intxt;
-            var outtxt;
-            for (var j = 0; j < inputs.length; j++)
-            {
-              if (inputs[j].name == "out")
-                outtxt = inputs[j].value;
-              else if (inputs[j].name == "in")
-                intxt = inputs[j].value;
-            }
-
-            if (outtxt == "" || intxt == "")
-              continue; //empty is invalid
-
-            var select = $("#connections").get(0).rows[i].getElementsByTagName("select");
-
-            connections.connection[it++] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
-          }
-
-          $("#test").html(JSON.stringify({"connections" : connections}));
-          $.post("./connections", JSON.stringify({"connections" : connections}), ParseConnections);
-
+        $("#save").click(function()
+        {
+          PostConnections(true);
         });
 
       });
+
+      function PostConnections(save)
+      {
+        var connections = {"connection": []};
+
+        var it = 0;
+        for (var i = 1; i < $("#connections").get(0).rows.length; i++)
+        {
+          var inputs = $("#connections").get(0).rows[i].getElementsByTagName("input");
+          var intxt;
+          var outtxt;
+          for (var j = 0; j < inputs.length; j++)
+          {
+            if (inputs[j].name == "out")
+              outtxt = inputs[j].value;
+            else if (inputs[j].name == "in")
+              intxt = inputs[j].value;
+          }
+
+          if (outtxt == "" || intxt == "")
+            continue; //empty is invalid
+
+          var select = $("#connections").get(0).rows[i].getElementsByTagName("select");
+
+          connections.connection[it++] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
+        }
+
+        var postjson = JSON.stringify({"connections" : connections, "save" : save.toString()});
+
+        $("#test").html(postjson);
+        $.post("./connections", postjson, ParseConnections);
+      }
 
       function ParseConnections(data)
       {
@@ -152,6 +163,7 @@
     <button type="button" id="reset">Reset</button>
     <button type="button" id="addnew">Add new</button>
     <button type="button" id="apply">Apply</button>
+    <button type="button" id="save">Apply &amp; save</button>
     <br>
     <div id="test"></div>
 

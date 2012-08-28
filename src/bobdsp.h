@@ -52,6 +52,8 @@ class CBobDSP
 
     CPortConnector& PortConnector() { return m_portconnector; }
 
+    bool SaveConnectionsToFile(TiXmlElement* connections);
+
   private:
 
     bool                        m_stop;

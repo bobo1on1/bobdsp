@@ -42,6 +42,7 @@
 using namespace std;
 
 CBobDSP::CBobDSP(int argc, char *argv[]):
+  m_portconnector(*this),
   m_httpserver(*this)
 {
   m_stop     = false;
@@ -837,6 +838,8 @@ bool CBobDSP::PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long por
   return isok;
 }
 
+#define CONNECTIONSFILE "connections.xml"
+
 bool CBobDSP::LoadConnectionsFromFile()
 {
   string homepath;
@@ -846,7 +849,7 @@ bool CBobDSP::LoadConnectionsFromFile()
     return false;
   }
 
-  string filename = homepath + ".bobdsp/connections.xml";
+  string filename = homepath + ".bobdsp/" + CONNECTIONSFILE;
   Log("Loading connection settings from %s", filename.c_str());
 
   TiXmlDocument connectionsfile;
@@ -868,5 +871,29 @@ bool CBobDSP::LoadConnectionsFromFile()
   }
 
   return m_portconnector.ConnectionsFromXML(root);
+}
+
+bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
+{
+  TiXmlDocument doc;
+  doc.LinkEndChild(connections);
+
+  string homepath;
+  if (!GetHomePath(homepath))
+  {
+    LogError("Unable to get home path");
+    return false;
+  }
+
+  string filename = homepath + ".bobdsp/" + CONNECTIONSFILE;
+  Log("Saving connection settings to %s", filename.c_str());
+
+  if (!doc.SaveFile(filename))
+  {
+    LogError("Error saving connections: \"%s\"", doc.ErrorDesc());
+    return false;
+  }
+
+  return true;
 }
 

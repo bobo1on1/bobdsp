@@ -21,13 +21,15 @@
 #include <errno.h>
 #include <pcrecpp.h>
 
+#include "bobdsp.h"
 #include "portconnector.h"
 #include "util/log.h"
 #include "util/lock.h"
 
 using namespace std;
 
-CPortConnector::CPortConnector()
+CPortConnector::CPortConnector(CBobDSP& bobdsp) :
+  m_bobdsp(bobdsp)
 {
   m_client = NULL;
   m_connected = false;
@@ -148,11 +150,16 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 {
   TiXmlElement* root = JSONXML::JSONToXML(json);
 
-  bool success = false;
+  bool success = true;
 
-  TiXmlNode* child = root->FirstChildElement("connections");
-  if (child && child->Type() == TiXmlNode::TINYXML_ELEMENT)
-    success = ConnectionsFromXML(child->ToElement());
+  TiXmlNode* connections = root->FirstChildElement("connections");
+  if (connections && connections->Type() == TiXmlNode::TINYXML_ELEMENT)
+    success = ConnectionsFromXML(connections->ToElement());
+
+  bool loadfailed = false;
+  LOADBOOLELEMENT(root, save, OPTIONAL, false, POSTCHECK_NONE);
+  if (success && save_p)
+    m_bobdsp.SaveConnectionsToFile(ConnectionsToXML());
 
   delete root;
   return success;

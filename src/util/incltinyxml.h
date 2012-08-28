@@ -91,4 +91,7 @@ PARSEELEMENT(element, name, mandatory, default, double, StrToFloat, postcheck);
 #define LOADINTELEMENT(element, name, mandatory, default, postcheck)\
 PARSEELEMENT(element, name, mandatory, default, int64_t, StrToInt, postcheck);
 
+#define LOADBOOLELEMENT(element, name, mandatory, default, postcheck)\
+PARSEELEMENT(element, name, mandatory, default, bool, StrToBool, postcheck);
+
 #endif //INCLTINYXML_H
