@@ -150,7 +150,7 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 
   bool success = false;
 
-  TiXmlNode* child = root->FirstChildElement();
+  TiXmlNode* child = root->FirstChildElement("connections");
   if (child && child->Type() == TiXmlNode::TINYXML_ELEMENT)
     success = ConnectionsFromXML(child->ToElement());
 
