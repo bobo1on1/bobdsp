@@ -196,6 +196,7 @@ std::string CPortConnector::ConnectionsToJSON()
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
     yajl_gen_map_open(handle);
+
     yajl_gen_string(handle, YAJLSTRING("out"));
     yajl_gen_string(handle, YAJLSTRING(it->out.c_str()));
     yajl_gen_string(handle, YAJLSTRING("in"));
