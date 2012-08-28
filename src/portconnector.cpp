@@ -445,11 +445,11 @@ void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vecto
   pcrecpp::RE outre(it->out);
   outmatch = outre.FullMatch(con->first);
   if (outmatch)
-    LogDebug("Regex \"%s\" matches%soutput port \"%s\"", it->out.c_str(), con->first.c_str(), removed ? " removed " : " ");
+    LogDebug("Regex \"%s\" matches%soutput port \"%s\"", it->out.c_str(), removed ? " removed " : " ", con->first.c_str());
 
   pcrecpp::RE inre(it->in);
   inmatch = inre.FullMatch(con->second);
   if (inmatch)
-    LogDebug("Regex \"%s\" matches%sinput port \"%s\"", it->in.c_str(), con->second.c_str(), removed ? " removed " : " ");
+    LogDebug("Regex \"%s\" matches%sinput port \"%s\"", it->in.c_str(), removed ? " removed " : " ", con->second.c_str());
 }
 
