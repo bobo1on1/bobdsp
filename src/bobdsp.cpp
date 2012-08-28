@@ -860,8 +860,6 @@ bool CBobDSP::LoadConnectionsFromFile()
     return false;
   }
 
-  m_portconnector.ConnectionsFromXML(root);
-
-  return true;
+  return m_portconnector.ConnectionsFromXML(root);
 }
 
