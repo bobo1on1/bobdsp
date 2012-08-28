@@ -434,7 +434,6 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
       uint8_t msg;
       while ((msg = m_httpserver.GetMessage()) != MsgNone)
       {
-        //TODO: somehow disconnect connections that got removed
         if (msg == MsgPortsUpdated)
         {
           LogDebug("got message MsgPortsUpdated from httpserver");
