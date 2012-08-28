@@ -47,7 +47,9 @@ static yajl_callbacks callbacks =
 
 TiXmlElement* JSONXML::JSONToXML(const std::string& json)
 {
+  //allocate a root element to work with
   TiXmlElement* root = new TiXmlElement("JSON");
+  //pointer for yajl to work with
   TiXmlElement* rootptr = root;
 
   yajl_handle handle;
@@ -76,6 +78,7 @@ TiXmlElement* JSONXML::JSONToXML(const std::string& json)
   return root;
 }
 
+//set an inner text value for the last added child
 int JSONXML::String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
@@ -92,6 +95,7 @@ int JSONXML::String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN st
   return 1;
 }
 
+//going in one level deeper
 int JSONXML::StartMap(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
@@ -101,17 +105,17 @@ int JSONXML::StartMap(void* ctx)
     if (child)
     {
       int userdata = (int)child->GetUserData();
-      if (userdata == 1)
+      if (userdata == 1) //first element of array
       {
-        element = child->ToElement();
-        element->SetUserData((void*)2);
+        element = child->ToElement(); //set the pointer to the child
+        element->SetUserData((void*)2); //after this, a new child element should be added
       }
-      if (userdata == 2)
+      if (userdata == 2) //add a new element to the array, with the same name as the previous element
       {
         element = element->InsertEndChild(TiXmlElement(child->Value()))->ToElement();
         element->SetUserData((void*)2);
       }
-      else
+      else //standard element, set the pointer to the last added child
       {
         element = child->ToElement();
       }
@@ -121,6 +125,7 @@ int JSONXML::StartMap(void* ctx)
   return 1;
 }
 
+//new key, add a new child element
 int JSONXML::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
@@ -130,6 +135,7 @@ int JSONXML::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLe
   return 1;
 }
 
+//end of map, go up one level, set the pointer to the parent
 int JSONXML::EndMap(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
@@ -139,6 +145,7 @@ int JSONXML::EndMap(void* ctx)
   return 1;
 }
 
+//start of array, MapKey should have been called before this to allocate a new element
 int JSONXML::StartArray(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
@@ -146,7 +153,7 @@ int JSONXML::StartArray(void* ctx)
   {
     TiXmlNode* child = element->LastChild();
     if (child)
-      child->SetUserData((void*)1);
+      child->SetUserData((void*)1); //tell StartMap that this is an array
   }
 
   return 1;
@@ -159,7 +166,7 @@ int JSONXML::EndArray(void* ctx)
   {
     TiXmlNode* child = element->LastChild();
     if (child)
-      child->SetUserData((void*)0);
+      child->SetUserData((void*)0); //tell StartMap that the array has ended
   }
 
   return 1;
