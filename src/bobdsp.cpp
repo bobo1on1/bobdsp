@@ -435,7 +435,14 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
       {
         //TODO: somehow disconnect connections that got removed
         if (msg == MsgPortsUpdated)
+        {
+          LogDebug("got message MsgPortsUpdated from httpserver");
           portregistered = portconnected= true;
+        }
+        else
+        {
+          LogDebug("got message %i from httpserver", msg);
+        }
       }
     }
   }
