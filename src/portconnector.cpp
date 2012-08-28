@@ -400,7 +400,6 @@ void CPortConnector::DisconnectPorts(const char** ports)
 
     bool matched    = false;
     bool disconnect = false;
-    lock.Enter();
     for (vector<portconnection>::iterator it = connections.begin(); it != connections.end(); it++)
     {
       bool outmatch;
@@ -419,7 +418,6 @@ void CPortConnector::DisconnectPorts(const char** ports)
         disconnect = true;
       }
     }
-    lock.Leave();
 
     //check if we need to disconnect a removed connection
     if (!matched && !disconnect)
