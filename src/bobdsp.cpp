@@ -145,8 +145,8 @@ void CBobDSP::Process()
 
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
-  bool portregistered = false;
-  bool portconnected  = false;
+  bool checkconnect = false;
+  bool checkdisconnect = false;
   while(!m_stop)
   {
     bool triedconnect = false;
@@ -182,7 +182,7 @@ void CBobDSP::Process()
         {
           triedconnect = true;
           if ((*it)->Connect())
-            portregistered = true;
+            checkconnect = true;
         }
       }
     }
@@ -192,10 +192,10 @@ void CBobDSP::Process()
 
     //if a client connected, or a port callback was called
     //process port connections, if it fails try again in 10 seconds
-    m_portconnector.Process(portregistered, portconnected);
+    m_portconnector.Process(checkconnect, checkdisconnect);
 
     //process messages, blocks if there's nothing to do
-    ProcessMessages(portregistered, portconnected, !allconnected || portregistered || portconnected);
+    ProcessMessages(checkconnect, checkdisconnect, !allconnected || checkconnect || checkdisconnect);
 
     LogDebug("main loop woke up");
   }
@@ -332,7 +332,7 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
     LogError("fdopen: %s", GetErrno().c_str());
 }
 
-void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool usetimeout)
+void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool usetimeout)
 {
   unsigned int nrfds = 0;
   pollfd* fds        = (pollfd*)malloc((m_clients.size() + 4) * sizeof(pollfd));
@@ -401,12 +401,12 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
         if (msg == MsgPortRegistered)
         {
           LogDebug("got message MsgPortRegistered from client \"%s\"", (*it)->Name().c_str());
-          portregistered = true;
+          checkconnect = true;
         }
         else if (msg == MsgPortConnected)
         {
           LogDebug("got message MsgPortConnected from client \"%s\"", (*it)->Name().c_str());
-          portconnected = true;
+          checkdisconnect = true;
         }
         else if (msg == MsgExited)
           LogDebug("got message MsgExited from client \"%s\"", (*it)->Name().c_str());
@@ -437,7 +437,7 @@ void CBobDSP::ProcessMessages(bool& portregistered, bool& portconnected, bool us
         if (msg == MsgPortsUpdated)
         {
           LogDebug("got message MsgPortsUpdated from httpserver");
-          portregistered = portconnected= true;
+          checkconnect = checkdisconnect = true;
         }
         else
         {

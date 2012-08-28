@@ -61,7 +61,7 @@ class CPortConnector
     bool Connect();
     void Disconnect();
 
-    void Process(bool& portregistered, bool& portconnected);
+    void Process(bool& checkconnect, bool& checkdisconnect);
 
     bool          ConnectionsFromXML(TiXmlElement* root);
     bool          ConnectionsFromJSON(const std::string& json);
@@ -77,7 +77,7 @@ class CPortConnector
     bool           m_connected;
 
     bool ConnectInternal();
-    void ProcessInternal(bool& portregistered, bool& portconnected);
+    void ProcessInternal(bool& checkconnect, bool& checkdisconnect);
 
     void ConnectPorts(const char** ports);
     void DisconnectPorts(const char** ports);

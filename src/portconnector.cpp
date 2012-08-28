@@ -238,16 +238,16 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
   return root;
 }
 
-void CPortConnector::Process(bool& portregistered, bool& portconnected)
+void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect)
 {
-  if (!portregistered && !portconnected)
+  if (!checkconnect && !checkdisconnect)
     return; //nothing to do
 
   //connect, connect ports and disconnect
   //since this client will never be active, if we leave it connected
   //then jackd will never signal any of the other bobdsp clients when it quits
   Connect();
-  ProcessInternal(portregistered, portconnected);
+  ProcessInternal(checkconnect, checkdisconnect);
   Disconnect();
 }
 
@@ -269,23 +269,23 @@ bool CPortConnector::ConnectInternal()
   return true;
 } 
 
-void CPortConnector::ProcessInternal(bool& portregistered, bool& portconnected)
+void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect)
 {
   if (!m_connected)
     return;
 
   const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
 
-  if (portregistered)
+  if (checkconnect)
   {
     ConnectPorts(ports);   //connect ports that match the regexes
-    portregistered = false;
+    checkconnect = false;
   }
 
-  if (portconnected)
+  if (checkdisconnect)
   {
     DisconnectPorts(ports);//disconnect ports that don't match the regexes
-    portconnected = false;
+    checkdisconnect = false;
   }
 
   jack_free((void*)ports);
