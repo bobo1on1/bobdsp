@@ -46,6 +46,11 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
 CHttpServer::~CHttpServer()
 {
   Stop();
+
+  if (m_pipe[0] != -1)
+    close(m_pipe[0]);
+  if (m_pipe[1] != -1)
+    close(m_pipe[1]);
 }
 
 bool CHttpServer::Start()
