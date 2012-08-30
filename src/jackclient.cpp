@@ -27,8 +27,12 @@
 #include "util/timeutils.h"
 #include "util/log.h"
 
-#include "bobdsp.h"
 #include "jackclient.h"
+
+#define PORTEVENT_REGISTERED   0x01
+#define PORTEVENT_DEREGISTERED 0x02
+#define PORTEVENT_CONNECTED    0x04
+#define PORTEVENT_DISCONNECTED 0x08
 
 using namespace std;
 
@@ -49,8 +53,7 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_clientprefix    = clientprefix;
   m_portprefix      = portprefix;
   m_samplerate      = 0;
-  m_portregistered  = false;
-  m_portconnected   = false;
+  m_portevents      = 0;
 
   //load all symbols, so it doesn't have to be done from the jack thread
   //this is better for realtime performance
@@ -119,14 +122,12 @@ bool CJackClient::ConnectInternal()
   int returnv;
 
   //enable port registration callback, so we know when to connect new ports
-  m_portregistered = false;
   returnv = jack_set_port_registration_callback(m_client, SJackPortRegistrationCallback, this);
   if (returnv != 0)
     LogError("Client \"%s\" error %i setting port registration callback: \"%s\"",
              m_name.c_str(), returnv, GetErrno().c_str());
 
   //enable port connect callback, so we know when to disconnect ports
-  m_portconnected = false;
   returnv = jack_set_port_connect_callback(m_client, SJackPortConnectCallback, this);
   if (returnv != 0)
     LogError("Client \"%s\" error %i setting port connect callback: \"%s\"",
@@ -185,6 +186,7 @@ void CJackClient::Disconnect()
   }
 
   m_connected  = false;
+  m_portevents = 0;
   m_exitstatus = (jack_status_t)0;
 }
 
@@ -213,10 +215,20 @@ void CJackClient::InitLadspa()
 
 void CJackClient::CheckMessages()
 {
-  if (m_portregistered)
-    m_portregistered = !WriteMessage(MsgPortRegistered);
-  if (m_portconnected)
-    m_portconnected  = !WriteMessage(MsgPortConnected);
+  if (m_portevents)
+  {
+    if ((m_portevents & PORTEVENT_REGISTERED) && WriteMessage(MsgPortRegistered))
+      m_portevents &= ~PORTEVENT_REGISTERED;
+
+    if ((m_portevents & PORTEVENT_DEREGISTERED) && WriteMessage(MsgPortDeregistered))
+      m_portevents &= ~PORTEVENT_DEREGISTERED;
+
+    if ((m_portevents & PORTEVENT_CONNECTED) && WriteMessage(MsgPortConnected))
+      m_portevents &= ~PORTEVENT_CONNECTED;
+
+    if ((m_portevents & PORTEVENT_DISCONNECTED) && WriteMessage(MsgPortDisconnected))
+      m_portevents &= ~PORTEVENT_DISCONNECTED;
+  }
 }
 
 //returns true when the message has been sent or pipe is broken
@@ -320,12 +332,11 @@ void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, vo
 void CJackClient::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
 {
   if (reg)
-  {
-    //only message to the main loop when a client registers
-    //if a client deregisters is not important
-    m_portregistered = true;
-    CheckMessages();
-  }
+    m_portevents |= PORTEVENT_REGISTERED;
+  else
+    m_portevents |= PORTEVENT_DEREGISTERED;
+
+  CheckMessages();
 }
 
 void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
@@ -336,9 +347,9 @@ void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, i
 void CJackClient::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
   if (connect)
-    m_portconnected = true; //message the main loop to check if a port should be disconnected
+    m_portevents |= PORTEVENT_CONNECTED;
   else
-    m_portregistered = true; //message to the main loop to check if a port should be connected
+    m_portevents |= PORTEVENT_DISCONNECTED;
 
   CheckMessages();
 }

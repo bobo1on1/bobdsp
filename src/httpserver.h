@@ -38,6 +38,8 @@
   #define ARGHTSIZE int
 #endif
 
+#include "clientmessage.h"
+
 class CBobDSP;
 
 class CHttpServer

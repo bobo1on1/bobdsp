@@ -25,6 +25,7 @@
 
 #include "ladspaplugin.h"
 #include "ladspainstance.h"
+#include "clientmessage.h"
 
 class CJackClient
 {
@@ -59,8 +60,7 @@ class CJackClient
     int            m_samplerate;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
-    bool           m_portregistered;
-    bool           m_portconnected;
+    int            m_portevents;
     int            m_pipe[2];
 
     std::vector<CLadspaInstance*> m_instances;

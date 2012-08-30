@@ -26,19 +26,11 @@
 #include <string>
 #include <utility>
 
-enum ClientMessage
-{
-  MsgNone,
-  MsgExited,
-  MsgPortRegistered,
-  MsgPortConnected,
-  MsgPortsUpdated,
-};
-
 #include "ladspaplugin.h"
 #include "jackclient.h"
 #include "portconnector.h"
 #include "httpserver.h"
+#include "clientmessage.h"
 
 class CBobDSP
 {
@@ -70,8 +62,10 @@ class CBobDSP
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
     void ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool usetimeout);
+    void ProcessClientMessages(bool& checkconnect, bool& checkdisconnect);
     void ProcessSignalfd();
     void ProcessStdFd(const char* name, int& fd);
+    void ProcessHttpServerMessages(bool& checkconnect, bool& checkdisconnect);
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadPluginsFromFile();

@@ -408,32 +408,8 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
   }
   else if (returnv > 0)
   {
-    //wait 1 ms for other events to come in, since in case of a port event
-    //we get an event from every client
-    USleep(1000);
-
-    //check events of all clients
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-    {
-      uint8_t msg;
-      while ((msg = (*it)->GetMessage()) != MsgNone)
-      {
-        if (msg == MsgPortRegistered)
-        {
-          LogDebug("got message MsgPortRegistered from client \"%s\"", (*it)->Name().c_str());
-          checkconnect = true;
-        }
-        else if (msg == MsgPortConnected)
-        {
-          LogDebug("got message MsgPortConnected from client \"%s\"", (*it)->Name().c_str());
-          checkdisconnect = true;
-        }
-        else if (msg == MsgExited)
-          LogDebug("got message MsgExited from client \"%s\"", (*it)->Name().c_str());
-        else
-          LogDebug("got message %i from client \"%s\"", msg, (*it)->Name().c_str());
-      }
-    }
+    //check client messages
+    ProcessClientMessages(checkconnect, checkdisconnect);
     
     //check stdout pipe
     if (pipenrs[0] != -1 && (fds[pipenrs[0]].revents & POLLIN))
@@ -449,24 +425,31 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
 
     //check for message from the http server
     if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
-    {
-      uint8_t msg;
-      while ((msg = m_httpserver.GetMessage()) != MsgNone)
-      {
-        if (msg == MsgPortsUpdated)
-        {
-          LogDebug("got message MsgPortsUpdated from httpserver");
-          checkconnect = checkdisconnect = true;
-        }
-        else
-        {
-          LogDebug("got message %i from httpserver", msg);
-        }
-      }
-    }
+      ProcessHttpServerMessages(checkconnect, checkdisconnect);
   }
 
   free(fds);
+}
+
+void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
+{
+  //wait 1 ms for other events to come in, since in case of a port event
+  //we get an event from every client
+  USleep(1000);
+
+  //check events of all clients
+  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  {
+    uint8_t msg;
+    while ((msg = (*it)->GetMessage()) != MsgNone)
+    {
+      LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
+      if (msg == MsgPortRegistered || msg == MsgPortDisconnected)
+        checkconnect = true;
+      else if (msg == MsgPortConnected)
+        checkdisconnect = true;
+    }
+  }
 }
 
 void CBobDSP::ProcessSignalfd()
@@ -521,6 +504,17 @@ void CBobDSP::ProcessStdFd(const char* name, int& fd)
       close(fd);
       fd = -1;
     }
+  }
+}
+
+void CBobDSP::ProcessHttpServerMessages(bool& checkconnect, bool& checkdisconnect)
+{
+  uint8_t msg;
+  while ((msg = m_httpserver.GetMessage()) != MsgNone)
+  {
+    LogDebug("got message %s from httpserver", MsgToString(msg));
+    if (msg == MsgConnectionsUpdated)
+      checkconnect = checkdisconnect = true;
   }
 }
 

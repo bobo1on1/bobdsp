@@ -174,7 +174,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       {
         LogDebug("%s", ((string*)*con_cls)->c_str());
         httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(*((string*)*con_cls));
-        httpserver->WriteMessage(MsgPortsUpdated); //tell the main loop to check the port connections
+        httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
         delete ((string*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
       }
