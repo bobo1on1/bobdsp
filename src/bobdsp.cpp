@@ -315,14 +315,27 @@ void CBobDSP::SetupSignals()
   if (m_signalfd == -1)
   {
     LogError("signalfd: %s", GetErrno().c_str());
+  }
+  else
+  {
+    //block SIGTERM and SIGINT
+    if (sigprocmask(SIG_BLOCK, &sigset, NULL) == -1)
+      LogError("sigpocmask: %s", GetErrno().c_str());
+  }
+
+  if (sigemptyset(&sigset) == -1)
+  {
+    LogError("sigemptyset: %s", GetErrno().c_str());
     return;
   }
 
-  //libjack throws SIGPIPE a lot
   if (sigaddset(&sigset, SIGPIPE) == -1)
+  {
     LogError("adding SIGPIPE: %s", GetErrno().c_str());
+    return;
+  }
 
-  //block SIGTERM, SIGINT and SIGPIPE
+  //libjack throws SIGPIPE a lot, block it
   if (sigprocmask(SIG_BLOCK, &sigset, NULL) == -1)
     LogError("sigpocmask: %s", GetErrno().c_str());
 }
