@@ -45,7 +45,7 @@ inline const char* MsgToString(ClientMessage msg)
     "MsgConnectionsUpdated",
   };
 
-  if ((size_t)msg >= 0 && (size_t)msg < (sizeof(msgstrings) / sizeof(msgstrings[0])))
+  if (msg >= 0 && (size_t)msg < (sizeof(msgstrings) / sizeof(msgstrings[0])))
     return msgstrings[msg];
   else
     return "ERROR: INVALID MESSAGE";
