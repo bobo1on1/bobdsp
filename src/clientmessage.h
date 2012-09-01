@@ -32,11 +32,6 @@ enum ClientMessage
   MsgConnectionsUpdated,
 };
 
-inline const char* MsgToString(uint8_t msg)
-{
-  return MsgToString((ClientMessage)msg);
-}
-
 inline const char* MsgToString(ClientMessage msg)
 {
   static const char* msgstrings[] = 
@@ -54,6 +49,11 @@ inline const char* MsgToString(ClientMessage msg)
     return msgstrings[msg];
   else
     return "ERROR: INVALID MESSAGE";
+}
+
+inline const char* MsgToString(uint8_t msg)
+{
+  return MsgToString((ClientMessage)msg);
 }
 
 #endif //CLIENTMESSAGE_H
