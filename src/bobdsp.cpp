@@ -446,11 +446,8 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
 
 void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
 {
-  //wait 1 ms for other events to come in, since in case of a port event
-  //we get an event from every client
-  USleep(1000);
-
-  //check events of all clients
+  //check events of all clients, instead of just the ones that poll() returned on
+  //since in case of a jack event, every client sends a message
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
     uint8_t msg;
