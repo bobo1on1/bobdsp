@@ -244,7 +244,7 @@ bool CJackClient::WriteMessage(uint8_t msg)
 
   if (returnv == -1 && errno != EAGAIN)
   {
-    LogError("Client \"%s\" error writing msg %i to pipe: \"%s\"", m_name.c_str(), msg, GetErrno().c_str());
+    LogError("Client \"%s\" error writing msg %s to pipe: \"%s\"", m_name.c_str(), MsgToString(msg), GetErrno().c_str());
     if (errno != EINTR)
     {
       close(m_pipe[1]);
