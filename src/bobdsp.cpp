@@ -454,9 +454,6 @@ void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
 
 void CBobDSP::ProcessSignalfd()
 {
-  if (m_signalfd == -1)
-    return;
-
   signalfd_siginfo siginfo;
   int returnv = read(m_signalfd, &siginfo, sizeof(siginfo));
   if (returnv == -1 && errno != EAGAIN)
