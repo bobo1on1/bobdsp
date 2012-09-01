@@ -355,7 +355,7 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool usetimeout)
 {
   unsigned int nrfds = 0;
-  pollfd* fds        = (pollfd*)malloc((m_clients.size() + 4) * sizeof(pollfd));
+  pollfd* fds        = new pollfd[m_clients.size() + 4];
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -385,7 +385,7 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
   if (nrfds == 0)
   {
     LogDebug("no file descriptors to wait on");
-    free(fds);
+    delete[] fds;
     sleep(1);
     return;
   }
@@ -428,7 +428,7 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
       ProcessHttpServerMessages(checkconnect, checkdisconnect);
   }
 
-  free(fds);
+  delete[] fds;
 }
 
 void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
