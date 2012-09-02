@@ -140,6 +140,8 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root)
             oldit->out.c_str(), oldit->in.c_str(), oldit->DisconnectStr());
       }
     }
+    
+    //store the new connections
     m_connections = connections;
   }
 
