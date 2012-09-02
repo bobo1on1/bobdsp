@@ -65,7 +65,7 @@ class CPortConnector
 
     void Process(bool& checkconnect, bool& checkdisconnect);
 
-    bool          ConnectionsFromXML(TiXmlElement* root);
+    bool          ConnectionsFromXML(TiXmlElement* root, bool strict);
     bool          ConnectionsFromJSON(const std::string& json);
     std::string   ConnectionsToJSON();
     TiXmlElement* ConnectionsToXML();

@@ -66,7 +66,7 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
-bool CPortConnector::ConnectionsFromXML(TiXmlElement* root)
+bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
 {
   std::vector<portconnection> connections;
 
@@ -114,11 +114,10 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root)
       }
     }
 
-    if (valid)
-      connections.push_back(connection);
+    connections.push_back(connection);
   }
 
-  if (valid)
+  if (!strict || valid)
   {
     //save any connections that were removed, so we can disconnect those ports
     CLock lock(m_mutex);
@@ -156,7 +155,7 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 
   TiXmlNode* connections = root->FirstChildElement("connections");
   if (connections && connections->Type() == TiXmlNode::TINYXML_ELEMENT)
-    success = ConnectionsFromXML(connections->ToElement());
+    success = ConnectionsFromXML(connections->ToElement(), true);
 
   bool loadfailed = false;
   (void)loadfailed; //no warnings

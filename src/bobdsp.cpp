@@ -889,7 +889,7 @@ bool CBobDSP::LoadConnectionsFromFile()
     return false;
   }
 
-  return m_portconnector.ConnectionsFromXML(root);
+  return m_portconnector.ConnectionsFromXML(root, false);
 }
 
 bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
