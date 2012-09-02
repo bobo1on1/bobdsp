@@ -130,7 +130,7 @@ int JSONXML::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLe
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)
-    element->InsertEndChild(TiXmlElement(string((const char*)key, 0, stringLen)));
+    element->InsertEndChild(TiXmlElement(string((const char*)key, stringLen)));
 
   return 1;
 }
