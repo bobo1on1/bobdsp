@@ -19,6 +19,7 @@
 #ifndef JSONXML_H
 #define JSONXML_H
 
+#include "config.h"
 #include "util/incltinyxml.h"
 #include <string>
 
