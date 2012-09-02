@@ -28,9 +28,10 @@ using namespace std;
 
 CLadspaPlugin::CLadspaPlugin(const std::string& filename, void* handle, const LADSPA_Descriptor* descriptor)
 {
-  m_filename   = filename;
-  m_handle     = handle;
-  m_descriptor = descriptor;
+  m_filename    = filename;
+  m_handle      = handle;
+  m_descriptor  = descriptor;
+  m_fullyloaded = false;
 }
 
 CLadspaPlugin::~CLadspaPlugin()
@@ -111,12 +112,16 @@ void CLadspaPlugin::GetPlugins(std::string path, std::vector<CLadspaPlugin*>& pl
 
 void CLadspaPlugin::LoadAllSymbols()
 {
+  if (m_fullyloaded)
+    return;
+
   //open a new handle with all symbols loaded
   void* handle = dlopen(m_filename.c_str(), RTLD_NOW);
   if (handle)
   {
     dlclose(m_handle); //close the old handle
     m_handle = handle;
+    m_fullyloaded = true;
   }
   else
   {

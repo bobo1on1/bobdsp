@@ -50,6 +50,7 @@ class CLadspaPlugin
     const LADSPA_Descriptor* m_descriptor;
     std::string              m_filename;
     void*                    m_handle;
+    bool                     m_fullyloaded;
 };
 
 #endif //LADSPAPLUGIN_H
