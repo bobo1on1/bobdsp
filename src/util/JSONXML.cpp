@@ -104,7 +104,7 @@ int JSONXML::StartMap(void* ctx)
     TiXmlNode* child = element->LastChild();
     if (child)
     {
-      int userdata = (int)child->GetUserData();
+      int userdata = (long)child->GetUserData();
       if (userdata == 1) //first element of array
       {
         element = child->ToElement(); //set the pointer to the child
@@ -167,7 +167,7 @@ int JSONXML::EndArray(void* ctx)
     TiXmlNode* child = element->LastChild();
     if (child)
     {
-      if ((int)child->GetUserData() == 1)
+      if ((long)child->GetUserData() == 1)
         element->RemoveChild(child); //array with 0 elements, remove
       else
         child->SetUserData((void*)0); //tell StartMap that the array has ended
