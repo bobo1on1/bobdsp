@@ -73,6 +73,9 @@ class CBobDSP
     bool LoadPortsFromPlugin(TiXmlElement* plugin, std::vector<portvalue>& portvalues);
     CLadspaPlugin* SearchLadspaPlugin(std::vector<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
     bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
+
+    static void JackError(const char* jackerror);
+    static void JackInfo(const char* jackinfo);
 };
 
 #endif //BOBDSP_H

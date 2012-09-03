@@ -157,6 +157,10 @@ void CBobDSP::Setup()
 
   //set up signal handlers
   SetupSignals();
+
+  //set up jack logging
+  jack_set_error_function(JackError);
+  jack_set_info_function(JackInfo);
 }
 
 void CBobDSP::Process()
@@ -914,5 +918,15 @@ bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
   }
 
   return true;
+}
+
+void CBobDSP::JackError(const char* jackerror)
+{
+  Log("%s", jackerror);
+}
+
+void CBobDSP::JackInfo(const char* jackinfo)
+{
+  Log("%s", jackinfo);
 }
 
