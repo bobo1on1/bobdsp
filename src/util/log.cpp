@@ -61,7 +61,7 @@ string GetStrTime()
   localtime_r(&now, &time); //convert to hours, minutes, seconds
 
   char buff[100];
-  sprintf(buff, "%02i:%02i:%02i.%06i", time.tm_hour, time.tm_min, time.tm_sec, (int)tv.tv_usec);
+  snprintf(buff, sizeof(buff), "%02i:%02i:%02i.%06i", time.tm_hour, time.tm_min, time.tm_sec, (int)tv.tv_usec);
 
   return buff;
 }
