@@ -51,6 +51,7 @@ class CLadspaInstance
     ~CLadspaInstance();
 
     bool Connect();
+    void Disconnect(bool unregisterjack = true);
     void Activate();
     void Deactivate();
     void Run(jack_nframes_t nframes, float pregain, float postgain);

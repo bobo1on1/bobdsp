@@ -84,15 +84,8 @@ CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name,
 
 CLadspaInstance::~CLadspaInstance()
 {
-  //deactivate and clean up the ladspa plugin
-  Deactivate();
-  if (m_handle)
-    m_descriptor->cleanup(m_handle);
+  Disconnect();
   delete m_descriptor;
-
-  //close the jack ports
-  for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
-    jack_port_unregister(m_client, it->m_jackport);
 }
 
 bool CLadspaInstance::Connect()
@@ -177,6 +170,26 @@ bool CLadspaInstance::Connect()
   }
 
   return true;
+}
+
+void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
+{
+  //deactivate and clean up the ladspa plugin
+  Deactivate();
+  if (m_handle)
+  {
+    m_descriptor->cleanup(m_handle);
+    m_handle = NULL;
+  }
+
+  //close the jack ports
+  while (!m_ports.empty())
+  {
+    if (unregisterjack)
+      jack_port_unregister(m_client, m_ports.back().m_jackport);
+
+    m_ports.pop_back();
+  }
 }
 
 void CLadspaInstance::Activate()

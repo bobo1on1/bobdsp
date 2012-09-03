@@ -172,6 +172,8 @@ void CJackClient::Disconnect()
     //clean up the plugin instances
     while(!m_instances.empty())
     {
+      //don't unregister the jack port here when the jack client exited, this might hang in libjack
+      m_instances.back()->Disconnect(m_exitstatus == 0);
       delete m_instances.back();
       m_instances.pop_back();
     }
