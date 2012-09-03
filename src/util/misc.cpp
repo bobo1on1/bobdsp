@@ -131,3 +131,36 @@ std::string ToLower(const std::string& in)
   return out;
 }
 
+bool StrToBool(const std::string& data, bool& value)
+{
+  std::string data2 = data;
+  std::string word;
+  if (!GetWord(data2, word))
+    return false;
+  
+  for (std::string::iterator it = word.begin(); it != word.end(); it++)
+    *it = tolower(*it);
+
+  if (word == "1" || word == "true" || word == "on" || word == "yes")
+  {
+    value = true;
+    return true;
+  }
+  else if (word == "0" || word == "false" || word == "off" || word == "no")
+  {
+    value = false;
+    return true;
+  }
+  else
+  {
+    int ivalue;
+    if (StrToInt(word, ivalue))
+    {
+      value = ivalue != 0;
+      return true;
+    }
+  }
+
+  return false;
+}
+
