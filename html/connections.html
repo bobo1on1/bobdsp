@@ -24,8 +24,6 @@
         $("#reload").click(function()
         {
           var postjson = JSON.stringify({"reload" : "true"});
-
-          $("#test").html(postjson);
           $.post("./connections", postjson, ParseConnections);
         });
 
@@ -79,8 +77,6 @@
         }
 
         var postjson = JSON.stringify({"connections" : connections, "save" : save.toString()});
-
-        $("#test").html(postjson);
         $.post("./connections", postjson, ParseConnections);
       }
 
@@ -197,7 +193,6 @@
     <button type="button" id="apply">Apply</button>
     <button type="button" id="save">Apply &amp; save</button>
     <br>
-    <div id="test"></div>
 
     <div>
       <div style="float:left;">
