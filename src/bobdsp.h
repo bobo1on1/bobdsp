@@ -48,11 +48,13 @@ class CBobDSP
     bool LoadConnectionsFromFile();
 
   private:
-
     bool                        m_stop;
     std::vector<CLadspaPlugin*> m_plugins;
     std::vector<CJackClient*>   m_clients;
     CPortConnector              m_portconnector;
+    bool                        m_checkconnect;
+    bool                        m_checkdisconnect;
+    bool                        m_updateports;
     int                         m_signalfd;
     int                         m_stdout[2];
     int                         m_stderr[2];
@@ -61,11 +63,11 @@ class CBobDSP
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
-    void ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool usetimeout);
-    void ProcessClientMessages(bool& checkconnect, bool& checkdisconnect);
+    void ProcessMessages(bool usetimeout);
+    void ProcessClientMessages();
     void ProcessSignalfd();
     void ProcessStdFd(const char* name, int& fd);
-    void ProcessHttpServerMessages(bool& checkconnect, bool& checkdisconnect);
+    void ProcessHttpServerMessages();
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadPluginsFromFile();

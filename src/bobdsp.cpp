@@ -45,8 +45,12 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   m_portconnector(*this),
   m_httpserver(*this)
 {
-  m_stop     = false;
-  m_signalfd = -1;
+  m_stop            = false;
+  m_checkconnect    = false;
+  m_checkdisconnect = false;
+  m_updateports     = false;
+  m_signalfd        = -1;
+
   m_stdout[0] = m_stdout[1] = -1;
   m_stderr[0] = m_stderr[1] = -1;
 
@@ -169,8 +173,6 @@ void CBobDSP::Process()
 
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
-  bool checkconnect = false;
-  bool checkdisconnect = false;
   while(!m_stop)
   {
     bool triedconnect = false;
@@ -206,7 +208,7 @@ void CBobDSP::Process()
         {
           triedconnect = true;
           if ((*it)->Connect())
-            checkconnect = true;
+            m_checkconnect = true;
         }
       }
     }
@@ -216,10 +218,10 @@ void CBobDSP::Process()
 
     //if a client connected, or a port callback was called
     //process port connections, if it fails try again in 10 seconds
-    m_portconnector.Process(checkconnect, checkdisconnect);
+    m_portconnector.Process(m_checkconnect, m_checkdisconnect);
 
     //process messages, blocks if there's nothing to do
-    ProcessMessages(checkconnect, checkdisconnect, !allconnected || checkconnect || checkdisconnect);
+    ProcessMessages(!allconnected || m_checkconnect || m_checkdisconnect);
 
     LogDebug("main loop woke up");
   }
@@ -369,7 +371,7 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
     LogError("fdopen: %s", GetErrno().c_str());
 }
 
-void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool usetimeout)
+void CBobDSP::ProcessMessages(bool usetimeout)
 {
   unsigned int nrfds = 0;
   pollfd* fds        = new pollfd[m_clients.size() + 4];
@@ -426,7 +428,7 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
   else if (returnv > 0)
   {
     //check client messages
-    ProcessClientMessages(checkconnect, checkdisconnect);
+    ProcessClientMessages();
     
     //check stdout pipe
     if (pipenrs[0] != -1 && (fds[pipenrs[0]].revents & POLLIN))
@@ -442,13 +444,13 @@ void CBobDSP::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool us
 
     //check for message from the http server
     if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
-      ProcessHttpServerMessages(checkconnect, checkdisconnect);
+      ProcessHttpServerMessages();
   }
 
   delete[] fds;
 }
 
-void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
+void CBobDSP::ProcessClientMessages()
 {
   //check events of all clients, instead of just the ones that poll() returned on
   //since in case of a jack event, every client sends a message
@@ -459,9 +461,9 @@ void CBobDSP::ProcessClientMessages(bool& checkconnect, bool& checkdisconnect)
     {
       LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
       if (msg == MsgPortRegistered || msg == MsgPortDisconnected)
-        checkconnect = true;
+        m_checkconnect = true;
       else if (msg == MsgPortConnected)
-        checkdisconnect = true;
+        m_checkdisconnect = true;
     }
   }
 }
@@ -518,14 +520,14 @@ void CBobDSP::ProcessStdFd(const char* name, int& fd)
   }
 }
 
-void CBobDSP::ProcessHttpServerMessages(bool& checkconnect, bool& checkdisconnect)
+void CBobDSP::ProcessHttpServerMessages()
 {
   uint8_t msg;
   while ((msg = m_httpserver.GetMessage()) != MsgNone)
   {
     LogDebug("got message %s from httpserver", MsgToString(msg));
     if (msg == MsgConnectionsUpdated)
-      checkconnect = checkdisconnect = true;
+      m_checkconnect = m_checkdisconnect = true;
   }
 }
 
