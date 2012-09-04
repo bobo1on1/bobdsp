@@ -17,6 +17,9 @@
         //get jack connections
         $.getJSON('./connections', ParseConnections);
 
+        //get jack ports
+        $.getJSON('./ports', ParsePorts);
+
         //tell bobdsp to reload the connections from connections.xml
         $("#reload").click(function()
         {
@@ -165,6 +168,25 @@
         it.parentNode.deleteRow(it.rowIndex);
       }
 
+      function ParsePorts(data)
+      {
+        //clear the table
+        $("#outports").empty();
+        $("#inports").empty();
+
+        //add header
+        $("#outports").append("<tr><th>Jack output ports</th></tr>");
+        $("#inports").append("<tr><th>Jack input ports</th></tr>");
+
+        for (var i = 0; i < data.ports.port.length; i++)
+        {
+          if (data.ports.port[i].type == "output")
+            $("#outports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+          else if (data.ports.port[i].type == "input")
+            $("#inports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+        }
+      }
+
     </script>
 
     <table id="connections" border="0"></table>
@@ -176,6 +198,15 @@
     <button type="button" id="save">Apply &amp; save</button>
     <br>
     <div id="test"></div>
+
+    <div>
+      <div style="float:left;">
+        <table id="outports" border="0"></table>
+      </div>
+      <div>
+        <table id="inports" border="0"></table>
+      </div>
+    </div>
 
  </body>
 
