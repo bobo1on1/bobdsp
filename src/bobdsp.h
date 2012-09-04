@@ -63,7 +63,7 @@ class CBobDSP
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
-    void ProcessMessages(bool usetimeout);
+    void ProcessMessages(int64_t timeout);
     void ProcessClientMessages();
     void ProcessSignalfd();
     void ProcessStdFd(const char* name, int& fd);

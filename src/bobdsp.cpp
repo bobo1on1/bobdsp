@@ -38,6 +38,8 @@
 #include "util/timeutils.h"
 
 #define CONNECTINTERVAL 1000000
+#define PORTRETRY         10000
+#define TIMEOUT_INFINITE  -1000
 
 using namespace std;
 
@@ -171,6 +173,9 @@ void CBobDSP::Process()
 {
   Log("Starting %zu jack client(s)", m_clients.size());
 
+  int64_t timeout = TIMEOUT_INFINITE;
+  int64_t lastportretry = GetTimeUs();
+  int64_t portretryinterval = 0;
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
   //make sure to retrieve the ports list
@@ -226,8 +231,47 @@ void CBobDSP::Process()
     //process port connections, if it fails try again next time
     m_portconnector.Process(m_checkconnect, m_checkdisconnect, m_updateports);
 
+    if (m_checkconnect || m_checkdisconnect || m_updateports)
+    {
+      //if the portconnector failed to process, retry after PORTRETRY,
+      //and multiply the retry time by 2 after each try, up to CONNECTINTERVAL
+      //the reason for this is that bobdsp might try to connect client ports
+      //before the client is made active
+      if (portretryinterval == 0)
+      {
+        portretryinterval = PORTRETRY;
+        lastportretry = GetTimeUs();
+      }
+      else
+      {
+        portretryinterval = Min(portretryinterval * 2, CONNECTINTERVAL);
+      }
+
+      int64_t now = GetTimeUs();
+      timeout = portretryinterval - (GetTimeUs() - lastportretry);
+      lastportretry = now;
+      if (timeout < 0)
+        timeout = 0;
+    }
+    else if (!allconnected)
+    {
+      //if not all clients are connected, retry after CONNECTINTERVAL
+      timeout = CONNECTINTERVAL - (GetTimeUs() - lastconnect);
+      if (timeout < 0)
+        timeout = 0;
+
+      //reset port connector interval
+      portretryinterval = 0;
+    }
+    else
+    {
+      //everything ok, wait for events
+      timeout = TIMEOUT_INFINITE;
+      portretryinterval = 0;
+    }
+
     //process messages, blocks if there's nothing to do
-    ProcessMessages(!allconnected || m_checkconnect || m_checkdisconnect || m_updateports);
+    ProcessMessages(timeout);
 
     LogDebug("main loop woke up");
   }
@@ -378,7 +422,7 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
     LogError("fdopen: %s", GetErrno().c_str());
 }
 
-void CBobDSP::ProcessMessages(bool usetimeout)
+void CBobDSP::ProcessMessages(int64_t timeout)
 {
   unsigned int nrfds = 0;
   pollfd* fds        = new pollfd[m_clients.size() + 4];
@@ -420,13 +464,7 @@ void CBobDSP::ProcessMessages(bool usetimeout)
     LogDebug("Waiting on %i file descriptors", nrfds);
   }
 
-  int timeout;
-  if (usetimeout)
-    timeout = CONNECTINTERVAL / 1000; //return after timeout to reconnect clients
-  else
-    timeout = -1; //don't have to reconnect clients, infinite wait
-
-  int returnv = poll(fds, nrfds, timeout);
+  int returnv = poll(fds, nrfds, timeout / 1000);
   if (returnv == -1)
   {
     LogError("poll on msg pipes: %s", GetErrno().c_str());
