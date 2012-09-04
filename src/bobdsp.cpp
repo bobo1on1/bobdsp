@@ -461,23 +461,41 @@ void CBobDSP::ProcessClientMessages()
 {
   //check events of all clients, instead of just the ones that poll() returned on
   //since in case of a jack event, every client sends a message
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (int i = 0; i < 2; i++)
   {
-    uint8_t msg;
-    while ((msg = (*it)->GetMessage()) != MsgNone)
+    size_t nrclients = 0;
+    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
-      LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
-      if (msg == MsgExited)
-        m_updateports = true;
-      else if (msg == MsgPortRegistered)
-        m_updateports = m_checkconnect = true;
-      else if (msg == MsgPortDeregistered)
-        m_updateports = true;
-      else if (msg == MsgPortConnected)
-        m_checkdisconnect = true;
-      else if (msg == MsgPortDisconnected)
-        m_checkconnect = true;
+      bool gotmessage = false;
+      uint8_t msg;
+      while ((msg = (*it)->GetMessage()) != MsgNone)
+      {
+        LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
+        if (msg == MsgExited)
+          m_updateports = true;
+        else if (msg == MsgPortRegistered)
+          m_updateports = m_checkconnect = true;
+        else if (msg == MsgPortDeregistered)
+          m_updateports = true;
+        else if (msg == MsgPortConnected)
+          m_checkdisconnect = true;
+        else if (msg == MsgPortDisconnected)
+          m_checkconnect = true;
+
+        gotmessage = true;
+      }
+      if (gotmessage)
+        nrclients++;
     }
+
+    //in case of a jack event, every connected client sends a message
+    //to make sure we get them all in one go, if a message from one client is received
+    //and not all clients have sent a message, wait a millisecond,
+    //then check all clients for messages again
+    if (nrclients > 0 && nrclients < m_clients.size() && i == 0)
+      USleep(1000);
+    else
+      break;
   }
 }
 
