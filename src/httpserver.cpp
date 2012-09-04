@@ -21,6 +21,7 @@
 #include "util/log.h"
 #include "util/misc.h"
 #include "util/JSON.h"
+#include "util/lock.h"
 
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE //for pipe2
@@ -60,7 +61,7 @@ bool CHttpServer::Start()
   if (m_daemon)
     return true;
 
-  unsigned int options = MHD_USE_SELECT_INTERNALLY;
+  unsigned int options = MHD_USE_THREAD_PER_CONNECTION;
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 
@@ -109,6 +110,8 @@ ClientMessage CHttpServer::GetMessage()
 
 void CHttpServer::WriteMessage(uint8_t msg)
 {
+  CLock lock(m_mutex);
+
   if (m_pipe[1] == -1)
     return; //can't write
 
@@ -158,8 +161,13 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       JSON::CJSONGenerator generator;
       generator.MapOpen();
       generator.AddString("session");
+
+      CLock lock(httpserver->m_mutex);
       generator.AddString(ToString(httpserver->m_sessioncounter++));
+      lock.Leave();
+
       generator.MapClose();
+
       return CreateJSONDownloadResponse(connection, generator.ToString());
     }
     else

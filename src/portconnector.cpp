@@ -153,6 +153,8 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 
   bool success = true;
 
+  CLock lock(m_mutex);
+
   TiXmlNode* connections = root->FirstChildElement("connections");
   if (connections && connections->Type() == TiXmlNode::TINYXML_ELEMENT)
     success = ConnectionsFromXML(connections->ToElement(), true);

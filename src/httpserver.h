@@ -20,6 +20,7 @@
 #define HTTPSERVER_H
 
 #include "util/inclstdint.h"
+#include "util/mutex.h"
 #include <string>
 #include <cstdarg>
 #include <cstdio>
@@ -63,6 +64,7 @@ class CHttpServer
     CBobDSP&           m_bobdsp;
     int                m_pipe[2];
     int                m_sessioncounter;
+    CMutex             m_mutex;
 
     void WriteMessage(uint8_t message);
 
