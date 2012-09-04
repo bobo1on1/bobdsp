@@ -17,11 +17,13 @@
  */
 
 #include "JSON.h"
+#include "util/misc.h"
 
 using namespace std;
 
 namespace JSON
 {
+  int Boolean(void* ctx, int boolVal);
   int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen);
   int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen);
   int StartMap(void* ctx);
@@ -34,7 +36,7 @@ namespace JSON
 static yajl_callbacks callbacks =
 {
   NULL,
-  NULL,
+  JSON::Boolean,
   NULL,
   NULL,
   JSON::Number,
@@ -77,6 +79,12 @@ TiXmlElement* JSON::JSONToXML(const std::string& json)
   yajl_free(handle);
 
   return root;
+}
+
+int JSON::Boolean(void* ctx, int boolVal)
+{
+  string boolean = ToString(boolVal ? true : false);
+  return JSON::String(ctx, (const unsigned char*)boolean.c_str(), boolean.length());
 }
 
 int JSON::Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)

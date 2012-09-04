@@ -25,7 +25,7 @@
         //tell bobdsp to reload the connections from connections.xml
         $("#reload").click(function()
         {
-          var postjson = JSON.stringify({"reload" : "true"});
+          var postjson = JSON.stringify({"reload" : true});
           $.post("./connections", postjson, ParseConnections);
         });
 
@@ -78,7 +78,7 @@
           connections.connection[it++] = {"out" : outtxt, "in" : intxt, "disconnect": select[0].value};
         }
 
-        var postjson = JSON.stringify({"connections" : connections, "save" : save.toString()});
+        var postjson = JSON.stringify({"connections" : connections, "save" : save});
         $.post("./connections", postjson, ParseConnections);
       }
 

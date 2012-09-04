@@ -53,6 +53,14 @@ inline std::string ToString(Value value)
   return data;
 }
 
+inline std::string ToString(bool value)
+{
+  if (value)
+    return "true";
+  else
+    return "false";
+}
+
 inline std::string GetErrno()
 {
   return strerror(errno);
