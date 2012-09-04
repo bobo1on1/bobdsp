@@ -110,8 +110,8 @@ class CPortConnector
     bool ConnectInternal();
     void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
-    void ConnectPorts(const char** ports);
-    void DisconnectPorts(const char** ports);
+    bool ConnectPorts(const char** ports);
+    bool DisconnectPorts(const char** ports);
     void MatchConnection(std::vector<portconnection>::iterator& it, std::vector< std::pair<std::string, std::string> >::iterator& con,
                          bool& outmatch, bool& inmatch, bool removed);
 

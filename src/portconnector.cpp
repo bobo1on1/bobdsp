@@ -346,14 +346,14 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
 
   if (checkconnect)
   {
-    ConnectPorts(ports);   //connect ports that match the regexes
-    checkconnect = false;
+   //connect ports that match the regexes
+    checkconnect = !ConnectPorts(ports);
   }
 
   if (checkdisconnect)
   {
-    DisconnectPorts(ports);//disconnect ports that don't match the regexes
-    checkdisconnect = false;
+    //disconnect ports that don't match the regexes
+    checkdisconnect = !DisconnectPorts(ports);
   }
 
   if (updateports)
@@ -365,8 +365,10 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
   jack_free((void*)ports);
 }
 
-void CPortConnector::ConnectPorts(const char** ports)
+bool CPortConnector::ConnectPorts(const char** ports)
 {
+  bool success = true;
+
   for (const char** portname = ports; *portname != NULL; portname++)
   {
     //find input ports
@@ -415,17 +417,26 @@ void CPortConnector::ConnectPorts(const char** ports)
         //if there's a match, connect
         int returnv = jack_connect(m_client, *outport, *inport);
         if (returnv == 0)
+        {
           Log("Connected port \"%s\" to port \"%s\"", *outport, *inport);
+        }
         else if (returnv != EEXIST)
+        {
           LogError("Error %i connecting port \"%s\" to port \"%s\": \"%s\"",
               returnv, *outport, *inport, GetErrno().c_str());
+          success = false;
+        }
       }
     }
   }
+
+  return success;
 }
 
-void CPortConnector::DisconnectPorts(const char** ports)
+bool CPortConnector::DisconnectPorts(const char** ports)
 {
+  bool success = true;
+
   //build up a list of jack port connections
   vector< pair<string, string> > connectionlist; //pair.first = output port, pair.second = input port
   for (const char** portname = ports; *portname != NULL; portname++)
@@ -503,12 +514,19 @@ void CPortConnector::DisconnectPorts(const char** ports)
     {
       int returnv = jack_disconnect(m_client, con->first.c_str(), con->second.c_str());
       if (returnv == 0)
+      {
         Log("Disconnected port \"%s\" from port \"%s\"", con->first.c_str(), con->second.c_str());
+      }
       else
+      {
         LogError("Error %i disconnecting port \"%s\" from port \"%s\": \"%s\"",
                   returnv, con->first.c_str(), con->second.c_str(), GetErrno().c_str());
+        success = false;
+      }
     }
   }
+
+  return success;
 }
 
 void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vector< pair<string, string> >::iterator& con,

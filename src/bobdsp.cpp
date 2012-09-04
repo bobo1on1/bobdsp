@@ -37,7 +37,7 @@
 #include "util/misc.h"
 #include "util/timeutils.h"
 
-#define CONNECTINTERVAL 10000000
+#define CONNECTINTERVAL 1000000
 
 using namespace std;
 
@@ -184,7 +184,7 @@ void CBobDSP::Process()
     //check if we need to start the http server
     if (!m_httpserver.IsStarted())
     {
-      allconnected = false; //use 10 second timeout in ProcessMessages()
+      allconnected = false; //use timeout in ProcessMessages()
       if (GetTimeUs() - lastconnect >= CONNECTINTERVAL)
       {
         m_httpserver.Start();
@@ -203,7 +203,7 @@ void CBobDSP::Process()
       }
 
       //keep trying to connect
-      //only try to connect every 10 seconds to prevent hammering jackd
+      //only try to connect at the interval to prevent hammering jackd
       if (!(*it)->IsConnected())
       {
         allconnected = false;
@@ -223,7 +223,7 @@ void CBobDSP::Process()
       lastconnect = GetTimeUs();
 
     //if a client connected, or a port callback was called
-    //process port connections, if it fails try again in 10 seconds
+    //process port connections, if it fails try again next time
     m_portconnector.Process(m_checkconnect, m_checkdisconnect, m_updateports);
 
     //process messages, blocks if there's nothing to do
@@ -422,7 +422,7 @@ void CBobDSP::ProcessMessages(bool usetimeout)
 
   int timeout;
   if (usetimeout)
-    timeout = 10000; //return after 10 seconds to reconnect clients
+    timeout = CONNECTINTERVAL / 1000; //return after timeout to reconnect clients
   else
     timeout = -1; //don't have to reconnect clients, infinite wait
 
