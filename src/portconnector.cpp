@@ -171,62 +171,37 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
   return success;
 }
 
-#define YAJLSTRING(str) (const unsigned char*)(str), strlen((str))
-
 std::string CPortConnector::ConnectionsToJSON()
 {
-  string json;
-
   JSON::CJSONGenerator generator;
 
   generator.MapOpen();
   generator.AddString("connections");
-/*#if YAJL_MAJOR == 2
-  yajl_gen handle = yajl_gen_alloc(NULL);
-  yajl_gen_config(handle, yajl_gen_beautify, 1);
-  yajl_gen_config(handle, yajl_gen_indent_string, "  ");
-#else
-  yajl_gen_config yajlconfig;
-  yajlconfig.beautify = 1;
-  yajlconfig.indentString = "  ";
-  yajl_gen handle = yajl_gen_alloc(&yajlconfig, NULL);
-#endif
-
-  yajl_gen_map_open(handle);
-  yajl_gen_string(handle, YAJLSTRING("connections"));
-  yajl_gen_map_open(handle);
-  yajl_gen_string(handle, YAJLSTRING("connection"));
-  yajl_gen_array_open(handle);
+  generator.MapOpen();
+  generator.AddString("connection");
+  generator.ArrayOpen();
 
   CLock lock(m_mutex);
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
-    yajl_gen_map_open(handle);
+    generator.MapOpen();
 
-    yajl_gen_string(handle, YAJLSTRING("out"));
-    yajl_gen_string(handle, YAJLSTRING(it->out.c_str()));
-    yajl_gen_string(handle, YAJLSTRING("in"));
-    yajl_gen_string(handle, YAJLSTRING(it->in.c_str()));
-    yajl_gen_string(handle, YAJLSTRING("disconnect"));
-    yajl_gen_string(handle, YAJLSTRING(it->DisconnectStr()));
+    generator.AddString("out");
+    generator.AddString(it->out);
+    generator.AddString("in");
+    generator.AddString(it->in);
+    generator.AddString("disconnect");
+    generator.AddString(it->DisconnectStr());
 
-    yajl_gen_map_close(handle);
+    generator.MapClose();
   }
   lock.Leave();
 
-  yajl_gen_array_close(handle);
-  yajl_gen_map_close(handle);
-  yajl_gen_map_close(handle);
+  generator.ArrayClose();
+  generator.MapClose();
+  generator.MapClose();
 
-  const unsigned char* str;
-  YAJLSTRINGLEN length;
-  yajl_gen_get_buf(handle, &str, &length);
-  json = string((const char *)str, length);
-
-  yajl_gen_clear(handle);
-  yajl_gen_free(handle);*/
-
-  return json;
+  return generator.ToString();
 }
 
 TiXmlElement* CPortConnector::ConnectionsToXML()
