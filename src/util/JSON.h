@@ -22,6 +22,7 @@
 #include "config.h"
 #include "util/incltinyxml.h"
 #include <string>
+#include <cstring>
 
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
@@ -38,6 +39,28 @@
 namespace JSON
 {
   TiXmlElement* JSONToXML(const std::string& json);
+
+  class CJSONGenerator
+  {
+    public:
+      CJSONGenerator();
+      ~CJSONGenerator();
+
+      void        Reset();
+      std::string ToString();
+
+      void MapOpen()    { yajl_gen_map_open(m_handle);    }
+      void MapClose()   { yajl_gen_map_close(m_handle);   }
+      void ArrayOpen()  { yajl_gen_array_open(m_handle);  }
+      void ArrayClose() { yajl_gen_array_close(m_handle); }
+      void AddString(const std::string& in)
+        { yajl_gen_string(m_handle, (const unsigned char*)in.c_str(), in.length()); }
+      void AddString(const char* in)
+        { yajl_gen_string(m_handle, (const unsigned char*)in, strlen(in)); }
+
+    private:
+      yajl_gen m_handle;
+  };
 }
 
 #endif //JSON_H

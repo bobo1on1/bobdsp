@@ -177,3 +177,36 @@ int JSON::EndArray(void* ctx)
   return 1;
 }
 
+JSON::CJSONGenerator::CJSONGenerator()
+{
+#if YAJL_MAJOR == 2
+  m_handle = yajl_gen_alloc(NULL);
+  yajl_gen_config(handle, yajl_gen_beautify, 1);
+  yajl_gen_config(handle, yajl_gen_indent_string, "  ");
+#else
+  yajl_gen_config yajlconfig;
+  yajlconfig.beautify = 1;
+  yajlconfig.indentString = "  ";
+  m_handle = yajl_gen_alloc(&yajlconfig, NULL);
+#endif
+}
+
+JSON::CJSONGenerator::~CJSONGenerator()
+{
+  yajl_gen_clear(m_handle);
+  yajl_gen_free(m_handle);
+}
+
+void JSON::CJSONGenerator::Reset()
+{
+  yajl_gen_clear(m_handle);
+}
+
+std::string JSON::CJSONGenerator::ToString()
+{
+  const unsigned char* str;
+  YAJLSTRINGLEN length;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  return string((const char *)str, length);
+}
+

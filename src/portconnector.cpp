@@ -177,7 +177,11 @@ std::string CPortConnector::ConnectionsToJSON()
 {
   string json;
 
-#if YAJL_MAJOR == 2
+  JSON::CJSONGenerator generator;
+
+  generator.MapOpen();
+  generator.AddString("connections");
+/*#if YAJL_MAJOR == 2
   yajl_gen handle = yajl_gen_alloc(NULL);
   yajl_gen_config(handle, yajl_gen_beautify, 1);
   yajl_gen_config(handle, yajl_gen_indent_string, "  ");
@@ -220,7 +224,7 @@ std::string CPortConnector::ConnectionsToJSON()
   json = string((const char *)str, length);
 
   yajl_gen_clear(handle);
-  yajl_gen_free(handle);
+  yajl_gen_free(handle);*/
 
   return json;
 }
