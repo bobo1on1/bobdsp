@@ -63,6 +63,14 @@ class CJackPort
       flags = a_flags;
     }
 
+    const char* TypeStr()
+    {
+      if (flags & JackPortIsOutput)
+        return "output";
+      else
+        return "input";
+    }
+
     std::string name;
     int         flags;
 };
@@ -82,6 +90,7 @@ class CPortConnector
     bool          ConnectionsFromJSON(const std::string& json);
     std::string   ConnectionsToJSON();
     TiXmlElement* ConnectionsToXML();
+    std::string   PortsToJSON();
 
   private:
     std::vector<portconnection> m_connections;

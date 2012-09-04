@@ -231,6 +231,37 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
   return root;
 }
 
+std::string CPortConnector::PortsToJSON()
+{
+  JSON::CJSONGenerator generator;
+
+  generator.MapOpen();
+  generator.AddString("ports");
+  generator.MapOpen();
+  generator.AddString("port");
+  generator.ArrayOpen();
+
+  CLock lock(m_mutex);
+  for (vector<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
+  {
+    generator.MapOpen();
+
+    generator.AddString("name");
+    generator.AddString(it->name);
+    generator.AddString("type");
+    generator.AddString(it->TypeStr());
+
+    generator.MapClose();
+  }
+  lock.Leave();
+
+  generator.ArrayClose();
+  generator.MapClose();
+  generator.MapClose();
+
+  return generator.ToString();
+}
+
 void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& updateports)
 {
   if (!checkconnect && !checkdisconnect && !updateports)
@@ -265,7 +296,12 @@ bool CPortConnector::ConnectInternal()
 void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports)
 {
   if (!m_connected)
+  {
+    //jackd is probably not running, clear the list of ports
+    CLock lock(m_mutex);
+    m_jackports.clear();
     return;
+  }
 
   const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
 

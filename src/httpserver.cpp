@@ -147,6 +147,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
     }
+    else if (strurl == "/ports")
+    {
+      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON());
+    }
     else
     {
       //TODO: add some security, since now you can download every file
