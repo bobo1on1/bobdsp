@@ -63,7 +63,6 @@ class CHttpServer
     int                m_port;
     CBobDSP&           m_bobdsp;
     int                m_pipe[2];
-    int                m_sessioncounter;
     CMutex             m_mutex;
 
     void WriteMessage(uint8_t message);
