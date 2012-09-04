@@ -20,6 +20,7 @@
 #include "httpserver.h"
 #include "util/log.h"
 #include "util/misc.h"
+#include "util/JSON.h"
 
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE //for pipe2
@@ -35,6 +36,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
 {
   m_daemon = NULL;
   m_port = 8080;
+  m_sessioncounter = 0;
 
   if (pipe2(m_pipe, O_NONBLOCK) == -1)
   {
@@ -150,6 +152,15 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     else if (strurl == "/ports")
     {
       return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON());
+    }
+    else if (strurl == "/session")
+    {
+      JSON::CJSONGenerator generator;
+      generator.MapOpen();
+      generator.AddString("session");
+      generator.AddString(ToString(httpserver->m_sessioncounter++));
+      generator.MapClose();
+      return CreateJSONDownloadResponse(connection, generator.ToString());
     }
     else
     {
