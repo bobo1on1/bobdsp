@@ -33,6 +33,7 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
 {
   m_client = NULL;
   m_connected = false;
+  m_wasconnected = true;
   m_stop = false;
   m_portindex = 0;
 }
@@ -47,6 +48,8 @@ bool CPortConnector::Connect()
   m_connected = ConnectInternal();
   if (!m_connected)
     Disconnect();
+  else
+    m_wasconnected = true;
 
   return m_connected;
 }
@@ -320,7 +323,11 @@ bool CPortConnector::ConnectInternal()
 
   if (m_client == NULL)
   {
-    LogError("Portconnector error connecting to jackd: \"%s\"", GetErrno().c_str());
+    if (m_wasconnected || g_printdebuglevel)
+    {
+      LogError("Portconnector error connecting to jackd: \"%s\"", GetErrno().c_str());
+      m_wasconnected = false;
+    }
     return false;
   }
 

@@ -106,6 +106,7 @@ class CPortConnector
     CBobDSP&       m_bobdsp;
     jack_client_t* m_client;
     bool           m_connected;
+    bool           m_wasconnected;
 
     bool ConnectInternal();
     void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);
