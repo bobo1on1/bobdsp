@@ -351,18 +351,15 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
 
   const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
 
+  //connect ports that match the regexes
   if (checkconnect)
-  {
-   //connect ports that match the regexes
     checkconnect = !ConnectPorts(ports);
-  }
 
+  //disconnect ports that don't match the regexes
   if (checkdisconnect)
-  {
-    //disconnect ports that don't match the regexes
     checkdisconnect = !DisconnectPorts(ports);
-  }
 
+  //update the ports list
   if (updateports)
   {
     UpdatePorts(ports);
