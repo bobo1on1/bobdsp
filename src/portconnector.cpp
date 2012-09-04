@@ -252,16 +252,16 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
   return root;
 }
 
-void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect)
+void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& updateports)
 {
-  if (!checkconnect && !checkdisconnect)
+  if (!checkconnect && !checkdisconnect && !updateports)
     return; //nothing to do
 
   //connect, connect ports and disconnect
   //since this client will never be active, if we leave it connected
   //then jackd will never signal any of the other bobdsp clients when it quits
   Connect();
-  ProcessInternal(checkconnect, checkdisconnect);
+  ProcessInternal(checkconnect, checkdisconnect, updateports);
   Disconnect();
 }
 
@@ -283,7 +283,7 @@ bool CPortConnector::ConnectInternal()
   return true;
 } 
 
-void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect)
+void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports)
 {
   if (!m_connected)
     return;
@@ -300,6 +300,12 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect)
   {
     DisconnectPorts(ports);//disconnect ports that don't match the regexes
     checkdisconnect = false;
+  }
+
+  if (updateports)
+  {
+    UpdatePorts(ports);
+    updateports = false;
   }
 
   jack_free((void*)ports);
@@ -463,5 +469,19 @@ void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vecto
   inmatch = inre.FullMatch(con->second);
   if (inmatch)
     LogDebug("Regex \"%s\" matches%sinput port \"%s\"", it->in.c_str(), removed ? " removed " : " ", con->second.c_str());
+}
+
+void CPortConnector::UpdatePorts(const char** ports)
+{
+  CLock lock(m_mutex);
+  m_jackports.clear();
+
+  for (const char** portname = ports; *portname != NULL; portname++)
+  {
+    const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
+    int  portflags = jack_port_flags(jackport);
+
+    m_jackports.push_back(CJackPort(*portname, portflags));
+  }
 }
 

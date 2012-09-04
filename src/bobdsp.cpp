@@ -173,6 +173,9 @@ void CBobDSP::Process()
 
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
+  //make sure to retrieve the ports list
+  m_updateports = true;
+
   while(!m_stop)
   {
     bool triedconnect = false;
@@ -208,7 +211,10 @@ void CBobDSP::Process()
         {
           triedconnect = true;
           if ((*it)->Connect())
+          {
             m_checkconnect = true;
+            m_updateports = true;
+          }
         }
       }
     }
@@ -218,10 +224,10 @@ void CBobDSP::Process()
 
     //if a client connected, or a port callback was called
     //process port connections, if it fails try again in 10 seconds
-    m_portconnector.Process(m_checkconnect, m_checkdisconnect);
+    m_portconnector.Process(m_checkconnect, m_checkdisconnect, m_updateports);
 
     //process messages, blocks if there's nothing to do
-    ProcessMessages(!allconnected || m_checkconnect || m_checkdisconnect);
+    ProcessMessages(!allconnected || m_checkconnect || m_checkdisconnect || m_updateports);
 
     LogDebug("main loop woke up");
   }
@@ -460,10 +466,16 @@ void CBobDSP::ProcessClientMessages()
     while ((msg = (*it)->GetMessage()) != MsgNone)
     {
       LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
-      if (msg == MsgPortRegistered || msg == MsgPortDisconnected)
-        m_checkconnect = true;
+      if (msg == MsgExited)
+        m_updateports = true;
+      else if (msg == MsgPortRegistered)
+        m_updateports = m_checkconnect = true;
+      else if (msg == MsgPortDeregistered)
+        m_updateports = true;
       else if (msg == MsgPortConnected)
         m_checkdisconnect = true;
+      else if (msg == MsgPortDisconnected)
+        m_checkconnect = true;
     }
   }
 }

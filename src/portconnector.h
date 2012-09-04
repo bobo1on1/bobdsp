@@ -54,6 +54,19 @@ class portconnection
     }
 };
 
+class CJackPort
+{
+  public:
+    CJackPort(std::string a_name, int a_flags)
+    {
+      name = a_name;
+      flags = a_flags;
+    }
+
+    std::string name;
+    int         flags;
+};
+
 class CPortConnector
 {
   public:
@@ -63,7 +76,7 @@ class CPortConnector
     bool Connect();
     void Disconnect();
 
-    void Process(bool& checkconnect, bool& checkdisconnect);
+    void Process(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
     bool          ConnectionsFromXML(TiXmlElement* root, bool strict);
     bool          ConnectionsFromJSON(const std::string& json);
@@ -73,6 +86,7 @@ class CPortConnector
   private:
     std::vector<portconnection> m_connections;
     std::vector<portconnection> m_removed;
+    std::vector<CJackPort>      m_jackports;
     CMutex                      m_mutex;
 
     CBobDSP&       m_bobdsp;
@@ -80,12 +94,14 @@ class CPortConnector
     bool           m_connected;
 
     bool ConnectInternal();
-    void ProcessInternal(bool& checkconnect, bool& checkdisconnect);
+    void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
     void ConnectPorts(const char** ports);
     void DisconnectPorts(const char** ports);
     void MatchConnection(std::vector<portconnection>::iterator& it, std::vector< std::pair<std::string, std::string> >::iterator& con,
                          bool& outmatch, bool& inmatch, bool removed);
+
+    void UpdatePorts(const char** ports);
 };
 
 #endif //PORTCONNECTOR_H
