@@ -57,6 +57,8 @@ namespace JSON
         { yajl_gen_string(m_handle, (const unsigned char*)in.c_str(), in.length()); }
       void AddString(const char* in)
         { yajl_gen_string(m_handle, (const unsigned char*)in, strlen(in)); }
+      void AddInt(long int in)
+        { yajl_gen_integer(m_handle, in); }
 
     private:
       yajl_gen m_handle;

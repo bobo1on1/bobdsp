@@ -22,6 +22,7 @@ using namespace std;
 
 namespace JSON
 {
+  int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen);
   int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen);
   int StartMap(void* ctx);
   int MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen);
@@ -36,7 +37,7 @@ static yajl_callbacks callbacks =
   NULL,
   NULL,
   NULL,
-  NULL,
+  JSON::Number,
   JSON::String,
   JSON::StartMap,
   JSON::MapKey,
@@ -76,6 +77,11 @@ TiXmlElement* JSON::JSONToXML(const std::string& json)
   yajl_free(handle);
 
   return root;
+}
+
+int JSON::Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)
+{
+  return JSON::String(ctx, (const unsigned char*)numberVal, numberLen);
 }
 
 //set an inner text value for the last added child

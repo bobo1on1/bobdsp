@@ -180,26 +180,38 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   {
     LogDebug("upload_data_size: %zi", *upload_data_size);
 
-    if (strurl == "/connections")
+    if (!*con_cls) //on the first call, just alloc a string
     {
-      if (!*con_cls) //on the first call, just alloc a string
-      {
-        *con_cls = new string();
-        return MHD_YES;
-      }
-      else if (*upload_data_size) //on every next call with data, process
-      {
-        ((string*)*con_cls)->append(upload_data, *upload_data_size);
-        *upload_data_size = 0; //signal that we processed this data
-        return MHD_YES; //TODO: add some maximum data size so a client can't make us run out of mem
-      }
-      else //no more POST data, handle, delete and reply
+      *con_cls = new string();
+      return MHD_YES;
+    }
+    else if (*upload_data_size) //on every next call with data, process
+    {
+      ((string*)*con_cls)->append(upload_data, *upload_data_size);
+      *upload_data_size = 0; //signal that we processed this data
+      return MHD_YES; //TODO: add some maximum data size so a client can't make us run out of mem
+    }
+    else 
+    {
+      if (strurl == "/connections")
       {
         LogDebug("%s", ((string*)*con_cls)->c_str());
         httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(*((string*)*con_cls));
         httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
         delete ((string*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
+      }
+      else if (strurl == "/ports")
+      {
+        string& postdata = *(string*)*con_cls;
+        LogDebug("%s", postdata.c_str());
+        int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
+        delete ((string*)*con_cls);
+        return returnv;
+      }
+      else
+      {
+        delete ((string*)*con_cls);
       }
     }
   }

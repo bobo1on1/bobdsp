@@ -33,6 +33,8 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
 {
   m_client = NULL;
   m_connected = false;
+  m_stop = false;
+  m_portindex = 0;
 }
 
 CPortConnector::~CPortConnector()
@@ -120,7 +122,7 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
   if (!strict || valid)
   {
     //save any connections that were removed, so we can disconnect those ports
-    CLock lock(m_mutex);
+    CLock lock(m_condition);
     for (vector<portconnection>::iterator oldit = m_connections.begin(); oldit != m_connections.end(); oldit++)
     {
       bool found = false;
@@ -153,7 +155,7 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 
   bool success = true;
 
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
 
   TiXmlNode* connections = root->FirstChildElement("connections");
   if (connections && connections->Type() == TiXmlNode::TINYXML_ELEMENT)
@@ -183,7 +185,7 @@ std::string CPortConnector::ConnectionsToJSON()
   generator.AddString("connection");
   generator.ArrayOpen();
 
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
     generator.MapOpen();
@@ -210,7 +212,7 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
 {
   TiXmlElement* root = new TiXmlElement("connections");
 
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
   for (vector<portconnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
     TiXmlElement out("out");
@@ -235,15 +237,17 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
 
 std::string CPortConnector::PortsToJSON()
 {
+  CLock lock(m_condition);
+
   JSON::CJSONGenerator generator;
 
   generator.MapOpen();
+
   generator.AddString("ports");
   generator.MapOpen();
   generator.AddString("port");
   generator.ArrayOpen();
 
-  CLock lock(m_mutex);
   for (vector<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
   {
     generator.MapOpen();
@@ -255,13 +259,33 @@ std::string CPortConnector::PortsToJSON()
 
     generator.MapClose();
   }
-  lock.Leave();
 
   generator.ArrayClose();
+  generator.AddString("portindex");
+  generator.AddInt(m_portindex);
   generator.MapClose();
   generator.MapClose();
 
   return generator.ToString();
+}
+
+std::string CPortConnector::PortsToJSON(std::string& postjson)
+{
+  TiXmlElement* root = JSON::JSONToXML(postjson);
+
+  bool loadfailed = false;
+
+  LOADINTELEMENT(root, timeout, OPTIONAL, 0, POSTCHECK_ZEROORHIGHER);
+  LOADINTELEMENT(root, portindex, OPTIONAL, 0, POSTCHECK_NONE);
+
+  //wait for the port index to change with the client requested timeout
+  //the maximum timeout is 60 seconds
+  CLock lock(m_condition);
+  if (portindex_p == m_portindex && timeout_p > 0 && !m_stop)
+    m_condition.Wait(Min(timeout_p, 60000) * 1000);
+
+  delete root;
+  return PortsToJSON();
 }
 
 void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& updateports)
@@ -275,6 +299,14 @@ void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& up
   Connect();
   ProcessInternal(checkconnect, checkdisconnect, updateports);
   Disconnect();
+}
+
+void CPortConnector::Stop()
+{
+  CLock lock(m_condition);
+  m_stop = true;
+  //interrupt all waiting httpserver threads so we don't hang on exit
+  m_condition.Broadcast(); 
 }
 
 bool CPortConnector::ConnectInternal()
@@ -300,8 +332,13 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
   if (!m_connected)
   {
     //jackd is probably not running, clear the list of ports
-    CLock lock(m_mutex);
-    m_jackports.clear();
+    if (!m_jackports.empty())
+    {
+      CLock lock(m_condition);
+      m_jackports.clear();
+      m_portindex++;
+      m_condition.Broadcast();
+    }
     return;
   }
 
@@ -348,7 +385,7 @@ void CPortConnector::ConnectPorts(const char** ports)
     const char** inport = portname;
 
     //copy the connections, so we don't deadlock the httpserver if this thread hangs when talking to jackd
-    CLock lock(m_mutex);
+    CLock lock(m_condition);
     vector<portconnection> connections = m_connections;
     lock.Leave();
 
@@ -412,7 +449,7 @@ void CPortConnector::DisconnectPorts(const char** ports)
   }
 
   //copy the connections and removed connections, this is to avoid a race condition
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
   vector<portconnection> connections = m_connections;
   vector<portconnection> removed = m_removed;
   m_removed.clear();
@@ -490,7 +527,7 @@ void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vecto
 
 void CPortConnector::UpdatePorts(const char** ports)
 {
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
   m_jackports.clear();
 
   for (const char** portname = ports; *portname != NULL; portname++)
@@ -500,5 +537,8 @@ void CPortConnector::UpdatePorts(const char** ports)
 
     m_jackports.push_back(CJackPort(*portname, portflags));
   }
+
+  m_portindex++;
+  m_condition.Broadcast();
 }
 

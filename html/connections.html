@@ -13,6 +13,8 @@
   <body>
 
     <script>
+      var portindex = -1;
+
       $(document).ready(function()
       {
         //set session cookie
@@ -175,21 +177,32 @@
 
       function ParsePorts(data)
       {
-        //clear the table
-        $("#outports").empty();
-        $("#inports").empty();
-
-        //add header
-        $("#outports").append("<tr><th>Jack output ports</th></tr>");
-        $("#inports").append("<tr><th>Jack input ports</th></tr>");
-
-        for (var i = 0; i < data.ports.port.length; i++)
+        if (data.ports.portindex != portindex)
         {
-          if (data.ports.port[i].type == "output")
-            $("#outports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
-          else if (data.ports.port[i].type == "input")
-            $("#inports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+          //clear the table
+          $("#outports").empty();
+          $("#inports").empty();
+
+          //add header
+          $("#outports").append("<tr><th>Jack output ports</th></tr>");
+          $("#inports").append("<tr><th>Jack input ports</th></tr>");
+
+          for (var i = 0; i < data.ports.port.length; i++)
+          {
+            if (data.ports.port[i].type == "output")
+              $("#outports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+            else if (data.ports.port[i].type == "input")
+              $("#inports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+          }
+
+          portindex = data.ports.portindex;
         }
+
+        //get json again, but set the timeout to 10 seconds and pass the portindex
+        //this way, bobdsp will wait for the ports to change or the timeout to occur
+        //before sending the ports
+        var postjson = JSON.stringify({"timeout" : 10000, "portindex" : portindex});
+        $.post("./ports", postjson, ParsePorts);
       }
 
     </script>

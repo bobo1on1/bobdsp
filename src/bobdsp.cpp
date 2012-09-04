@@ -245,6 +245,7 @@ void CBobDSP::Cleanup()
   if (m_signalfd != -1)
     close(m_signalfd);
 
+  m_portconnector.Stop();
   m_httpserver.Stop();
 }
 

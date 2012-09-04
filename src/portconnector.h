@@ -24,7 +24,7 @@
 #include <jack/jack.h>
 #include "util/JSON.h"
 #include "util/incltinyxml.h"
-#include "util/mutex.h"
+#include "util/condition.h"
 
 class CBobDSP;
 
@@ -86,17 +86,22 @@ class CPortConnector
 
     void Process(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
+    void Stop();
+
     bool          ConnectionsFromXML(TiXmlElement* root, bool strict);
     bool          ConnectionsFromJSON(const std::string& json);
     std::string   ConnectionsToJSON();
     TiXmlElement* ConnectionsToXML();
     std::string   PortsToJSON();
+    std::string   PortsToJSON(std::string& postjson);
 
   private:
     std::vector<portconnection> m_connections;
     std::vector<portconnection> m_removed;
     std::vector<CJackPort>      m_jackports;
-    CMutex                      m_mutex;
+    bool                        m_stop;
+    unsigned int                m_portindex;
+    CCondition                  m_condition;
 
     CBobDSP&       m_bobdsp;
     jack_client_t* m_client;
