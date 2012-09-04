@@ -76,7 +76,7 @@ def build(bld):
                       src/ladspaplugin.cpp\
                       src/portconnector.cpp\
                       src/util/condition.cpp\
-                      src/util/JSONXML.cpp\
+                      src/util/JSON.cpp\
                       src/util/log.cpp\
                       src/util/misc.cpp\
                       src/util/mutex.cpp\

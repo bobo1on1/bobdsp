@@ -16,11 +16,11 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "JSONXML.h"
+#include "JSON.h"
 
 using namespace std;
 
-namespace JSONXML
+namespace JSON
 {
   int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen);
   int StartMap(void* ctx);
@@ -37,15 +37,15 @@ static yajl_callbacks callbacks =
   NULL,
   NULL,
   NULL,
-  JSONXML::String,
-  JSONXML::StartMap,
-  JSONXML::MapKey,
-  JSONXML::EndMap,
-  JSONXML::StartArray,
-  JSONXML::EndArray,
+  JSON::String,
+  JSON::StartMap,
+  JSON::MapKey,
+  JSON::EndMap,
+  JSON::StartArray,
+  JSON::EndArray,
 };
 
-TiXmlElement* JSONXML::JSONToXML(const std::string& json)
+TiXmlElement* JSON::JSONToXML(const std::string& json)
 {
   //allocate a root element to work with
   TiXmlElement* root = new TiXmlElement("JSON");
@@ -79,7 +79,7 @@ TiXmlElement* JSONXML::JSONToXML(const std::string& json)
 }
 
 //set an inner text value for the last added child
-int JSONXML::String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen)
+int JSON::String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)
@@ -96,7 +96,7 @@ int JSONXML::String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN st
 }
 
 //going in one level deeper
-int JSONXML::StartMap(void* ctx)
+int JSON::StartMap(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)
@@ -126,7 +126,7 @@ int JSONXML::StartMap(void* ctx)
 }
 
 //new key, add a new child element
-int JSONXML::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
+int JSON::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)
@@ -136,7 +136,7 @@ int JSONXML::MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLe
 }
 
 //end of map, go up one level, set the pointer to the parent
-int JSONXML::EndMap(void* ctx)
+int JSON::EndMap(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element && element->Parent())
@@ -146,7 +146,7 @@ int JSONXML::EndMap(void* ctx)
 }
 
 //start of array, MapKey should have been called before this to allocate a new element
-int JSONXML::StartArray(void* ctx)
+int JSON::StartArray(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)
@@ -159,7 +159,7 @@ int JSONXML::StartArray(void* ctx)
   return 1;
 }
 
-int JSONXML::EndArray(void* ctx)
+int JSON::EndArray(void* ctx)
 {
   TiXmlElement*& element = *((TiXmlElement**)ctx);
   if (element)

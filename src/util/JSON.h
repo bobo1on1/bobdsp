@@ -16,8 +16,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef JSONXML_H
-#define JSONXML_H
+#ifndef JSON_H
+#define JSON_H
 
 #include "config.h"
 #include "util/incltinyxml.h"
@@ -35,9 +35,9 @@
   #define YAJLSTRINGLEN unsigned int
 #endif
 
-namespace JSONXML
+namespace JSON
 {
   TiXmlElement* JSONToXML(const std::string& json);
 }
 
-#endif //JSONXML_H
+#endif //JSON_H

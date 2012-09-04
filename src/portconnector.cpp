@@ -149,7 +149,7 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
 
 bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 {
-  TiXmlElement* root = JSONXML::JSONToXML(json);
+  TiXmlElement* root = JSON::JSONToXML(json);
 
   bool success = true;
 

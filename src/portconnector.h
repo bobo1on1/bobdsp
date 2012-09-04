@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 #include <jack/jack.h>
-#include "util/JSONXML.h"
+#include "util/JSON.h"
 #include "util/incltinyxml.h"
 #include "util/mutex.h"
 
