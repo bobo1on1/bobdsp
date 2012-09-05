@@ -61,6 +61,7 @@ else if (!name->GetText() || strlen(name->GetText()) == 0)\
   if (mandatory)\
     loadfailed = true;\
 }\
+(void)loadfailed;\
 
 #define PARSEELEMENT(element, name, mandatory, default, type, parsefunc, postcheck)\
 LOADELEMENT(element, name, mandatory);\

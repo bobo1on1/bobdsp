@@ -165,7 +165,7 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
     success = ConnectionsFromXML(connections->ToElement(), true);
 
   bool loadfailed = false;
-  (void)loadfailed; //no warnings
+
   LOADBOOLELEMENT(root, save, OPTIONAL, false, POSTCHECK_NONE);
   if (success && save_p)
     m_bobdsp.SaveConnectionsToFile(ConnectionsToXML());
