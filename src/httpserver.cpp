@@ -31,11 +31,14 @@
 
 using namespace std;
 
+#define POSTDATA_SIZELIMIT (1024 * 1024 * 1024) //1 gigabye
+
 CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_bobdsp(bobdsp)
 {
   m_daemon = NULL;
   m_port = 8080;
+  m_postdatasize = 0;
 
   if (pipe2(m_pipe, O_NONBLOCK) == -1)
   {
@@ -171,12 +174,30 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else if (*upload_data_size) //on every next call with data, process
     {
+      //check if all post data combined doesn't use more than the memory limit
+      CLock lock(httpserver->m_mutex);
+      if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
+      {
+        LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
+        *upload_data_size = 0;
+        httpserver->m_postdatasize -= ((string*)*con_cls)->length();
+        delete (string*)*con_cls;
+        return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
+      }
+      httpserver->m_postdatasize += *upload_data_size;
+      lock.Leave();
+
       ((string*)*con_cls)->append(upload_data, *upload_data_size);
       *upload_data_size = 0; //signal that we processed this data
-      return MHD_YES; //TODO: add some maximum data size so a client can't make us run out of mem
+
+      return MHD_YES;
     }
     else 
     {
+      CLock lock(httpserver->m_mutex);
+      httpserver->m_postdatasize -= ((string*)*con_cls)->length();
+      lock.Leave();
+
       if (strurl == "/connections")
       {
         LogDebug("%s", ((string*)*con_cls)->c_str());

@@ -64,6 +64,7 @@ class CHttpServer
     CBobDSP&           m_bobdsp;
     int                m_pipe[2];
     CMutex             m_mutex;
+    int64_t            m_postdatasize;
 
     void WriteMessage(uint8_t message);
 
