@@ -189,10 +189,10 @@
           portindex = data.ports.portindex;
         }
 
-        //get json again, but set the timeout to 10 seconds and pass the portindex
+        //get json again, but set the timeout to 60 seconds and pass the portindex
         //this way, bobdsp will wait for the ports to change or the timeout to occur
         //before sending the ports
-        var postjson = JSON.stringify({"timeout" : 10000, "portindex" : portindex});
+        var postjson = JSON.stringify({"timeout" : 60000, "portindex" : portindex});
         $.post("./ports", postjson, ParsePorts);
       }
 

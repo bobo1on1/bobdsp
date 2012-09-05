@@ -282,10 +282,10 @@ std::string CPortConnector::PortsToJSON(std::string& postjson)
   LOADINTELEMENT(root, portindex, OPTIONAL, 0, POSTCHECK_NONE);
 
   //wait for the port index to change with the client requested timeout
-  //the maximum timeout is 60 seconds
+  //the maximum timeout is one hour
   CLock lock(m_condition);
   if (portindex_p == m_portindex && timeout_p > 0 && !m_stop)
-    m_condition.Wait(Min(timeout_p, 60000) * 1000);
+    m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000);
 
   delete root;
   return PortsToJSON();
