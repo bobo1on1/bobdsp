@@ -38,7 +38,7 @@
 #include "util/timeutils.h"
 
 #define CONNECTINTERVAL 1000000
-#define PORTRETRY         10000
+#define PORTRETRY         15625
 #define TIMEOUT_INFINITE  -1000
 
 using namespace std;
@@ -174,7 +174,6 @@ void CBobDSP::Process()
   Log("Starting %zu jack client(s)", m_clients.size());
 
   int64_t timeout = TIMEOUT_INFINITE;
-  int64_t lastportretry = GetTimeUs();
   int64_t portretryinterval = 0;
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
@@ -240,26 +239,19 @@ void CBobDSP::Process()
       if (portretryinterval == 0)
       {
         portretryinterval = PORTRETRY;
-        lastportretry = GetTimeUs();
       }
       else
       {
-        portretryinterval = Min(portretryinterval * 2, CONNECTINTERVAL);
+        portretryinterval *= 2;
+        if (portretryinterval > CONNECTINTERVAL)
+          portretryinterval = CONNECTINTERVAL;
       }
-
-      int64_t now = GetTimeUs();
-      timeout = portretryinterval - (GetTimeUs() - lastportretry);
-      lastportretry = now;
-      if (timeout < 0)
-        timeout = 0;
+      timeout = portretryinterval;
     }
     else if (!allconnected)
     {
       //if not all clients are connected, retry after CONNECTINTERVAL
-      timeout = CONNECTINTERVAL - (GetTimeUs() - lastconnect);
-      if (timeout < 0)
-        timeout = 0;
-
+      timeout = CONNECTINTERVAL;
       //reset port connector interval
       portretryinterval = 0;
     }
@@ -461,7 +453,7 @@ void CBobDSP::ProcessMessages(int64_t timeout)
   }
   else
   {
-    LogDebug("Waiting on %i file descriptors", nrfds);
+    LogDebug("Waiting on %i file descriptors, timeout %s", nrfds, timeout >= 0 ? ToString(timeout).c_str() : "infinite");
   }
 
   int returnv = poll(fds, nrfds, timeout / 1000);
