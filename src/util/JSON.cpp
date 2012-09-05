@@ -195,8 +195,8 @@ JSON::CJSONGenerator::CJSONGenerator()
 {
 #if YAJL_MAJOR == 2
   m_handle = yajl_gen_alloc(NULL);
-  yajl_gen_config(handle, yajl_gen_beautify, 1);
-  yajl_gen_config(handle, yajl_gen_indent_string, "  ");
+  yajl_gen_config(m_handle, yajl_gen_beautify, 1);
+  yajl_gen_config(m_handle, yajl_gen_indent_string, "  ");
 #else
   yajl_gen_config yajlconfig;
   yajlconfig.beautify = 1;
