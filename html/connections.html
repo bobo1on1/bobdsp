@@ -113,7 +113,7 @@
         $("#connections").empty();
 
         //add header
-        $("#connections").append("<tr><th>out</th><th>in</th><th>disconnect</th></tr>");
+        $("#connections").append("<tr><th>Out</th><th></td><th>In</th><th>Disconnect</th></tr>");
 
         if (data.connections.connection.length == 0)
         {
@@ -137,20 +137,20 @@
         else
           readonly = "readonly=\"readonly\"";
 
-        var outtext = "<input type=\"text\" name=\"out\" size=50 " + readonly + " value=\"" + outstr + "\"/>";
-        var intext  = "<input type=\"text\" name=\"in\"  size=50 " + readonly + " value=\"" + instr  + "\"/>";
+        var outtext = "<input type=\"text\" name=\"out\" style=\"width:99%\" " + readonly + " value=\"" + outstr + "\"/>";
+        var intext  = "<input type=\"text\" name=\"in\"  style=\"width:99%\" " + readonly + " value=\"" + instr  + "\"/>";
         var editbutton = "<button type=\"button\" id=\"editbutton\" onclick=\"SetMutable(this.parentNode.parentNode)\">Edit</button>";
         var removebutton = "<button type=\"button\" id=\"removebutton\" onclick=\"Remove(this.parentNode.parentNode)\">Remove</button>";
 
-        var disconnectstr = "<select>";
+        var disconnectstr = "<select style=\"width:100%\">";
         var disconnectopts = ["none", "in", "out", "both"];
         for (var j = 0; j < disconnectopts.length; j++)
           disconnectstr += AddOption(disconnectopts[j], disconnect, editable);
 
         disconnectstr += "</select>";
 
-        table.append("<tr><td>" + outtext + "&rarr;</td><td>" + intext + "</td><td>" + disconnectstr +
-                     "</td><td>" + editbutton + removebutton + "</td></tr>");
+        table.append("<tr><td style=\"width:50%\">" + outtext + "</td><td>&rarr;</td><td style=\"width:50%\">" +
+                     intext + "</td><td>" + disconnectstr + "</td><td>" + editbutton + "</td><td>" + removebutton + "</td></tr>");
       }
 
       function AddOption(name, disconnect, editable)
@@ -281,30 +281,29 @@
 
     </script>
 
-    <table id="connections" border="0"></table>
-    <br>
-    <button type="button" id="reload">Reload</button>
-    <button type="button" id="reset">Reset</button>
-    <button type="button" id="addnew">Add new</button>
-    <button type="button" id="apply">Apply</button>
-    <button type="button" id="save">Apply &amp; save</button>
-    <br>
-    <br>
-    <br>
+    <table width=100%>
+      <tr><td>
+        <table id="connections"></table>
+      </td></tr>
+      <tr><td>
+        <button type="button" id="reload">Reload</button>
+        <button type="button" id="reset">Reset</button>
+        <button type="button" id="addnew">Add new</button>
+        <button type="button" id="apply">Apply</button>
+        <button type="button" id="save">Apply &amp; save</button>
+      </td></tr>
+    </table>
 
-    <div>
-      <div style="float:left;">
-        <table id="outports" border="0"></table>
-      </div>
-      <div>
-        <table id="inports" border="0"></table>
-      </div>
-    </div>
-
-    <br>
-    <br>
-    <button type="button" id="add">Add</button>
-    <button type="button" id="addregex">Add as regex</button>
+    <table>
+      <tr>
+        <td valign="top"><table id="outports"></table></td>
+        <td valign="top"><table id="inports"></table></td>
+      </tr>
+      <tr><td>
+        <button type="button" id="add">Add</button>
+        <button type="button" id="addregex">Add as regex</button>
+      </td></tr>
+    </table>
 
  </body>
 
