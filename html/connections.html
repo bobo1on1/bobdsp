@@ -274,22 +274,22 @@
         var inportname = false;
         for (var i = 0; i < instr.length; i++)
         {
-          var char = instr.charAt(i);
-          if (char == ':')
+          var currchar = instr.charAt(i);
+          if (currchar == ':')
             inportname = true;
 
           if (innumber)
           {
-            if (char < '0' || char > '9')
+            if (currchar < '0' || currchar > '9')
             {
               innumber = false;
               out += "[0-9]*";
-              out += char;
+              out += currchar;
             }
           }
           else
           {
-            if (!inportname && char >= '0' && char <= '9')
+            if (!inportname && currchar >= '0' && currchar <= '9')
             {
               if (i == instr.length - 1)
                 out += "[0-9]*";
@@ -298,7 +298,7 @@
             }
             else
             {
-              out += char;
+              out += currchar;
             }
           }
         }
