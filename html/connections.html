@@ -50,6 +50,31 @@
           PostConnections(true);
         });
 
+        $("#add").click(function()
+        {
+          //get the current selection
+          var selectedoutput = $("#outports input:checked");
+          var selectedinput = $("#inports input:checked");
+
+          //add as new row
+          if (selectedoutput.length > 0 && selectedinput.length > 0)
+            AddRow($("#connections"), selectedinput.attr("value"), selectedoutput.attr("value"), "none", true);
+        });
+
+        $("#addregex").click(function()
+        {
+          //get the current selection
+          var selectedoutput = $("#outports input:checked");
+          var selectedinput = $("#inports input:checked");
+
+          //add as new row
+          if (selectedoutput.length > 0 && selectedinput.length > 0)
+          {
+            var output = Regexify(selectedoutput.attr("value"));
+            var input = Regexify(selectedinput.attr("value"));
+            AddRow($("#connections"), input, output, "none", true);
+          }
+        });
       });
 
       function PostConnections(save)
@@ -170,6 +195,10 @@
       {
         if (data.ports.portindex != portindex)
         {
+          //store the current selection
+          var selectedoutput = $("#outports input:checked");
+          var selectedinput = $("#inports input:checked");
+
           //clear the table
           $("#outports").empty();
           $("#inports").empty();
@@ -180,10 +209,19 @@
 
           for (var i = 0; i < data.ports.port.length; i++)
           {
+            var checked = "";
             if (data.ports.port[i].type == "output")
-              $("#outports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+            {
+              if (selectedoutput.length > 0 && selectedoutput.attr("value") == data.ports.port[i].name)
+                checked = "checked";
+              AddPortRow($("#outports"), "output", data.ports.port[i].name, checked);
+            }
             else if (data.ports.port[i].type == "input")
-              $("#inports").append("<tr><td>" + data.ports.port[i].name + "</td></tr>");
+            {
+              if (selectedinput.length > 0 && selectedinput.attr("value") == data.ports.port[i].name)
+                checked = "checked";
+              AddPortRow($("#inports"), "input", data.ports.port[i].name, checked);
+            }
           }
 
           portindex = data.ports.portindex;
@@ -196,6 +234,51 @@
         $.post("./ports", postjson, ParsePorts);
       }
 
+      function AddPortRow(table, type, name, checked)
+      {
+        var option = "<input type=\"radio\" name=\"" + type + "\" value=\"" + name + "\" " + checked + ">";
+        table.append("<tr><td>" + option + name + "</td></tr>");
+      }
+
+      //turns any number of the client name into [0-9]*
+      function Regexify(instr)
+      {
+        var out = "";
+        var innumber = false;
+        var inportname = false;
+        for (var i = 0; i < instr.length; i++)
+        {
+          var char = instr.charAt(i);
+          if (char == ':')
+            inportname = true;
+
+          if (innumber)
+          {
+            if (char < '0' || char > '9')
+            {
+              innumber = false;
+              out += "[0-9]*";
+              out += char;
+            }
+          }
+          else
+          {
+            if (!inportname && char >= '0' && char <= '9')
+            {
+              if (i == instr.length - 1)
+                out += "[0-9]*";
+              else
+                innumber = true;
+            }
+            else
+            {
+              out += char;
+            }
+          }
+        }
+        return out;
+      }
+
     </script>
 
     <table id="connections" border="0"></table>
@@ -206,6 +289,8 @@
     <button type="button" id="apply">Apply</button>
     <button type="button" id="save">Apply &amp; save</button>
     <br>
+    <br>
+    <br>
 
     <div>
       <div style="float:left;">
@@ -215,6 +300,11 @@
         <table id="inports" border="0"></table>
       </div>
     </div>
+
+    <br>
+    <br>
+    <button type="button" id="add">Add</button>
+    <button type="button" id="addregex">Add as regex</button>
 
  </body>
 
