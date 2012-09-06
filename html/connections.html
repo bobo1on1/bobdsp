@@ -58,7 +58,11 @@
 
           //add as new row
           if (selectedoutput.length > 0 && selectedinput.length > 0)
-            AddRow($("#connections"), selectedinput.attr("value"), selectedoutput.attr("value"), "none", true);
+          {
+            var outputstr = EscapeRegex(selectedoutput.attr("value"));
+            var inputstr = EscapeRegex(selectedinput.attr("value"));
+            AddRow($("#connections"), inputstr, outputstr, "none", true);
+          }
         });
 
         $("#addregex").click(function()
@@ -70,9 +74,9 @@
           //add as new row
           if (selectedoutput.length > 0 && selectedinput.length > 0)
           {
-            var output = Regexify(selectedoutput.attr("value"));
-            var input = Regexify(selectedinput.attr("value"));
-            AddRow($("#connections"), input, output, "none", true);
+            var outputstr = Regexify(EscapeRegex(selectedoutput.attr("value")));
+            var inputstr = Regexify(EscapeRegex(selectedinput.attr("value")));
+            AddRow($("#connections"), inputstr, outputstr, "none", true);
           }
         });
       });
@@ -296,6 +300,34 @@
             }
           }
         }
+        return out;
+      }
+
+      function EscapeRegex(instr)
+      {
+        var escapechars = ".^$*+?()[]{\\";
+        var out = "";
+
+        for (var i = 0; i < instr.length; i++)
+        {
+          var currchar = instr.charAt(i);
+          var found = false;
+          //TODO: figure out why escapechars.search(currchar) doesn't work
+          for (var j = 0; j < escapechars.length; j++)
+          {
+            if (currchar == escapechars.charAt(j))
+            {
+              out += "\\";
+              out += currchar;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found)
+            out += currchar;
+        }
+
         return out;
       }
 
