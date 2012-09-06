@@ -117,7 +117,7 @@
         $("#connections").empty();
 
         //add header
-        $("#connections").append("<tr><th>Out</th><th></td><th>In</th><th>Disconnect</th></tr>");
+        $("#connections").append("<tr><th></th><th></th><th>Out</th><th></td><th>In</th><th>Disconnect</th></tr>");
 
         if (data.connections.connection.length == 0)
         {
@@ -155,9 +155,9 @@
 
         disconnectstr += "</select>";
 
-        table.append("<tr><td style=\"width:50%\">" + outtext + "</td><td>&rarr;</td><td style=\"width:50%\">" +
-                     intext + "</td><td>" + disconnectstr + "</td><td>" + editbutton + "</td><td>" + removebutton + "</td><td>" +
-                     upbutton + "</td><td>" + downbutton + "</td></tr>");
+        table.append("<tr><td>" + upbutton + "</td><td>" + downbutton + "<td style=\"width:50%\">" + outtext +
+                     "</td><td>&rarr;</td><td style=\"width:50%\">" + intext + "</td><td>" + disconnectstr +
+                     "</td><td>" + editbutton + "</td><td>" + removebutton + "</td></tr>");
       }
 
       function AddOption(name, disconnect, editable)
