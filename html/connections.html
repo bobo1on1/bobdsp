@@ -133,6 +133,7 @@
         }
       }
 
+      //TODO: escape instr and outstr here, or use the javascript DOM to generate elements
       function AddRow(table, instr, outstr, disconnect, editable)
       {
         var readonly;
@@ -258,6 +259,7 @@
         $.post("./ports", postjson, ParsePorts);
       }
 
+      //TODO: escape for html here
       function AddPortRow(table, type, name, checked)
       {
         var option = "<input type=\"radio\" name=\"" + type + "\" value=\"" + name + "\" " + checked + ">";
