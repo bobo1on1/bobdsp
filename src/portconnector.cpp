@@ -251,7 +251,7 @@ std::string CPortConnector::PortsToJSON()
   generator.AddString("port");
   generator.ArrayOpen();
 
-  for (vector<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
+  for (list<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
   {
     generator.MapOpen();
 
@@ -559,6 +559,7 @@ void CPortConnector::UpdatePorts(const char** ports)
 
     m_jackports.push_back(CJackPort(*portname, portflags));
   }
+  m_jackports.sort();
 
   m_portindex++;
   m_condition.Broadcast();

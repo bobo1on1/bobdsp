@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <jack/jack.h>
+#include <list>
 #include "util/JSON.h"
 #include "util/incltinyxml.h"
 #include "util/condition.h"
@@ -71,6 +72,11 @@ class CJackPort
         return "input";
     }
 
+    bool operator<(CJackPort& rhs)
+    {
+      return (name < rhs.name);
+    }
+
     std::string name;
     int         flags;
 };
@@ -98,7 +104,7 @@ class CPortConnector
   private:
     std::vector<portconnection> m_connections;
     std::vector<portconnection> m_removed;
-    std::vector<CJackPort>      m_jackports;
+    std::list<CJackPort>        m_jackports;
     bool                        m_stop;
     unsigned int                m_portindex;
     CCondition                  m_condition;
