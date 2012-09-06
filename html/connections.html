@@ -141,6 +141,8 @@
         var intext  = "<input type=\"text\" name=\"in\"  style=\"width:99%\" " + readonly + " value=\"" + instr  + "\"/>";
         var editbutton = "<button type=\"button\" id=\"editbutton\" onclick=\"SetMutable(this.parentNode.parentNode)\">Edit</button>";
         var removebutton = "<button type=\"button\" id=\"removebutton\" onclick=\"Remove(this.parentNode.parentNode)\">Remove</button>";
+        var upbutton = "<button type=\"button\" id=\"upbutton\" onclick=\"Move(this.parentNode.parentNode, true)\">&uarr;</button>";
+        var downbutton = "<button type=\"button\" id=\"downbutton\" onclick=\"Move(this.parentNode.parentNode, false)\">&darr;</button>";
 
         var disconnectstr = "<select style=\"width:100%\">";
         var disconnectopts = ["none", "in", "out", "both"];
@@ -150,7 +152,8 @@
         disconnectstr += "</select>";
 
         table.append("<tr><td style=\"width:50%\">" + outtext + "</td><td>&rarr;</td><td style=\"width:50%\">" +
-                     intext + "</td><td>" + disconnectstr + "</td><td>" + editbutton + "</td><td>" + removebutton + "</td></tr>");
+                     intext + "</td><td>" + disconnectstr + "</td><td>" + editbutton + "</td><td>" + removebutton + "</td><td>" +
+                     upbutton + "</td><td>" + downbutton + "</td></tr>");
       }
 
       function AddOption(name, disconnect, editable)
@@ -189,6 +192,23 @@
           AddRow($("#connections"), "", "", "none", true);
 
         it.parentNode.deleteRow(it.rowIndex);
+      }
+
+      function Move(it, up)
+      {
+        var row = it.rowIndex;
+        if ((row <= 1 && up) || (row >= it.parentNode.rows.length - 1 && !up))
+          return;
+
+        var newrow;
+        if (up)
+          newrow = row - 1;
+        else
+          newrow = row + 1;
+        
+        var oldhtml = it.parentNode.rows[newrow].innerHTML;
+        it.parentNode.rows[newrow].innerHTML = it.innerHTML;
+        it.innerHTML = oldhtml;
       }
 
       function ParsePorts(data)
