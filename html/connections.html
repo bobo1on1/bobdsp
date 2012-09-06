@@ -20,7 +20,7 @@
         $.getJSON('./connections', ParseConnections);
 
         //get jack ports
-        $.getJSON('./ports', ParsePorts);
+        GetPorts();
 
         //tell bobdsp to reload the connections from connections.xml
         $("#reload").click(function()
@@ -80,6 +80,9 @@
           }
         });
       });
+
+      var isunloading = false;
+      $(window).on('beforeunload',function() { isunloading = true; });
 
       function PostConnections(save)
       {
@@ -216,15 +219,41 @@
         it.innerHTML = oldhtml;
       }
 
+      function ErrorHandler()
+      {
+        //prevent error message showing from cancelled xmlhttprequest when the user refreshes the page
+        if (!isunloading)
+        {
+          $("#errormessagetop,#errormessagebot").html("Connection to bobdsp lost!");
+          document.bgColor="#FFBBBB";
+        }
+
+        setTimeout("GetPorts()", 1000);
+      }
+
+      function GetPorts()
+      {
+        $.ajax({ 
+          url: "./ports", 
+          dataType: "json", 
+          success: ParsePorts, 
+          timeout: 10000,
+          error: ErrorHandler
+        });
+      }
+
       function ParsePorts(data)
       {
+        document.bgColor="#FFFFFF";
+        $("#errormessagetop,#errormessagebot").empty();
+
         if (data.ports.portindex != portindex)
         {
           //store the current selection
           var selectedoutput = $("#outports input:checked");
           var selectedinput = $("#inports input:checked");
 
-          //clear the table
+          //clear the tables
           $("#outports").empty();
           $("#inports").empty();
 
@@ -255,8 +284,18 @@
         //get json again, but set the timeout to 60 seconds and pass the portindex
         //this way, bobdsp will wait for the ports to change or the timeout to occur
         //before sending the ports
-        var postjson = JSON.stringify({"timeout" : 60000, "portindex" : portindex});
-        $.post("./ports", postjson, ParsePorts);
+        var timeout = 60000;
+        var postjson = JSON.stringify({"timeout" : timeout, "portindex" : portindex});
+
+        $.ajax({ 
+          type: "POST",
+          url: "./ports", 
+          data: postjson,
+          dataType: "json", 
+          success: ParsePorts, 
+          timeout: timeout + 10000,
+          error: ErrorHandler
+        });
       }
 
       //TODO: escape for html here
@@ -335,6 +374,8 @@
 
     </script>
 
+    <div id="errormessagetop" style="color: black; background-color: red; font-size: 30pt; font-weight:bold; text-align:center"></div>
+
     <table width=100%>
       <tr><td>
         <table id="connections"></table>
@@ -358,6 +399,8 @@
         <button type="button" id="addregex">Add as regex</button>
       </td></tr>
     </table>
+
+    <div id="errormessagebot" style="color: black; background-color: red; font-size: 30pt; font-weight:bold; text-align:center"></div>
 
  </body>
 
