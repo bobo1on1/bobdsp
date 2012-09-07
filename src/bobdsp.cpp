@@ -493,10 +493,9 @@ void CBobDSP::ProcessClientMessages()
   //since in case of a jack event, every client sends a message
   for (int i = 0; i < 2; i++)
   {
-    size_t nrclients = 0;
+    bool gotmessage = false;
     for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
-      bool gotmessage = false;
       uint8_t msg;
       while ((msg = (*it)->GetMessage()) != MsgNone)
       {
@@ -514,15 +513,12 @@ void CBobDSP::ProcessClientMessages()
 
         gotmessage = true;
       }
-      if (gotmessage)
-        nrclients++;
     }
 
     //in case of a jack event, every connected client sends a message
     //to make sure we get them all in one go, if a message from one client is received
-    //and not all clients have sent a message, wait a millisecond,
-    //then check all clients for messages again
-    if (nrclients > 0 && nrclients < m_clients.size() && i == 0)
+    //wait a millisecond, then check all clients for messages again
+    if (gotmessage && i == 0)
       USleep(1000);
     else
       break;
