@@ -210,13 +210,30 @@
 
         var newrow;
         if (up)
-          newrow = row - 1;
+          newrow = it.parentNode.rows[row - 1];
         else
-          newrow = row + 1;
-        
-        var oldhtml = it.parentNode.rows[newrow].innerHTML;
-        it.parentNode.rows[newrow].innerHTML = it.innerHTML;
-        it.innerHTML = oldhtml;
+          newrow = it.parentNode.rows[row + 1];
+
+        var color = "#FF0000";
+
+        var settransparent = function()
+        {
+          newrow.style.backgroundColor = "transparent";
+        }
+
+        var switchhtml = function()
+        {
+          var oldhtml = newrow.innerHTML;
+          newrow.innerHTML = it.innerHTML;
+          it.innerHTML = oldhtml;
+          it.style.backgroundColor = "transparent";
+          newrow.style.backgroundColor = color;
+          setTimeout(settransparent, 250);
+        }
+
+        //make the row colored first, then switch after the timeout, this way you can see the row move
+        it.style.backgroundColor = color;
+        setTimeout(switchhtml, 50);
       }
 
       function ErrorHandler()
