@@ -70,9 +70,9 @@ class CBobDSP
     void ProcessHttpServerMessages();
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
-    bool LoadPluginsFromFile();
-    void LoadPluginsFromRoot(TiXmlElement* root);
-    bool LoadPortsFromPlugin(TiXmlElement* plugin, std::vector<portvalue>& portvalues);
+    bool LoadClientsFromFile();
+    void LoadClientsFromRoot(TiXmlElement* root);
+    bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
     CLadspaPlugin* SearchLadspaPlugin(std::vector<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
     bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
 

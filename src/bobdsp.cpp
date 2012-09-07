@@ -155,8 +155,8 @@ void CBobDSP::Setup()
     LogDebug("ID:%lu Label:\"%s\" Name:\"%s\" Ports:%lu", d->UniqueID, d->Label, d->Name, d->PortCount);
   }
 
-  //load the plugins we want to use
-  LoadPluginsFromFile();
+  //load the clients we want to use
+  LoadClientsFromFile();
 
   //load the port connections
   LoadConnectionsFromFile();
@@ -662,7 +662,7 @@ void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)
   }
 }
 
-bool CBobDSP::LoadPluginsFromFile()
+bool CBobDSP::LoadClientsFromFile()
 {
   string homepath;
   if (!GetHomePath(homepath))
@@ -671,39 +671,39 @@ bool CBobDSP::LoadPluginsFromFile()
     return false;
   }
 
-  string filename = homepath + ".bobdsp/plugins.xml";
-  Log("Loading plugin settings from %s", filename.c_str());
+  string filename = homepath + ".bobdsp/clients.xml";
+  Log("Loading client settings from %s", filename.c_str());
 
-  TiXmlDocument pluginsfile;
-  pluginsfile.LoadFile(filename.c_str());
+  TiXmlDocument clientsfile;
+  clientsfile.LoadFile(filename.c_str());
 
-  if (pluginsfile.Error())
+  if (clientsfile.Error())
   {
-    LogError("Unable to load %s: %s %s %s", filename.c_str(), pluginsfile.ErrorDesc(),
-        pluginsfile.ErrorRow() ? (string("Row: ") + ToString(pluginsfile.ErrorRow())).c_str() : "",
-        pluginsfile.ErrorCol() ? (string("Col: ") + ToString(pluginsfile.ErrorCol())).c_str() : "");
+    LogError("Unable to load %s: %s %s %s", filename.c_str(), clientsfile.ErrorDesc(),
+        clientsfile.ErrorRow() ? (string("Row: ") + ToString(clientsfile.ErrorRow())).c_str() : "",
+        clientsfile.ErrorCol() ? (string("Col: ") + ToString(clientsfile.ErrorCol())).c_str() : "");
     return false;
   }
 
-  TiXmlElement* root = pluginsfile.RootElement();
+  TiXmlElement* root = clientsfile.RootElement();
   if (!root)
   {
-    LogError("Unable to get <plugins> root node from %s", filename.c_str());
+    LogError("Unable to get <clients> root node from %s", filename.c_str());
     return false;
   }
 
-  LoadPluginsFromRoot(root);
+  LoadClientsFromRoot(root);
 
   return true;
 }
 
-/* load plugin settings from plugins.xml
+/* load client settings from clients.xml
    it may look like this:
 
-<plugins>
+<clients>
   <clientprefix>bobdsp_</clientprefix>
   <portprefix>ladspa_</portprefix>
-  <plugin>
+  <client>
     <name>Audio limiter</name>
     <label>fastLookaheadLimiter</label>
     <uniqueid>1913</uniqueid>
@@ -723,12 +723,12 @@ bool CBobDSP::LoadPluginsFromFile()
       <name>Release time (s)</name>
       <value>0.1</value>
     </port>
-  </plugin>
-</plugins>
+  </client>
+</clients>
 
   <clientprefix>bobdsp_</clientprefix> is a string prefixed to every client name
   <portprefix>ladspa_</portprefix> is a string prefixed to every port name
-  <portprefix>lim_</portprefix> is a string prefixed to every port name of the plugin
+  <portprefix>lim_</portprefix> is a string prefixed to every port name of the client
   <name> is the name for the jack client, it's not related to the name of the ladspa plugin
   <label> is the label of the ladspa plugin
   <uniqueid> is the unique id of the ladspa plugin
@@ -737,24 +737,24 @@ bool CBobDSP::LoadPluginsFromFile()
   <postgain> is the audio gain for the ladspa output ports
 */
 
-void CBobDSP::LoadPluginsFromRoot(TiXmlElement* root)
+void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
 {
   TiXmlElement* gclientprefix = root->FirstChildElement("clientprefix");
   TiXmlElement* gportprefix = root->FirstChildElement("portprefix");
 
-  for (TiXmlElement* plugin = root->FirstChildElement("plugin"); plugin != NULL; plugin = plugin->NextSiblingElement("plugin"))
+  for (TiXmlElement* client = root->FirstChildElement("client"); client != NULL; client = client->NextSiblingElement("client"))
   {
-    LogDebug("Read <plugin> element");
+    LogDebug("Read <client> element");
 
     bool loadfailed = false;
 
-    LOADELEMENT(plugin, name, MANDATORY);
-    LOADELEMENT(plugin, label, MANDATORY);
-    LOADELEMENT(plugin, portprefix, OPTIONAL);
-    LOADINTELEMENT(plugin, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
-    LOADINTELEMENT(plugin, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
-    LOADFLOATELEMENT(plugin, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
-    LOADFLOATELEMENT(plugin, postgain, OPTIONAL, 1.0, POSTCHECK_NONE);
+    LOADELEMENT(client, name, MANDATORY);
+    LOADELEMENT(client, label, MANDATORY);
+    LOADELEMENT(client, portprefix, OPTIONAL);
+    LOADINTELEMENT(client, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
+    LOADINTELEMENT(client, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
+    LOADFLOATELEMENT(client, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
+    LOADFLOATELEMENT(client, postgain, OPTIONAL, 1.0, POSTCHECK_NONE);
 
     if (loadfailed || instances_parsefailed || pregain_parsefailed || postgain_parsefailed)
       continue;
@@ -763,7 +763,7 @@ void CBobDSP::LoadPluginsFromRoot(TiXmlElement* root)
              name->GetText(), label->GetText(), uniqueid_p, instances_p, pregain_p, postgain_p);
 
     vector<portvalue> portvalues;
-    if (!LoadPortsFromPlugin(plugin, portvalues))
+    if (!LoadPortsFromClient(client, portvalues))
       continue;
 
     CLadspaPlugin* ladspaplugin = SearchLadspaPlugin(m_plugins, uniqueid_p, label->GetText());
@@ -845,11 +845,11 @@ void CBobDSP::LoadPluginsFromRoot(TiXmlElement* root)
   }
 }
 
-bool CBobDSP::LoadPortsFromPlugin(TiXmlElement* plugin, std::vector<portvalue>& portvalues)
+bool CBobDSP::LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues)
 {
   bool success = true;
 
-  for (TiXmlElement* port = plugin->FirstChildElement("port"); port != NULL; port = port->NextSiblingElement("port"))
+  for (TiXmlElement* port = client->FirstChildElement("port"); port != NULL; port = port->NextSiblingElement("port"))
   {
     LogDebug("Read <port> element");
 
