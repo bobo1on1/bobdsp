@@ -39,7 +39,7 @@ CLadspaPlugin::~CLadspaPlugin()
   dlclose(m_handle);
 }
 
-void CLadspaPlugin::GetPlugins(std::string path, std::vector<CLadspaPlugin*>& plugins)
+void CLadspaPlugin::GetPlugins(std::string path, std::list<CLadspaPlugin*>& plugins)
 {
   Log("Loading plugins from %s", path.c_str());
 
@@ -110,6 +110,11 @@ void CLadspaPlugin::GetPlugins(std::string path, std::vector<CLadspaPlugin*>& pl
   closedir(ladspadir);
 }
 
+bool CLadspaPlugin::SortByName(CLadspaPlugin* first, CLadspaPlugin* second)
+{
+  return string(first->Name()) < second->Name();
+}
+
 void CLadspaPlugin::LoadAllSymbols()
 {
   if (m_fullyloaded)
@@ -163,11 +168,162 @@ const LADSPA_PortDescriptor CLadspaPlugin::PortDescriptor(unsigned long port)
     return 0;
 }
 
+const LADSPA_PortRangeHint CLadspaPlugin::PortRangeHint(unsigned long port)
+{
+  if (port < PortCount())
+  {
+    return m_descriptor->PortRangeHints[port];
+  }
+  else
+  {
+    LADSPA_PortRangeHint hint = {};
+    return hint;
+  }
+}
+
 const char* CLadspaPlugin::PortName(unsigned long port)
 {
   if (port < PortCount())
     return m_descriptor->PortNames[port];
   else
     return NULL;
+}
+
+const char* CLadspaPlugin::DirectionStr(unsigned long port)
+{
+  if (LADSPA_IS_PORT_INPUT(PortDescriptor(port)))
+    return "input";
+  else if (LADSPA_IS_PORT_OUTPUT(PortDescriptor(port)))
+    return "output";
+  else
+    return "unknown";
+}
+
+const char* CLadspaPlugin::TypeStr(unsigned long port)
+{
+  if (LADSPA_IS_PORT_CONTROL(PortDescriptor(port)))
+    return "control";
+  else if (LADSPA_IS_PORT_AUDIO(PortDescriptor(port)))
+    return "audio";
+  else
+    return "unknown";
+}
+
+bool CLadspaPlugin::IsControl(unsigned long port)
+{
+  if (LADSPA_IS_PORT_CONTROL(PortDescriptor(port)))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::IsInput(unsigned long port)
+{
+  if (LADSPA_IS_PORT_INPUT(PortDescriptor(port)))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::HasLowerBound(unsigned long port)
+{
+  if (LADSPA_IS_HINT_BOUNDED_BELOW(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::HasUpperBound(unsigned long port)
+{
+  if (LADSPA_IS_HINT_BOUNDED_ABOVE(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+float CLadspaPlugin::LowerBound(unsigned long port, int samplerate /*= 48000*/)
+{
+  LADSPA_PortRangeHint hint = PortRangeHint(port);
+  if (LADSPA_IS_HINT_SAMPLE_RATE(hint.HintDescriptor))
+    return hint.LowerBound * (float)samplerate;
+  else
+    return hint.LowerBound;
+}
+
+float CLadspaPlugin::UpperBound(unsigned long port, int samplerate /*= 48000*/)
+{
+  LADSPA_PortRangeHint hint = PortRangeHint(port);
+  if (LADSPA_IS_HINT_SAMPLE_RATE(hint.HintDescriptor))
+    return hint.UpperBound * (float)samplerate;
+  else
+    return hint.UpperBound;
+}
+
+bool CLadspaPlugin::IsToggled(unsigned long port)
+{
+  if (LADSPA_IS_HINT_TOGGLED(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::IsLogarithmic(unsigned long port)
+{
+  if (LADSPA_IS_HINT_LOGARITHMIC(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::IsInteger(unsigned long port)
+{
+  if (LADSPA_IS_HINT_INTEGER(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::HasDefault(unsigned long port)
+{
+  if (LADSPA_IS_HINT_HAS_DEFAULT(PortRangeHint(port).HintDescriptor))
+    return true;
+  else
+    return false;
+}
+
+float CLadspaPlugin::DefaultValue(unsigned long port, int samplerate /*= 48000*/)
+{
+  if (HasDefault(port))
+  {
+    LADSPA_PortRangeHintDescriptor hint = PortRangeHint(port).HintDescriptor;
+    if (LADSPA_IS_HINT_DEFAULT_MINIMUM(hint))
+      return LowerBound(port, samplerate);
+    else if (LADSPA_IS_HINT_DEFAULT_LOW(hint))
+      return MakeDefault(IsLogarithmic(port), LowerBound(port, samplerate), UpperBound(port, samplerate), 0.75f);
+    else if (LADSPA_IS_HINT_DEFAULT_MIDDLE(hint))
+      return MakeDefault(IsLogarithmic(port), LowerBound(port, samplerate), UpperBound(port, samplerate), 0.5f);
+    else if (LADSPA_IS_HINT_DEFAULT_HIGH(hint))
+      return MakeDefault(IsLogarithmic(port), LowerBound(port, samplerate), UpperBound(port, samplerate), 0.25f);
+    else if (LADSPA_IS_HINT_DEFAULT_MAXIMUM(hint))
+      return UpperBound(port, samplerate);
+    else if (LADSPA_IS_HINT_DEFAULT_0(hint))
+      return 0.0f;
+    else if (LADSPA_IS_HINT_DEFAULT_1(hint))
+      return 1.0f;
+    else if (LADSPA_IS_HINT_DEFAULT_100(hint))
+      return 100.0f;
+    else if (LADSPA_IS_HINT_DEFAULT_440(hint))
+      return 440.0f;
+  }
+
+  return 0.0f;
+}
+
+float CLadspaPlugin::MakeDefault(bool islog, float low, float high, float interpolate)
+{
+  if (islog)
+    return exp(log(low) * interpolate + log(high) * (1.0f - interpolate));
+  else
+    return low * interpolate + high * (1.0f - interpolate);
 }
 

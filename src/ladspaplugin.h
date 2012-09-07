@@ -19,7 +19,7 @@
 #ifndef LADSPAPLUGIN_H
 #define LADSPAPLUGIN_H
 
-#include <vector>
+#include <list>
 #include <string>
 #include <ladspa.h>
 
@@ -29,7 +29,8 @@ class CLadspaPlugin
     CLadspaPlugin(const std::string& filename, void* handle, const LADSPA_Descriptor* descriptor);
     ~CLadspaPlugin();
 
-    static void GetPlugins(std::string path, std::vector<CLadspaPlugin*>& plugins);
+    static void GetPlugins(std::string path, std::list<CLadspaPlugin*>& plugins);
+    static bool SortByName(CLadspaPlugin* first, CLadspaPlugin* second);
 
     void LoadAllSymbols();
 
@@ -38,15 +39,34 @@ class CLadspaPlugin
 
     unsigned long UniqueID()              { return m_descriptor->UniqueID;  }
     const char*   Label()                 { return m_descriptor->Label;     }
+    const char*   Name()                  { return m_descriptor->Name;      }
+    const char*   Maker()                 { return m_descriptor->Maker;     }
+    const char*   Copyright()             { return m_descriptor->Copyright; }
     unsigned long PortCount()             { return m_descriptor->PortCount; }
 
-    const LADSPA_PortDescriptor  PortDescriptor(unsigned long port);
-    const char*                  PortName(unsigned long port);
+    const LADSPA_PortDescriptor PortDescriptor(unsigned long port);
+    const LADSPA_PortRangeHint  PortRangeHint(unsigned long port);
+    const char*                 PortName(unsigned long port);
+    const char*                 DirectionStr(unsigned long port);
+    const char*                 TypeStr(unsigned long port);
+    bool                        IsControl(unsigned long port);
+    bool                        IsInput(unsigned long port);
+    bool                        HasLowerBound(unsigned long port);
+    bool                        HasUpperBound(unsigned long port);
+    float                       LowerBound(unsigned long port, int samplerate = 48000);
+    float                       UpperBound(unsigned long port, int samplerate = 48000);
+    bool                        IsToggled(unsigned long port);
+    bool                        IsLogarithmic(unsigned long port);
+    bool                        IsInteger(unsigned long port);
+    bool                        HasDefault(unsigned long port);
+    float                       DefaultValue(unsigned long port, int samplerate = 48000);
 
     int AudioInputPorts();
     int AudioOutputPorts();
 
   private:
+    float MakeDefault(bool islog, float low, float high, float interpolate);
+
     const LADSPA_Descriptor* m_descriptor;
     std::string              m_filename;
     void*                    m_handle;

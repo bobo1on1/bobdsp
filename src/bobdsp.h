@@ -21,7 +21,9 @@
 
 #include "util/inclstdint.h"
 #include "util/incltinyxml.h"
+#include "util/mutex.h"
 
+#include <list>
 #include <vector>
 #include <string>
 #include <utility>
@@ -47,18 +49,21 @@ class CBobDSP
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
 
+    std::string PluginsToJSON();
+
   private:
-    bool                        m_stop;
-    std::vector<CLadspaPlugin*> m_plugins;
-    std::vector<CJackClient*>   m_clients;
-    CPortConnector              m_portconnector;
-    bool                        m_checkconnect;
-    bool                        m_checkdisconnect;
-    bool                        m_updateports;
-    int                         m_signalfd;
-    int                         m_stdout[2];
-    int                         m_stderr[2];
-    CHttpServer                 m_httpserver;
+    CMutex                    m_mutex;
+    bool                      m_stop;
+    std::list<CLadspaPlugin*> m_plugins;
+    std::vector<CJackClient*> m_clients;
+    CPortConnector            m_portconnector;
+    bool                      m_checkconnect;
+    bool                      m_checkdisconnect;
+    bool                      m_updateports;
+    int                       m_signalfd;
+    int                       m_stdout[2];
+    int                       m_stderr[2];
+    CHttpServer               m_httpserver;
 
     void SetupRT(int64_t memsize);
     void SetupSignals();
@@ -73,7 +78,7 @@ class CBobDSP
     bool LoadClientsFromFile();
     void LoadClientsFromRoot(TiXmlElement* root);
     bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
-    CLadspaPlugin* SearchLadspaPlugin(std::vector<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
+    CLadspaPlugin* SearchLadspaPlugin(std::list<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
     bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
 
     static void JackError(const char* jackerror);
