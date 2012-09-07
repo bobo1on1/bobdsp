@@ -185,12 +185,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
       {
         LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
-        *upload_data_size = 0;
         httpserver->m_postdatasize -= ((string*)*con_cls)->length();
         delete (string*)*con_cls;
         return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
       }
-      lock.Leave();
 
       return MHD_YES;
     }
