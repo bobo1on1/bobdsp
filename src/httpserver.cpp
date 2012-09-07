@@ -66,8 +66,9 @@ bool CHttpServer::Start()
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 
+  unsigned int timeout = 60 * 60; //one hour timeout
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
-                              &AnswerToConnection, this, MHD_OPTION_END);
+                              &AnswerToConnection, this, MHD_OPTION_CONNECTION_TIMEOUT, timeout, MHD_OPTION_END);
   if (m_daemon)
     Log("Started webserver on port %i", m_port);
   else
