@@ -12,7 +12,6 @@
   <body>
 
     <script>
-      var portindex = -1;
 
       $(document).ready(function()
       {
@@ -259,6 +258,22 @@
         });
       }
 
+      var oldports = { "port" : [{ "name": "", "type": "" }] };
+      var portindex = -1;
+
+      function IsNewPort(port)
+      {
+        //on the first run, all ports are new, but don't highlight them
+        if (portindex == -1)
+          return false;
+        for (var i = 0; i < oldports.port.length; i++)
+        {
+          if (port.name == oldports.port[i].name && port.type == oldports.port[i].type)
+            return false;
+        }
+        return true;
+      }
+
       function ParsePorts(data)
       {
         document.bgColor="#FFFFFF";
@@ -281,21 +296,24 @@
           for (var i = 0; i < data.ports.port.length; i++)
           {
             var checked = "";
+            var newport = IsNewPort(data.ports.port[i]);
+
             if (data.ports.port[i].type == "output")
             {
               if (selectedoutput.length > 0 && selectedoutput.attr("value") == data.ports.port[i].name)
                 checked = "checked";
-              AddPortRow($("#outports"), "output", data.ports.port[i].name, checked);
+              AddPortRow($("#outports"), "output", data.ports.port[i].name, checked, newport);
             }
             else if (data.ports.port[i].type == "input")
             {
               if (selectedinput.length > 0 && selectedinput.attr("value") == data.ports.port[i].name)
                 checked = "checked";
-              AddPortRow($("#inports"), "input", data.ports.port[i].name, checked);
+              AddPortRow($("#inports"), "input", data.ports.port[i].name, checked, newport);
             }
           }
 
           portindex = data.ports.portindex;
+          oldports = data.ports;
         }
 
         //get json again, but set the timeout to 60 seconds and pass the portindex
@@ -316,10 +334,25 @@
       }
 
       //TODO: escape for html here
-      function AddPortRow(table, type, name, checked)
+      function AddPortRow(table, type, name, checked, isnew)
       {
         var option = "<input type=\"radio\" name=\"" + type + "\" value=\"" + name + "\" " + checked + ">";
         table.append("<tr><td>" + option + name + "</td></tr>");
+
+        if (isnew)
+        {
+          var row = table.get(0).rows[table.get(0).rows.length - 1];
+          row.style.backgroundColor = "#00FF00";
+
+          var settransparent = function()
+          {
+            row.style.backgroundColor = "transparent";
+          }
+
+          //TODO: when the ports list is updated before this times out
+          //the new port is immedately unhighlighted
+          setTimeout(settransparent, 5000);
+        }
       }
 
       //turns any number of the client name into [0-9]*
