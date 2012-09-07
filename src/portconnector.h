@@ -99,7 +99,7 @@ class CPortConnector
     std::string   ConnectionsToJSON();
     TiXmlElement* ConnectionsToXML();
     std::string   PortsToJSON();
-    std::string   PortsToJSON(std::string& postjson);
+    std::string   PortsToJSON(const std::string& postjson);
 
   private:
     std::vector<portconnection> m_connections;

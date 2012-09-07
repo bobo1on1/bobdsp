@@ -272,7 +272,7 @@ std::string CPortConnector::PortsToJSON()
   return generator.ToString();
 }
 
-std::string CPortConnector::PortsToJSON(std::string& postjson)
+std::string CPortConnector::PortsToJSON(const std::string& postjson)
 {
   TiXmlElement* root = JSON::JSONToXML(postjson);
 
