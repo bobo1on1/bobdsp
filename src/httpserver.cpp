@@ -174,8 +174,14 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else if (*upload_data_size) //on every next call with data, process
     {
+      //use strnlen here to exclude any null characters
+      size_t length = strnlen(upload_data, *upload_data_size);
+      ((string*)*con_cls)->append(upload_data, length);
+      *upload_data_size = 0; //signal that we processed this data
+
       //check if all post data combined doesn't use more than the memory limit
       CLock lock(httpserver->m_mutex);
+      httpserver->m_postdatasize += length;
       if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
       {
         LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
@@ -184,11 +190,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
         delete (string*)*con_cls;
         return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
       }
-      httpserver->m_postdatasize += *upload_data_size;
       lock.Leave();
-
-      ((string*)*con_cls)->append(upload_data, *upload_data_size);
-      *upload_data_size = 0; //signal that we processed this data
 
       return MHD_YES;
     }
