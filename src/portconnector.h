@@ -98,6 +98,7 @@ class CPortConnector
     bool          ConnectionsFromJSON(const std::string& json);
     std::string   ConnectionsToJSON();
     TiXmlElement* ConnectionsToXML();
+    std::string   PortIndexToJSON();
     std::string   PortsToJSON();
     std::string   PortsToJSON(const std::string& postjson);
 

@@ -238,6 +238,23 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
   return root;
 }
 
+std::string CPortConnector::PortIndexToJSON()
+{
+  JSON::CJSONGenerator generator;
+
+  generator.MapOpen();
+  generator.AddString("ports");
+  generator.MapOpen();
+  generator.AddString("portindex");
+  CLock lock(m_condition);
+  generator.AddInt(m_portindex);
+  lock.Leave();
+  generator.MapClose();
+  generator.MapClose();
+
+  return generator.ToString();
+}
+
 std::string CPortConnector::PortsToJSON()
 {
   CLock lock(m_condition);
@@ -289,7 +306,11 @@ std::string CPortConnector::PortsToJSON(const std::string& postjson)
   if (portindex_p == (int64_t)m_portindex && timeout_p > 0 && !m_stop)
     m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000, m_portindex, (unsigned int)portindex_p);
 
-  return PortsToJSON();
+  //if the portindex is the same, only send that, if it changed, send the ports too
+  if (portindex_p == (int64_t)m_portindex)
+    return PortIndexToJSON();
+  else
+    return PortsToJSON();
 }
 
 void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& updateports)
