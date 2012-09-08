@@ -147,18 +147,7 @@ void CBobDSP::Setup()
   LoadLadspaPaths(ladspapaths);
 
   //load ladspa plugins
-  for (vector<string>::iterator it = ladspapaths.begin(); it != ladspapaths.end(); it++)
-    CLadspaPlugin::GetPlugins(*it, m_plugins);
-
-  //sort plugins by name
-  m_plugins.sort(CLadspaPlugin::SortByName);
-
-  Log("Found %zu plugins", m_plugins.size());
-  for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
-  {
-    const LADSPA_Descriptor* d = (*it)->Descriptor();
-    LogDebug("ID:%lu Label:\"%s\" Name:\"%s\" Ports:%lu", d->UniqueID, d->Label, d->Name, d->PortCount);
-  }
+  m_pluginmanager.LoadPlugins(ladspapaths);
 
   //load the clients we want to use
   LoadClientsFromFile();
@@ -278,9 +267,6 @@ void CBobDSP::Cleanup()
 {
   Log("Stopping %zu jack client(s)", m_clients.size());
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-    delete *it;
-
-  for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
     delete *it;
 
   if (m_signalfd != -1)
@@ -771,7 +757,7 @@ void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
     if (!LoadPortsFromClient(client, portvalues))
       continue;
 
-    CLadspaPlugin* ladspaplugin = SearchLadspaPlugin(m_plugins, uniqueid_p, label->GetText());
+    CLadspaPlugin* ladspaplugin = m_pluginmanager.GetPlugin(uniqueid_p, label->GetText());
     if (ladspaplugin)
     {
       LogDebug("Found matching ladspa plugin in %s", ladspaplugin->FileName().c_str());
@@ -994,79 +980,3 @@ void CBobDSP::JackInfo(const char* jackinfo)
   Log("%s", jackinfo);
 }
 
-std::string CBobDSP::PluginsToJSON()
-{
-  JSON::CJSONGenerator generator;
-
-  generator.MapOpen();
-  generator.AddString("plugins");
-  generator.ArrayOpen();
-
-  CLock lock(m_mutex);
-  for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
-  {
-    generator.MapOpen();
-
-    generator.AddString("name");
-    generator.AddString((*it)->Name());
-    generator.AddString("label");
-    generator.AddString((*it)->Label());
-    generator.AddString("maker");
-    generator.AddString((*it)->Maker());
-    generator.AddString("copyright");
-    generator.AddString((*it)->Copyright());
-    generator.AddString("uniqueid");
-    generator.AddInt((*it)->UniqueID());
-
-    generator.AddString("ports");
-    generator.ArrayOpen();
-    for (unsigned long port = 0; port < (*it)->PortCount(); port++)
-    {
-      generator.MapOpen();
-
-      generator.AddString("name");
-      generator.AddString((*it)->PortName(port));
-      generator.AddString("direction");
-      generator.AddString((*it)->DirectionStr(port));
-      generator.AddString("type");
-      generator.AddString((*it)->TypeStr(port));
-
-      if ((*it)->IsControl(port) && (*it)->IsInput(port))
-      {
-        generator.AddString("toggled");
-        generator.AddBool((*it)->IsToggled(port));
-        generator.AddString("logarithmic");
-        generator.AddBool((*it)->IsLogarithmic(port));
-        generator.AddString("integer");
-        generator.AddBool((*it)->IsInteger(port));
-
-        if ((*it)->HasDefault(port))
-        {
-          generator.AddString("default");
-          generator.AddDouble((*it)->DefaultValue(port)); //TODO: pass the jack samplerate
-        }
-        if ((*it)->HasUpperBound(port))
-        {
-          generator.AddString("upperbound");
-          generator.AddDouble((*it)->UpperBound(port)); //TODO: same
-        }
-        if ((*it)->HasLowerBound(port))
-        {
-          generator.AddString("lowerbound");
-          generator.AddDouble((*it)->LowerBound(port)); //TODO: you get the idea
-        }
-      }
-
-      generator.MapClose();
-    }
-    generator.ArrayClose();
-
-    generator.MapClose();
-  }
-  lock.Leave();
-
-  generator.ArrayClose();
-  generator.MapClose();
-
-  return generator.ToString();
-}

@@ -23,7 +23,6 @@
 #include "util/incltinyxml.h"
 #include "util/mutex.h"
 
-#include <list>
 #include <vector>
 #include <string>
 #include <utility>
@@ -33,6 +32,7 @@
 #include "portconnector.h"
 #include "httpserver.h"
 #include "clientmessage.h"
+#include "pluginmanager.h"
 
 class CBobDSP
 {
@@ -45,6 +45,7 @@ class CBobDSP
     void Cleanup();
 
     CPortConnector& PortConnector() { return m_portconnector; }
+    CPluginManager& PluginManager() { return m_pluginmanager; }
 
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
@@ -54,9 +55,9 @@ class CBobDSP
   private:
     CMutex                    m_mutex;
     bool                      m_stop;
-    std::list<CLadspaPlugin*> m_plugins;
     std::vector<CJackClient*> m_clients;
     CPortConnector            m_portconnector;
+    CPluginManager            m_pluginmanager;
     bool                      m_checkconnect;
     bool                      m_checkdisconnect;
     bool                      m_updateports;

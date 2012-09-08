@@ -19,7 +19,6 @@
 #ifndef LADSPAPLUGIN_H
 #define LADSPAPLUGIN_H
 
-#include <list>
 #include <string>
 #include <ladspa.h>
 
@@ -29,7 +28,6 @@ class CLadspaPlugin
     CLadspaPlugin(const std::string& filename, void* handle, const LADSPA_Descriptor* descriptor);
     ~CLadspaPlugin();
 
-    static void GetPlugins(std::string path, std::list<CLadspaPlugin*>& plugins);
     static bool SortByName(CLadspaPlugin* first, CLadspaPlugin* second);
 
     void LoadAllSymbols();

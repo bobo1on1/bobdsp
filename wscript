@@ -74,6 +74,7 @@ def build(bld):
                       src/jackclient.cpp\
                       src/ladspainstance.cpp\
                       src/ladspaplugin.cpp\
+                      src/pluginmanager.cpp\
                       src/portconnector.cpp\
                       src/util/condition.cpp\
                       src/util/JSON.cpp\

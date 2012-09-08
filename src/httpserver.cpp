@@ -160,7 +160,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else if (strurl == "/plugins")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PluginsToJSON());
+      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PluginManager().PluginsToJSON());
     }
     else
     {
