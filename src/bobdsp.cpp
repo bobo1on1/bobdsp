@@ -207,7 +207,7 @@ void CBobDSP::Process()
       if ((*it)->ExitStatus())
       {
         LogError("Client \"%s\" exited with code %i reason: \"%s\"",
-                 (*it)->Name().c_str(), (*it)->ExitStatus(), (*it)->ExitReason().c_str());
+                 (*it)->Name().c_str(), (int)(*it)->ExitStatus(), (*it)->ExitReason().c_str());
         (*it)->Disconnect();
       }
 
