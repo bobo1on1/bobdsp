@@ -22,6 +22,7 @@
 #include "inclstdint.h"
 
 #include "mutex.h"
+#include "timeutils.h"
 
 //pthread condition variable class
 class CCondition : public CMutex
@@ -33,6 +34,33 @@ class CCondition : public CMutex
     void Signal();
     void Broadcast();
     bool Wait(int64_t usecs = -1);
+
+    template <class TPredicate>
+    bool Wait(int64_t usecs, TPredicate& predicate, TPredicate compval)
+    {
+      if (usecs < 0)
+      {
+        while (predicate == compval)
+          Wait();
+
+        return true;
+      }
+      else
+      {
+        int64_t now = GetTimeUs();
+        int64_t end = now + usecs;
+        while (now <= end && predicate == compval)
+        {
+          Wait(end - now);
+          if (predicate != compval)
+            return true;
+          else
+            now = GetTimeUs();
+        }
+
+        return predicate != compval;
+      }
+    }
 
   private:
     pthread_cond_t m_cond;    

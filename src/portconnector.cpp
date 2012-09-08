@@ -285,7 +285,7 @@ std::string CPortConnector::PortsToJSON(const std::string& postjson)
   //the maximum timeout is one hour
   CLock lock(m_condition);
   if (portindex_p == (int64_t)m_portindex && timeout_p > 0 && !m_stop)
-    m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000);
+    m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000, m_portindex, (unsigned int)portindex_p);
 
   delete root;
   return PortsToJSON();
@@ -307,8 +307,9 @@ void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& up
 void CPortConnector::Stop()
 {
   CLock lock(m_condition);
-  m_stop = true;
   //interrupt all waiting httpserver threads so we don't hang on exit
+  m_portindex++;
+  m_stop = true;
   m_condition.Broadcast(); 
 }
 
