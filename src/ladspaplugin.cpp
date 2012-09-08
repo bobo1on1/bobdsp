@@ -103,8 +103,9 @@ void CLadspaPlugin::GetPlugins(std::string path, std::list<CLadspaPlugin*>& plug
     else
     {
       LogError("Unable to get ladspa_descriptor from %s: %s", entry->d_name, dlerror());
-      dlclose(handle);
     }
+
+    dlclose(handle);
   }
 
   closedir(ladspadir);
