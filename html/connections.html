@@ -235,6 +235,9 @@
         setTimeout(switchhtml, 50);
       }
 
+      var oldports = { "port" : [{ "name": "", "type": "" }] };
+      var portindex = -1;
+
       function ErrorHandler()
       {
         //prevent error message showing from cancelled xmlhttprequest when the user refreshes the page
@@ -242,9 +245,13 @@
         {
           $("#errormessagetop,#errormessagebot").html("Connection to bobdsp lost!");
           document.bgColor="#FFBBBB";
-        }
 
-        setTimeout("GetPorts()", 1000);
+          //prevent all ports showing as new when we lose the connection
+          portindex = -1
+          oldports = { "port" : [{ "name": "", "type": "" }] };
+          //try to get the ports again
+          setTimeout("GetPorts()", 1000);
+        }
       }
 
       function GetPorts()
@@ -257,9 +264,6 @@
           error: ErrorHandler
         });
       }
-
-      var oldports = { "port" : [{ "name": "", "type": "" }] };
-      var portindex = -1;
 
       function IsNewPort(port)
       {
