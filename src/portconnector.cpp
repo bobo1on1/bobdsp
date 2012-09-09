@@ -564,11 +564,12 @@ void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vecto
 
 void CPortConnector::UpdatePorts()
 {
+  //build up a temp list
   const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
+  if (!ports)
+    return;
 
-  CLock lock(m_condition);
-
-  m_jackports.clear();
+  std::list<CJackPort> jackports;
   for (const char** portname = ports; *portname != NULL; portname++)
   {
     const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
@@ -581,14 +582,37 @@ void CPortConnector::UpdatePorts()
     int portflags = jack_port_flags(jackport);
 
     LogDebug("Found %s port \"%s\"", *portname, portflags & JackPortIsInput ? "input" : "output");
-    m_jackports.push_back(CJackPort(*portname, portflags));
+    jackports.push_back(CJackPort(*portname, portflags));
   }
-  m_jackports.sort();
-
-  m_portindex++;
-  m_condition.Broadcast();
-  lock.Leave();
-
+  jackports.sort();
   jack_free((void*)ports);
+
+  //check if the list really changed, it might not if the main loop got a delayed event from a jack client
+  CLock lock(m_condition);
+  bool changed = jackports.size() != m_jackports.size();
+  if (!changed)
+  {
+    list<CJackPort>::iterator oldport = m_jackports.begin();
+    list<CJackPort>::iterator newport = jackports.begin();
+
+    while (oldport != m_jackports.end())
+    {
+      if (oldport != newport)
+      {
+        changed = true;
+        break;
+      }
+      oldport++;
+      newport++;
+    }
+  }
+
+  //if the list of connections really changed, update and signal threads waiting on m_condition
+  if (changed)
+  {
+    m_jackports.swap(jackports); //swap is faster here since it doesn't copy
+    m_portindex++;
+    m_condition.Broadcast();
+  }
 }
 

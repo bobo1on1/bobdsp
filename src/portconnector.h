@@ -77,6 +77,11 @@ class CJackPort
       return (name < rhs.name);
     }
 
+    bool operator==(CJackPort& rhs)
+    {
+      return (name == rhs.name && flags == rhs.flags);
+    }
+
     std::string name;
     int         flags;
 };
