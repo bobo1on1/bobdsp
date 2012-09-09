@@ -265,6 +265,8 @@ std::string CPortConnector::PortsToJSON()
 
   generator.AddString("ports");
   generator.MapOpen();
+  generator.AddString("portindex");
+  generator.AddInt(m_portindex);
   generator.AddString("port");
   generator.ArrayOpen();
 
@@ -281,8 +283,6 @@ std::string CPortConnector::PortsToJSON()
   }
 
   generator.ArrayClose();
-  generator.AddString("portindex");
-  generator.AddInt(m_portindex);
   generator.MapClose();
   generator.MapClose();
 
