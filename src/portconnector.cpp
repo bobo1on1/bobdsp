@@ -372,46 +372,31 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
     return;
   }
 
-  const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
-
-  //connect ports that match the regexes
-  if (checkconnect)
-    checkconnect = !ConnectPorts(ports);
-
-  //disconnect ports that don't match the regexes
-  if (checkdisconnect)
-    checkdisconnect = !DisconnectPorts(ports);
-
   //update the ports list
   if (updateports)
   {
-    UpdatePorts(ports);
+    UpdatePorts();
     updateports = false;
   }
 
-  jack_free((void*)ports);
+  //connect ports that match the regexes
+  if (checkconnect)
+    checkconnect = !ConnectPorts();
+
+  //disconnect ports that don't match the regexes
+  if (checkdisconnect)
+    checkdisconnect = !DisconnectPorts();
 }
 
-bool CPortConnector::ConnectPorts(const char** ports)
+bool CPortConnector::ConnectPorts()
 {
   bool success = true;
 
-  for (const char** portname = ports; *portname != NULL; portname++)
+  for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
-    //find input ports
-    const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
-    int portflags = jack_port_flags(jackport);
-    if (portflags & JackPortIsInput)
-    {
-      LogDebug("Found input port \"%s\"", *portname);
-    }
-    else
-    {
-      LogDebug("Found output port \"%s\"", *portname);
+    //only use input ports here
+    if (!(inport->flags & JackPortIsInput))
       continue;
-    }
-
-    const char** inport = portname;
 
     //copy the connections, so we don't deadlock the httpserver if this thread hangs when talking to jackd
     CLock lock(m_condition);
@@ -422,35 +407,37 @@ bool CPortConnector::ConnectPorts(const char** ports)
     for (vector<portconnection>::iterator it = connections.begin(); it != connections.end(); it++)
     {
       pcrecpp::RE inputre(it->in);
-      if (!inputre.FullMatch(*inport))
+      if (!inputre.FullMatch(inport->name))
         continue;
 
-      LogDebug("Regex \"%s\" matches input port \"%s\"", it->in.c_str(), *inport);
+      LogDebug("Regex \"%s\" matches input port \"%s\"", it->in.c_str(), inport->name.c_str());
 
       //find output ports that match the <out> regex
       pcrecpp::RE outputre(it->out);
-      for (const char** outport = ports; *outport != NULL; outport++)
+      for (list<CJackPort>::iterator outport = m_jackports.begin(); outport != m_jackports.end(); outport++)
       {
-        const jack_port_t* jackportout = jack_port_by_name(m_client, *outport);
-        int outportflags = jack_port_flags(jackportout);
-        if (!(outportflags & JackPortIsOutput) || !outputre.FullMatch(*outport))
+        if (!(outport->flags & JackPortIsOutput) || !outputre.FullMatch(outport->name))
           continue;
 
-        LogDebug("Regex \"%s\" matches output port \"%s\"", it->out.c_str(), *outport);
+        LogDebug("Regex \"%s\" matches output port \"%s\"", it->out.c_str(), outport->name.c_str());
 
-        if (jack_port_connected_to(jackportout, *inport))
-          continue; //alread connected
+        const jack_port_t* jackportout = jack_port_by_name(m_client, outport->name.c_str());
+        if (!jackportout)
+          LogDebug("Can't find output port \"%s\", it probably deregistered", outport->name.c_str());
+
+        if (!jackportout || jack_port_connected_to(jackportout, inport->name.c_str()))
+          continue; //non existent port or already connected
 
         //if there's a match, connect
-        int returnv = jack_connect(m_client, *outport, *inport);
+        int returnv = jack_connect(m_client, outport->name.c_str(), inport->name.c_str());
         if (returnv == 0)
         {
-          Log("Connected port \"%s\" to port \"%s\"", *outport, *inport);
+          Log("Connected port \"%s\" to port \"%s\"", outport->name.c_str(), inport->name.c_str());
         }
         else if (returnv != EEXIST)
         {
           LogError("Error %i connecting port \"%s\" to port \"%s\": \"%s\"",
-              returnv, *outport, *inport, GetErrno().c_str());
+              returnv, outport->name.c_str(), inport->name.c_str(), GetErrno().c_str());
           success = false;
         }
       }
@@ -460,33 +447,38 @@ bool CPortConnector::ConnectPorts(const char** ports)
   return success;
 }
 
-bool CPortConnector::DisconnectPorts(const char** ports)
+bool CPortConnector::DisconnectPorts()
 {
   bool success = true;
 
   //build up a list of jack port connections
   vector< pair<string, string> > connectionlist; //pair.first = output port, pair.second = input port
-  for (const char** portname = ports; *portname != NULL; portname++)
+  for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
-    const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
-    int  portflags = jack_port_flags(jackport);
-    
     //only check input ports, since every connection is between an input and output port
     //we will get all connections this way
-    if (!((portflags & JackPortIsInput) == JackPortIsInput))
+    if (!(inport->flags & JackPortIsInput))
         continue;
 
-    const char** connections = jack_port_get_all_connections(m_client, jackport);
+    const jack_port_t* jackportin = jack_port_by_name(m_client, inport->name.c_str());
+    if (!jackportin)
+    {
+      LogDebug("Can't find input port \"%s\", it probably deregistered", inport->name.c_str());
+      continue;
+    }
+
+    const char** connections = jack_port_get_all_connections(m_client, jackportin);
     if (connections)
     {
       for (const char** con = connections; *con != NULL; con++)
-        connectionlist.push_back(make_pair(*con, *portname));
+        connectionlist.push_back(make_pair(*con, inport->name.c_str()));
 
       jack_free((void*)connections);
     }
   }
 
   //copy the connections and removed connections, this is to avoid a race condition
+  //and to prevent keeping the lock for a long time while iterating the loop and talking to jackd
   CLock lock(m_condition);
   vector<portconnection> connections = m_connections;
   vector<portconnection> removed = m_removed;
@@ -570,21 +562,33 @@ void CPortConnector::MatchConnection(vector<portconnection>::iterator& it, vecto
     LogDebug("Regex \"%s\" matches%sinput port \"%s\"", it->in.c_str(), removed ? " removed " : " ", con->second.c_str());
 }
 
-void CPortConnector::UpdatePorts(const char** ports)
+void CPortConnector::UpdatePorts()
 {
-  CLock lock(m_condition);
-  m_jackports.clear();
+  const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
 
+  CLock lock(m_condition);
+
+  m_jackports.clear();
   for (const char** portname = ports; *portname != NULL; portname++)
   {
     const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
-    int  portflags = jack_port_flags(jackport);
+    if (!jackport)
+    {
+      LogError("Unable to get flags from port \"%s\"", *portname);
+      continue;
+    }
 
+    int portflags = jack_port_flags(jackport);
+
+    LogDebug("Found %s port \"%s\"", *portname, portflags & JackPortIsInput ? "input" : "output");
     m_jackports.push_back(CJackPort(*portname, portflags));
   }
   m_jackports.sort();
 
   m_portindex++;
   m_condition.Broadcast();
+  lock.Leave();
+
+  jack_free((void*)ports);
 }
 
