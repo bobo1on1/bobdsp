@@ -146,7 +146,7 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
     }
     
     //store the new connections
-    m_connections = connections;
+    m_connections.swap(connections);
   }
 
   return valid;
