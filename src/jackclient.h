@@ -31,8 +31,7 @@ class CJackClient
 {
   public:
     CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                float pregain, float postgain, std::vector<portvalue> controlinputs,
-                const std::string& clientprefix, const std::string& portprefix);
+                float pregain, float postgain, std::vector<portvalue> controlinputs);
     ~CJackClient();
 
     bool Connect();
@@ -53,8 +52,6 @@ class CJackClient
     jack_client_t* m_client;
     CLadspaPlugin* m_plugin;
     std::string    m_name;
-    std::string    m_clientprefix;
-    std::string    m_portprefix;
     int            m_nrinstances;
     float          m_pregain;
     float          m_postgain;

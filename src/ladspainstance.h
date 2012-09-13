@@ -47,7 +47,7 @@ class CLadspaInstance
 {
   public:
     CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances,
-        CLadspaPlugin* plugin, std::vector<portvalue>& controlinputs, int samplerate, const std::string& portprefix);
+        CLadspaPlugin* plugin, std::vector<portvalue>& controlinputs, int samplerate);
     ~CLadspaInstance();
 
     bool Connect();
@@ -58,7 +58,6 @@ class CLadspaInstance
 
   private:
     std::string             m_name;
-    const std::string&      m_portprefix;
     std::vector<portvalue>& m_controlinputs;
     std::vector<portvalue>  m_controloutputs;
     jack_client_t*          m_client;

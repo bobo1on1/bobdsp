@@ -37,8 +37,7 @@
 using namespace std;
 
 CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                         float pregain, float postgain, std::vector<portvalue> controlinputs,
-                         const std::string& clientprefix, const std::string& portprefix)
+                         float pregain, float postgain, std::vector<portvalue> controlinputs)
 {
   m_plugin          = plugin;
   m_name            = name;
@@ -50,8 +49,6 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_connected       = false;
   m_wasconnected    = true;
   m_exitstatus      = (jack_status_t)0;
-  m_clientprefix    = clientprefix;
-  m_portprefix      = portprefix;
   m_samplerate      = 0;
   m_portevents      = 0;
 
@@ -99,8 +96,7 @@ bool CJackClient::ConnectInternal()
   m_exitreason.clear();
 
   //try to connect to jackd
-  string name = m_clientprefix + m_name;
-  m_client = jack_client_open(name.substr(0, jack_client_name_size() + 1).c_str(), JackNoStartServer, NULL);
+  m_client = jack_client_open(m_name.substr(0, jack_client_name_size() + 1).c_str(), JackNoStartServer, NULL);
   if (m_client == NULL)
   {
     if (m_wasconnected || g_printdebuglevel)
@@ -210,8 +206,8 @@ void CJackClient::InitLadspa()
   //allocate plugin instances
   for (int instance = 0; instance < m_nrinstances; instance++)
   {
-    CLadspaInstance* ladspainstance = new CLadspaInstance(m_client, m_name, instance, m_nrinstances, m_plugin,
-                                                          m_controlinputs, m_samplerate, m_portprefix);
+    CLadspaInstance* ladspainstance = new CLadspaInstance(m_client, m_name, instance, m_nrinstances,
+                                                          m_plugin, m_controlinputs, m_samplerate);
     m_instances.push_back(ladspainstance);
   }
 }

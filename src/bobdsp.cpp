@@ -696,8 +696,6 @@ bool CBobDSP::LoadClientsFromFile()
    it may look like this:
 
 <clients>
-  <clientprefix>bobdsp_</clientprefix>
-  <portprefix>ladspa_</portprefix>
   <client>
     <name>Audio limiter</name>
     <label>fastLookaheadLimiter</label>
@@ -705,7 +703,6 @@ bool CBobDSP::LoadClientsFromFile()
     <instances>1</instances>
     <pregain>1.0</pregain>
     <postgain>1.0</postgain>
-    <portprefix>lim_</portprefix>
     <port>
       <name>Input gain (dB)</name>
       <value>0</value>
@@ -721,9 +718,6 @@ bool CBobDSP::LoadClientsFromFile()
   </client>
 </clients>
 
-  <clientprefix>bobdsp_</clientprefix> is a string prefixed to every client name
-  <portprefix>ladspa_</portprefix> is a string prefixed to every port name
-  <portprefix>lim_</portprefix> is a string prefixed to every port name of the client
   <name> is the name for the jack client, it's not related to the name of the ladspa plugin
   <label> is the label of the ladspa plugin
   <uniqueid> is the unique id of the ladspa plugin
@@ -734,9 +728,6 @@ bool CBobDSP::LoadClientsFromFile()
 
 void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
 {
-  TiXmlElement* gclientprefix = root->FirstChildElement("clientprefix");
-  TiXmlElement* gportprefix = root->FirstChildElement("portprefix");
-
   for (TiXmlElement* client = root->FirstChildElement("client"); client != NULL; client = client->NextSiblingElement("client"))
   {
     LogDebug("Read <client> element");
@@ -745,7 +736,6 @@ void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
 
     LOADELEMENT(client, name, MANDATORY);
     LOADELEMENT(client, label, MANDATORY);
-    LOADELEMENT(client, portprefix, OPTIONAL);
     LOADINTELEMENT(client, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
     LOADINTELEMENT(client, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
     LOADFLOATELEMENT(client, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
@@ -824,18 +814,7 @@ void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
     if (!allportsok)
       continue;
 
-    string strclientprefix;
-    if (gclientprefix && gclientprefix->GetText())
-      strclientprefix = gclientprefix->GetText();
-
-    string strportprefix;
-    if (gportprefix && gportprefix->GetText())
-      strportprefix = gportprefix->GetText();
-    if (!portprefix_loadfailed)
-      strportprefix += portprefix->GetText();
-
-    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p,
-                                              postgain_p, portvalues, strclientprefix, strportprefix);
+    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, portvalues);
     m_clients.push_back(jackclient);
   }
 }
