@@ -32,10 +32,10 @@ class CPluginManager
     CPluginManager();
     ~CPluginManager();
 
-    void LoadPlugins(std::vector<std::string>& paths);
+    void           LoadPlugins(std::vector<std::string>& paths);
     CLadspaPlugin* GetPlugin(int64_t uniqueid, const char* label);
-    std::string PluginsToJSON();
-    void SetSamplerate(int samplerate);
+    std::string    PluginsToJSON();
+    void           SetSamplerate(int samplerate);
 
   private:
     void LoadPluginsPath(std::string& path);
