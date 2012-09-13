@@ -39,12 +39,17 @@ class CJackClient
     bool IsConnected() { return m_connected;   }
     int  MsgPipe()     { return m_pipe[0];     }
     ClientMessage GetMessage();
-    int  Samplerate()  { return m_samplerate;  }
-
-    const std::string& Name() { return m_name; }
 
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
+
+    CLadspaPlugin*                Plugin()        { return m_plugin;        }
+    const std::string&            Name()          { return m_name;          }
+    int                           NrInstances()   { return m_nrinstances;   }
+    float                         PreGain()       { return m_pregain;       }
+    float                         PostGain()      { return m_postgain;      }
+    int                           Samplerate()    { return m_samplerate;    }
+    const std::vector<portvalue>& ControlInputs() { return m_controlinputs; }
 
   private:
     bool           m_connected;
