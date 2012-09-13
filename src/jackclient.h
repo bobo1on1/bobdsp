@@ -37,9 +37,10 @@ class CJackClient
 
     bool Connect();
     void Disconnect();
-    bool IsConnected() { return m_connected; }
-    int  MsgPipe()     { return m_pipe[0];   }
+    bool IsConnected() { return m_connected;   }
+    int  MsgPipe()     { return m_pipe[0];     }
     ClientMessage GetMessage();
+    int  Samplerate()  { return m_samplerate;  }
 
     const std::string& Name() { return m_name; }
 

@@ -190,6 +190,7 @@ void CJackClient::Disconnect()
   m_connected  = false;
   m_portevents = 0;
   m_exitstatus = (jack_status_t)0;
+  m_samplerate = 0;
 }
 
 bool CJackClient::ConnectJackPorts()

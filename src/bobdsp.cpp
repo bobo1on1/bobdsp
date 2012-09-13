@@ -212,6 +212,10 @@ void CBobDSP::Process()
           {
             m_checkconnect = true;
             m_updateports = true;
+
+            //update samplerate
+            if ((*it)->Samplerate() != 0)
+              m_pluginmanager.SetSamplerate((*it)->Samplerate());
           }
         }
       }

@@ -30,6 +30,7 @@ using namespace std;
 
 CPluginManager::CPluginManager()
 {
+  m_samplerate = 48000; //safe default
 }
 
 CPluginManager::~CPluginManager()
@@ -199,17 +200,17 @@ std::string CPluginManager::PluginsToJSON()
         if ((*it)->HasDefault(port))
         {
           generator.AddString("default");
-          generator.AddDouble((*it)->DefaultValue(port)); //TODO: pass the jack samplerate
+          generator.AddDouble((*it)->DefaultValue(port, m_samplerate));
         }
         if ((*it)->HasUpperBound(port))
         {
           generator.AddString("upperbound");
-          generator.AddDouble((*it)->UpperBound(port)); //TODO: same
+          generator.AddDouble((*it)->UpperBound(port, m_samplerate));
         }
         if ((*it)->HasLowerBound(port))
         {
           generator.AddString("lowerbound");
-          generator.AddDouble((*it)->LowerBound(port)); //TODO: you get the idea
+          generator.AddDouble((*it)->LowerBound(port, m_samplerate));
         }
       }
 
@@ -225,5 +226,16 @@ std::string CPluginManager::PluginsToJSON()
   generator.MapClose();
 
   return generator.ToString();
+}
+
+void CPluginManager::SetSamplerate(int samplerate)
+{
+  if (m_samplerate != samplerate)
+  {
+    Log("Samplerate updated from %i to %i", m_samplerate, samplerate);
+
+    CLock lock(m_mutex);
+    m_samplerate = samplerate;
+  }
 }
 

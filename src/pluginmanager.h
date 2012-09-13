@@ -35,10 +35,12 @@ class CPluginManager
     void LoadPlugins(std::vector<std::string>& paths);
     CLadspaPlugin* GetPlugin(int64_t uniqueid, const char* label);
     std::string PluginsToJSON();
+    void SetSamplerate(int samplerate);
 
   private:
     void LoadPluginsPath(std::string& path);
 
+    int                       m_samplerate;
     std::list<CLadspaPlugin*> m_plugins;
     CMutex                    m_mutex;
 };
