@@ -866,21 +866,6 @@ bool CBobDSP::LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& 
   return success;
 }
 
-CLadspaPlugin* CBobDSP::SearchLadspaPlugin(list<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label)
-{
-  CLadspaPlugin* ladspaplugin = NULL;
-  for (list<CLadspaPlugin*>::iterator it = plugins.begin(); it != plugins.end(); it++)
-  {
-    if (uniqueid == (int64_t)(*it)->UniqueID() && strcmp((*it)->Label(), label) == 0)
-    {
-      ladspaplugin = (*it);
-      break;
-    }
-  }
-
-  return ladspaplugin;
-}
-
 bool CBobDSP::PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p)
 {
   bool isinput = LADSPA_IS_PORT_INPUT(p);

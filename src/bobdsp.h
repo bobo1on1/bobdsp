@@ -50,8 +50,6 @@ class CBobDSP
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
 
-    std::string PluginsToJSON();
-
   private:
     CMutex                    m_mutex;
     bool                      m_stop;
@@ -79,7 +77,6 @@ class CBobDSP
     bool LoadClientsFromFile();
     void LoadClientsFromRoot(TiXmlElement* root);
     bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
-    CLadspaPlugin* SearchLadspaPlugin(std::list<CLadspaPlugin*> plugins, int64_t uniqueid, const char* label);
     bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
 
     static void JackError(const char* jackerror);
