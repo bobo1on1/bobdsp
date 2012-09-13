@@ -96,7 +96,7 @@ bool CJackClient::ConnectInternal()
   m_exitreason.clear();
 
   //try to connect to jackd
-  m_client = jack_client_open(m_name.substr(0, jack_client_name_size() + 1).c_str(), JackNoStartServer, NULL);
+  m_client = jack_client_open(m_name.substr(0, jack_client_name_size() - 1).c_str(), JackNoStartServer, NULL);
   if (m_client == NULL)
   {
     if (m_wasconnected || g_printdebuglevel)
