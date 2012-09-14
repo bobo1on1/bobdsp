@@ -614,5 +614,9 @@ void CPortConnector::UpdatePorts()
     m_portindex++;
     m_condition.Broadcast();
   }
+  else
+  {
+    LogDebug("Port list update requested but list did not change");
+  }
 }
 
