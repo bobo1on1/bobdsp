@@ -50,6 +50,8 @@ class CBobDSP
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
 
+    std::string ClientsToJSON();
+
   private:
     CMutex                    m_mutex;
     bool                      m_stop;

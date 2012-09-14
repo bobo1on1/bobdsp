@@ -162,6 +162,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PluginManager().PluginsToJSON());
     }
+    else if (strurl == "/clients")
+    {
+      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsToJSON());
+    }
     else
     {
       //TODO: add some security, since now you can download every file

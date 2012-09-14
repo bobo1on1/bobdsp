@@ -948,3 +948,56 @@ void CBobDSP::JackInfo(const char* jackinfo)
   Log("%s", jackinfo);
 }
 
+std::string CBobDSP::ClientsToJSON()
+{
+  JSON::CJSONGenerator generator;
+
+  generator.MapOpen();
+  generator.AddString("clients");
+  generator.ArrayOpen();
+
+  CLock lock(m_mutex);
+  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  {
+    generator.MapOpen();
+
+    generator.AddString("name");
+    generator.AddString((*it)->Name());
+    generator.AddString("instances");
+    generator.AddInt((*it)->NrInstances());
+    generator.AddString("pregain");
+    generator.AddDouble((*it)->PreGain());
+    generator.AddString("postgain");
+    generator.AddDouble((*it)->PostGain());
+
+    generator.AddString("controls");
+    generator.ArrayOpen();
+    const vector<portvalue>& controls = (*it)->ControlInputs();
+    for (vector<portvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
+    {
+      generator.MapOpen();
+      generator.AddString("name");
+      generator.AddString(control->first.c_str());
+      generator.AddString("value");
+      generator.AddDouble(control->second);
+      generator.MapClose();
+    }
+    generator.ArrayClose();
+
+    generator.AddString("plugin");
+    generator.MapOpen();
+    generator.AddString("label");
+    generator.AddString((*it)->Plugin()->Label());
+    generator.AddString("uniqueid");
+    generator.AddInt((*it)->Plugin()->UniqueID());
+    generator.MapClose();
+
+    generator.MapClose();
+  }
+
+  generator.ArrayClose();
+  generator.MapClose();
+
+  return generator.ToString();
+}
+
