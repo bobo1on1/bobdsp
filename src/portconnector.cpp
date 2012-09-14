@@ -388,19 +388,16 @@ bool CPortConnector::ConnectPorts()
 {
   bool success = true;
 
+  CLock lock(m_condition);
+
   for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
     //only use input ports here
     if (!(inport->Flags() & JackPortIsInput))
       continue;
 
-    //copy the connections, so we don't deadlock the httpserver if this thread hangs when talking to jackd
-    CLock lock(m_condition);
-    vector<CPortConnection> connections = m_connections;
-    lock.Leave();
-
     //check if the input port name matches an <in> regex
-    for (vector<CPortConnection>::iterator it = connections.begin(); it != connections.end(); it++)
+    for (vector<CPortConnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
     {
       if (!it->InMatch(inport->Name()))
         continue;
@@ -471,13 +468,7 @@ bool CPortConnector::DisconnectPorts()
     }
   }
 
-  //copy the connections and removed connections, this is to avoid a race condition
-  //and to prevent keeping the lock for a long time while iterating the loop and talking to jackd
   CLock lock(m_condition);
-  vector<CPortConnection> connections = m_connections;
-  vector<CPortConnection> removed = m_removed;
-  m_removed.clear();
-  lock.Leave();
 
   //match every connection to our regexes in connections
   for (vector< pair<string, string> >::iterator con = connectionlist.begin(); con != connectionlist.end(); con++)
@@ -486,7 +477,7 @@ bool CPortConnector::DisconnectPorts()
 
     bool matched    = false;
     bool disconnect = false;
-    for (vector<CPortConnection>::iterator it = connections.begin(); it != connections.end(); it++)
+    for (vector<CPortConnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
     {
       bool outmatch;
       bool inmatch;
@@ -508,7 +499,7 @@ bool CPortConnector::DisconnectPorts()
     //check if we need to disconnect a removed connection
     if (!matched && !disconnect)
     {
-      for (vector<CPortConnection>::iterator it = removed.begin(); it != removed.end(); it++)
+      for (vector<CPortConnection>::iterator it = m_removed.begin(); it != m_removed.end(); it++)
       {
         bool outmatch;
         bool inmatch;
@@ -538,6 +529,8 @@ bool CPortConnector::DisconnectPorts()
       }
     }
   }
+
+  m_removed.clear();
 
   return success;
 }
