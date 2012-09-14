@@ -597,7 +597,7 @@ void CPortConnector::UpdatePorts()
 
     while (oldport != m_jackports.end())
     {
-      if (oldport != newport)
+      if (*oldport != *newport)
       {
         changed = true;
         break;

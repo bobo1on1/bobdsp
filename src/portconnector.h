@@ -82,6 +82,11 @@ class CJackPort
       return (name == rhs.name && flags == rhs.flags);
     }
 
+    bool operator!=(CJackPort& rhs)
+    {
+      return !(*this == rhs);
+    }
+
     std::string name;
     int         flags;
 };
