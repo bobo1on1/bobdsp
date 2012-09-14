@@ -271,7 +271,7 @@ std::string CPortConnector::PortsToJSON()
     generator.MapOpen();
 
     generator.AddString("name");
-    generator.AddString(it->name);
+    generator.AddString(it->Name());
     generator.AddString("type");
     generator.AddString(it->TypeStr());
 
@@ -391,7 +391,7 @@ bool CPortConnector::ConnectPorts()
   for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
     //only use input ports here
-    if (!(inport->flags & JackPortIsInput))
+    if (!(inport->Flags() & JackPortIsInput))
       continue;
 
     //copy the connections, so we don't deadlock the httpserver if this thread hangs when talking to jackd
@@ -402,36 +402,36 @@ bool CPortConnector::ConnectPorts()
     //check if the input port name matches an <in> regex
     for (vector<CPortConnection>::iterator it = connections.begin(); it != connections.end(); it++)
     {
-      if (!it->InMatch(inport->name))
+      if (!it->InMatch(inport->Name()))
         continue;
 
-      LogDebug("Regex \"%s\" matches input port \"%s\"", it->In().c_str(), inport->name.c_str());
+      LogDebug("Regex \"%s\" matches input port \"%s\"", it->In().c_str(), inport->Name().c_str());
 
       //find output ports that match the <out> regex
       for (list<CJackPort>::iterator outport = m_jackports.begin(); outport != m_jackports.end(); outport++)
       {
-        if (!(outport->flags & JackPortIsOutput) || !it->OutMatch(outport->name))
+        if (!(outport->Flags() & JackPortIsOutput) || !it->OutMatch(outport->Name()))
           continue;
 
-        LogDebug("Regex \"%s\" matches output port \"%s\"", it->Out().c_str(), outport->name.c_str());
+        LogDebug("Regex \"%s\" matches output port \"%s\"", it->Out().c_str(), outport->Name().c_str());
 
-        const jack_port_t* jackportout = jack_port_by_name(m_client, outport->name.c_str());
+        const jack_port_t* jackportout = jack_port_by_name(m_client, outport->Name().c_str());
         if (!jackportout)
-          LogDebug("Can't find output port \"%s\", it probably deregistered", outport->name.c_str());
+          LogDebug("Can't find output port \"%s\", it probably deregistered", outport->Name().c_str());
 
-        if (!jackportout || jack_port_connected_to(jackportout, inport->name.c_str()))
+        if (!jackportout || jack_port_connected_to(jackportout, inport->Name().c_str()))
           continue; //non existent port or already connected
 
         //if there's a match, connect
-        int returnv = jack_connect(m_client, outport->name.c_str(), inport->name.c_str());
+        int returnv = jack_connect(m_client, outport->Name().c_str(), inport->Name().c_str());
         if (returnv == 0)
         {
-          Log("Connected port \"%s\" to port \"%s\"", outport->name.c_str(), inport->name.c_str());
+          Log("Connected port \"%s\" to port \"%s\"", outport->Name().c_str(), inport->Name().c_str());
         }
         else if (returnv != EEXIST)
         {
           LogError("Error %i connecting port \"%s\" to port \"%s\": \"%s\"",
-              returnv, outport->name.c_str(), inport->name.c_str(), GetErrno().c_str());
+              returnv, outport->Name().c_str(), inport->Name().c_str(), GetErrno().c_str());
           success = false;
         }
       }
@@ -451,13 +451,13 @@ bool CPortConnector::DisconnectPorts()
   {
     //only check input ports, since every connection is between an input and output port
     //we will get all connections this way
-    if (!(inport->flags & JackPortIsInput))
+    if (!(inport->Flags() & JackPortIsInput))
         continue;
 
-    const jack_port_t* jackportin = jack_port_by_name(m_client, inport->name.c_str());
+    const jack_port_t* jackportin = jack_port_by_name(m_client, inport->Name().c_str());
     if (!jackportin)
     {
-      LogDebug("Can't find input port \"%s\", it probably deregistered", inport->name.c_str());
+      LogDebug("Can't find input port \"%s\", it probably deregistered", inport->Name().c_str());
       continue;
     }
 
@@ -465,7 +465,7 @@ bool CPortConnector::DisconnectPorts()
     if (connections)
     {
       for (const char** con = connections; *con != NULL; con++)
-        connectionlist.push_back(make_pair(*con, inport->name.c_str()));
+        connectionlist.push_back(make_pair(*con, inport->Name().c_str()));
 
       jack_free((void*)connections);
     }

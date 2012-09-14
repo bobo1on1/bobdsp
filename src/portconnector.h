@@ -82,15 +82,15 @@ class CPortConnection
 class CJackPort
 {
   public:
-    CJackPort(std::string a_name, int a_flags)
+    CJackPort(std::string name, int flags)
     {
-      name = a_name;
-      flags = a_flags;
+      m_name = name;
+      m_flags = flags;
     }
 
     const char* TypeStr()
     {
-      if (flags & JackPortIsOutput)
+      if (m_flags & JackPortIsOutput)
         return "output";
       else
         return "input";
@@ -98,12 +98,12 @@ class CJackPort
 
     bool operator<(CJackPort& rhs)
     {
-      return (name < rhs.name);
+      return (m_name < rhs.m_name);
     }
 
     bool operator==(CJackPort& rhs)
     {
-      return (name == rhs.name && flags == rhs.flags);
+      return (m_name == rhs.m_name && m_flags == rhs.m_flags);
     }
 
     bool operator!=(CJackPort& rhs)
@@ -111,8 +111,12 @@ class CJackPort
       return !(*this == rhs);
     }
 
-    std::string name;
-    int         flags;
+    const std::string& Name()  { return m_name;  }
+    int                Flags() { return m_flags; }
+
+  private:
+    std::string m_name;
+    int         m_flags;
 };
 
 class CPortConnector
