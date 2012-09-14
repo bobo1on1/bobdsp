@@ -581,7 +581,7 @@ void CPortConnector::UpdatePorts()
 
     int portflags = jack_port_flags(jackport);
 
-    LogDebug("Found %s port \"%s\"", *portname, portflags & JackPortIsInput ? "input" : "output");
+    LogDebug("Found %s port \"%s\"", portflags & JackPortIsInput ? "input" : "output", *portname);
     jackports.push_back(CJackPort(*portname, portflags));
   }
   jackports.sort();
