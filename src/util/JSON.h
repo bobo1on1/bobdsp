@@ -20,6 +20,7 @@
 #define JSON_H
 
 #include "config.h"
+#include "util/inclstdint.h"
 #include "util/incltinyxml.h"
 #include <string>
 #include <cstring>
@@ -57,10 +58,8 @@ namespace JSON
         { yajl_gen_string(m_handle, (const unsigned char*)in.c_str(), in.length()); }
       void AddString(const char* in)
         { yajl_gen_string(m_handle, (const unsigned char*)in, strlen(in)); }
-      void AddInt(long int in)
-        { yajl_gen_integer(m_handle, in); }
-      void AddDouble(double in)
-        { yajl_gen_double(m_handle, in); }
+      void AddInt(int64_t in);
+      void AddDouble(double in);
       void AddBool(bool in)
         { yajl_gen_bool(m_handle, in); }
 

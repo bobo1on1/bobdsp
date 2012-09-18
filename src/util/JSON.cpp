@@ -224,3 +224,15 @@ std::string JSON::CJSONGenerator::ToString()
   return string((const char *)str, length);
 }
 
+void JSON::CJSONGenerator::AddInt(int64_t in)
+{
+  string number = ::ToString(in);
+  yajl_gen_number(m_handle, number.c_str(), number.length());
+}
+
+void JSON::CJSONGenerator::AddDouble(double in)
+{
+  string number = ::ToString(in);
+  yajl_gen_number(m_handle, number.c_str(), number.length());
+}
+
