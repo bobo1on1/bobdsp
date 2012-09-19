@@ -79,7 +79,6 @@ class CBobDSP
     bool LoadClientsFromFile();
     void LoadClientsFromRoot(TiXmlElement* root);
     bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
-    bool PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p);
 
     static void JackError(const char* jackerror);
     static void JackInfo(const char* jackinfo);

@@ -43,6 +43,7 @@ class CLadspaPlugin
     unsigned long PortCount()             { return m_descriptor->PortCount; }
 
     const LADSPA_PortDescriptor PortDescriptor(unsigned long port);
+    bool                        PortDescriptorSanityCheck(unsigned long port);
     const LADSPA_PortRangeHint  PortRangeHint(unsigned long port);
     const char*                 PortName(unsigned long port);
     const char*                 DirectionStr(unsigned long port);

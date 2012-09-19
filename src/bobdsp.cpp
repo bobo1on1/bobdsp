@@ -811,7 +811,7 @@ void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
         }
       }
 
-      if (!PortDescriptorSanityCheck(ladspaplugin, port, p))
+      if (!ladspaplugin->PortDescriptorSanityCheck(port))
         allportsok = false;
     }
 
@@ -847,40 +847,6 @@ bool CBobDSP::LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& 
   }
 
   return success;
-}
-
-bool CBobDSP::PortDescriptorSanityCheck(CLadspaPlugin* plugin, unsigned long port, LADSPA_PortDescriptor p)
-{
-  bool isinput = LADSPA_IS_PORT_INPUT(p);
-  bool isoutput = LADSPA_IS_PORT_OUTPUT(p);
-  bool iscontrol = LADSPA_IS_PORT_CONTROL(p);
-  bool isaudio = LADSPA_IS_PORT_AUDIO(p);
-
-  bool isok = true;
-
-  if (!isinput && !isoutput)
-  {
-    LogError("Port \"%s\" of plugin %s does not have input or output flag set", plugin->PortName(port), plugin->Label());
-    isok = false;
-  }
-  else if (isinput && isoutput)
-  {
-    LogError("Port \"%s\" of plugin %s has both input and output flag set", plugin->PortName(port), plugin->Label());
-    isok = false;
-  }
-
-  if (!iscontrol && !isaudio)
-  {
-    LogError("Port \"%s\" of plugin %s does not have audio or control flag set", plugin->PortName(port), plugin->Label());
-    isok = false;
-  }
-  else if (iscontrol && isaudio)
-  {
-    LogError("Port \"%s\" of plugin %s has both audio and control flag set", plugin->PortName(port), plugin->Label());
-    isok = false;
-  }
-
-  return isok;
 }
 
 #define CONNECTIONSFILE "connections.xml"
