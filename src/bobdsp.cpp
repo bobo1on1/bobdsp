@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include <sys/signalfd.h>
+#include <locale.h>
 
 #include "util/log.h"
 #include "util/misc.h"
@@ -59,6 +60,9 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   m_stderr[0] = m_stderr[1] = -1;
 
   bool dofork = false;
+
+  //make sure all numeric string<->float conversions are done using the C locale
+  setlocale(LC_NUMERIC, "C");
 
   //parse commandline options
   for (int i = 1; i < argc; i++)
