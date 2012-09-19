@@ -21,7 +21,6 @@
 
 #include "util/inclstdint.h"
 #include "util/incltinyxml.h"
-#include "util/mutex.h"
 
 #include <vector>
 #include <string>
@@ -33,6 +32,9 @@
 #include "httpserver.h"
 #include "clientmessage.h"
 #include "pluginmanager.h"
+#include "clientsmanager.h"
+
+#define CONNECTINTERVAL 1000000
 
 class CBobDSP
 {
@@ -44,41 +46,37 @@ class CBobDSP
     void Process();
     void Cleanup();
 
-    CPortConnector& PortConnector() { return m_portconnector; }
-    CPluginManager& PluginManager() { return m_pluginmanager; }
+    CPortConnector& PortConnector()   { return m_portconnector;  }
+    CPluginManager& PluginManager()   { return m_pluginmanager;  }
+    CClientsManager& ClientsManager() { return m_clientsmanager; }
 
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
 
-    std::string ClientsToJSON();
-
   private:
-    CMutex                    m_mutex;
-    bool                      m_stop;
-    std::vector<CJackClient*> m_clients;
-    CPortConnector            m_portconnector;
-    CPluginManager            m_pluginmanager;
-    bool                      m_checkconnect;
-    bool                      m_checkdisconnect;
-    bool                      m_updateports;
-    int                       m_signalfd;
-    int                       m_stdout[2];
-    int                       m_stderr[2];
-    CHttpServer               m_httpserver;
+    bool            m_stop;
+    CPortConnector  m_portconnector;
+    CPluginManager  m_pluginmanager;
+    CClientsManager m_clientsmanager;
+    bool            m_checkconnect;
+    bool            m_checkdisconnect;
+    bool            m_updateports;
+    int             m_signalfd;
+    int             m_stdout[2];
+    int             m_stderr[2];
+    CHttpServer     m_httpserver;
 
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
     void ProcessMessages(int64_t timeout);
-    void ProcessClientMessages();
+    void ProcessClientMessages(pollfd* fds, int nrclientpipes);
     void ProcessSignalfd();
     void ProcessStdFd(const char* name, int& fd);
     void ProcessHttpServerMessages();
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadClientsFromFile();
-    void LoadClientsFromRoot(TiXmlElement* root);
-    bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
 
     static void JackError(const char* jackerror);
     static void JackInfo(const char* jackinfo);

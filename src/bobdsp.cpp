@@ -38,9 +38,7 @@
 #include "util/misc.h"
 #include "util/timeutils.h"
 #include "util/JSON.h"
-#include "util/lock.h"
 
-#define CONNECTINTERVAL 1000000
 #define PORTRETRY         15625
 #define TIMEOUT_INFINITE  -1000
 
@@ -48,6 +46,7 @@ using namespace std;
 
 CBobDSP::CBobDSP(int argc, char *argv[]):
   m_portconnector(*this),
+  m_clientsmanager(*this),
   m_httpserver(*this)
 {
   m_stop            = false;
@@ -169,8 +168,6 @@ void CBobDSP::Setup()
 
 void CBobDSP::Process()
 {
-  Log("Starting %zu jack client(s)", m_clients.size());
-
   int64_t timeout = TIMEOUT_INFINITE;
   int64_t portretryinterval = 0;
   //set up timestamp so we connect on the first iteration
@@ -194,35 +191,10 @@ void CBobDSP::Process()
       }
     }
 
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    if (m_clientsmanager.Process(triedconnect, allconnected, lastconnect))
     {
-      //check if the jack thread has failed
-      if ((*it)->ExitStatus())
-      {
-        LogError("Client \"%s\" exited with code %i reason: \"%s\"",
-                 (*it)->Name().c_str(), (int)(*it)->ExitStatus(), (*it)->ExitReason().c_str());
-        (*it)->Disconnect();
-      }
-
-      //keep trying to connect
-      //only try to connect at the interval to prevent hammering jackd
-      if (!(*it)->IsConnected())
-      {
-        allconnected = false;
-        if (GetTimeUs() - lastconnect >= CONNECTINTERVAL)
-        {
-          triedconnect = true;
-          if ((*it)->Connect())
-          {
-            m_checkconnect = true;
-            m_updateports = true;
-
-            //update samplerate
-            if ((*it)->Samplerate() != 0)
-              m_pluginmanager.SetSamplerate((*it)->Samplerate());
-          }
-        }
-      }
+      m_checkconnect = true;
+      m_updateports = true;
     }
 
     if (triedconnect)
@@ -273,15 +245,12 @@ void CBobDSP::Process()
 
 void CBobDSP::Cleanup()
 {
-  Log("Stopping %zu jack client(s)", m_clients.size());
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-    delete *it;
+  m_portconnector.Stop();
+  m_httpserver.Stop();
+  m_clientsmanager.Stop();
 
   if (m_signalfd != -1)
     close(m_signalfd);
-
-  m_portconnector.Stop();
-  m_httpserver.Stop();
 }
 
 //based on https://rt.wiki.kernel.org/index.php/Dynamic_memory_allocation_example
@@ -415,19 +384,9 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 
 void CBobDSP::ProcessMessages(int64_t timeout)
 {
-  unsigned int nrfds = 0;
-  pollfd* fds        = new pollfd[m_clients.size() + 4];
-
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-  {
-    int pipe = (*it)->MsgPipe();
-    if (pipe != -1)
-    {
-      nrfds++;
-      fds[nrfds - 1].fd     = pipe;
-      fds[nrfds - 1].events = POLLIN;
-    }
-  }
+  pollfd* fds = new pollfd[m_clientsmanager.NrClients() + 4];
+  int nrclientpipes = m_clientsmanager.ClientPipes(fds);
+  unsigned int nrfds = nrclientpipes;
 
   int pipes[4] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe() };
   int pipenrs[4] = { -1, -1, -1, -1 };
@@ -443,6 +402,8 @@ void CBobDSP::ProcessMessages(int64_t timeout)
     }
   }
 
+  timeout /= 1000;
+
   if (nrfds == 0)
   {
     LogDebug("no file descriptors to wait on");
@@ -455,7 +416,7 @@ void CBobDSP::ProcessMessages(int64_t timeout)
     LogDebug("Waiting on %i file descriptors, timeout %s", nrfds, timeout >= 0 ? ToString(timeout).c_str() : "infinite");
   }
 
-  int returnv = poll(fds, nrfds, timeout / 1000);
+  int returnv = poll(fds, nrfds, timeout);
   if (returnv == -1)
   {
     LogError("poll on msg pipes: %s", GetErrno().c_str());
@@ -464,7 +425,7 @@ void CBobDSP::ProcessMessages(int64_t timeout)
   else if (returnv > 0)
   {
     //check client messages
-    ProcessClientMessages();
+    ProcessClientMessages(fds, nrclientpipes);
     
     //check stdout pipe
     if (pipenrs[0] != -1 && (fds[pipenrs[0]].revents & POLLIN))
@@ -486,41 +447,16 @@ void CBobDSP::ProcessMessages(int64_t timeout)
   delete[] fds;
 }
 
-void CBobDSP::ProcessClientMessages()
+void CBobDSP::ProcessClientMessages(pollfd* fds, int nrclientpipes)
 {
-  //check events of all clients, instead of just the ones that poll() returned on
-  //since in case of a jack event, every client sends a message
-  for (int i = 0; i < 2; i++)
+  //if one of the jack clients has sent us a message, process messages of all jack clients
+  for (int i = 0; i < nrclientpipes; i++)
   {
-    bool gotmessage = false;
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    if (fds[i].revents & POLLIN)
     {
-      uint8_t msg;
-      while ((msg = (*it)->GetMessage()) != MsgNone)
-      {
-        LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
-        if (msg == MsgExited)
-          m_updateports = true;
-        else if (msg == MsgPortRegistered)
-          m_updateports = m_checkconnect = true;
-        else if (msg == MsgPortDeregistered)
-          m_updateports = true;
-        else if (msg == MsgPortConnected)
-          m_checkdisconnect = true;
-        else if (msg == MsgPortDisconnected)
-          m_checkconnect = true;
-
-        gotmessage = true;
-      }
-    }
-
-    //in case of a jack event, every connected client sends a message
-    //to make sure we get them all in one go, if a message from one client is received
-    //wait a millisecond, then check all clients for messages again
-    if (gotmessage && i == 0)
-      USleep(1000);
-    else
+      m_clientsmanager.ProcessMessages(m_checkconnect, m_checkdisconnect, m_updateports);
       break;
+    }
   }
 }
 
@@ -691,162 +627,9 @@ bool CBobDSP::LoadClientsFromFile()
     return false;
   }
 
-  LoadClientsFromRoot(root);
+  m_clientsmanager.ClientsFromXML(root);
 
   return true;
-}
-
-/* load client settings from clients.xml
-   it may look like this:
-
-<clients>
-  <client>
-    <name>Audio limiter</name>
-    <label>fastLookaheadLimiter</label>
-    <uniqueid>1913</uniqueid>
-    <instances>1</instances>
-    <pregain>1.0</pregain>
-    <postgain>1.0</postgain>
-    <port>
-      <name>Input gain (dB)</name>
-      <value>0</value>
-    </port>
-    <port>
-      <name>Limit (dB)</name>
-      <value>0</value>
-    </port>
-    <port>
-      <name>Release time (s)</name>
-      <value>0.1</value>
-    </port>
-  </client>
-</clients>
-
-  <name> is the name for the jack client, it's not related to the name of the ladspa plugin
-  <label> is the label of the ladspa plugin
-  <uniqueid> is the unique id of the ladspa plugin
-  <instances> sets the number of instances for the plugin, by increasing instances you can process more audio channels
-  <pregain> is the audio gain for the ladspa input ports
-  <postgain> is the audio gain for the ladspa output ports
-*/
-
-void CBobDSP::LoadClientsFromRoot(TiXmlElement* root)
-{
-  for (TiXmlElement* client = root->FirstChildElement("client"); client != NULL; client = client->NextSiblingElement("client"))
-  {
-    LogDebug("Read <client> element");
-
-    bool loadfailed = false;
-
-    LOADELEMENT(client, name, MANDATORY);
-    LOADELEMENT(client, label, MANDATORY);
-    LOADINTELEMENT(client, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
-    LOADINTELEMENT(client, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
-    LOADFLOATELEMENT(client, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
-    LOADFLOATELEMENT(client, postgain, OPTIONAL, 1.0, POSTCHECK_NONE);
-
-    if (loadfailed || instances_parsefailed || pregain_parsefailed || postgain_parsefailed)
-      continue;
-
-    LogDebug("name:\"%s\" label:\"%s\" uniqueid:%" PRIi64 " instances:%" PRIi64 " pregain:%.2f postgain:%.2f",
-             name->GetText(), label->GetText(), uniqueid_p, instances_p, pregain_p, postgain_p);
-
-    vector<portvalue> portvalues;
-    if (!LoadPortsFromClient(client, portvalues))
-      continue;
-
-    CLadspaPlugin* ladspaplugin = m_pluginmanager.GetPlugin(uniqueid_p, label->GetText());
-    if (ladspaplugin)
-    {
-      LogDebug("Found matching ladspa plugin in %s", ladspaplugin->FileName().c_str());
-    }
-    else
-    {
-      LogError("Did not find matching ladspa plugin for \"%s\" label \"%s\" uniqueid %" PRIi64,
-               name->GetText(), label->GetText(), uniqueid_p);
-      continue;
-    }
-
-    //check if all ports from the xml match the ladspa plugin
-    bool allportsok = true;
-    for (vector<portvalue>::iterator it = portvalues.begin(); it != portvalues.end(); it++)
-    {
-      bool found = false;
-      for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
-      {
-        LADSPA_PortDescriptor p = ladspaplugin->PortDescriptor(port);
-        if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p) && it->first == ladspaplugin->PortName(port))
-        {
-          LogDebug("Found port \"%s\"", it->first.c_str());
-          found = true;
-          break;
-        }
-      }
-      if (!found)
-      {
-        LogError("Did not find port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
-        allportsok = false;
-      }
-    }
-
-    //check if all control input ports are mapped
-    for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
-    {
-      LADSPA_PortDescriptor p = ladspaplugin->PortDescriptor(port);
-      if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p))
-      {
-        bool found = false;
-        for (vector<portvalue>::iterator it = portvalues.begin(); it != portvalues.end(); it++)
-        {
-          if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p) && it->first == ladspaplugin->PortName(port))
-          {
-            found = true;
-            break;
-          }
-        }
-        if (!found)
-        {
-          LogError("Port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
-          allportsok = false;
-        }
-      }
-
-      if (!ladspaplugin->PortDescriptorSanityCheck(port))
-        allportsok = false;
-    }
-
-    if (!allportsok)
-      continue;
-
-    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, portvalues);
-    m_clients.push_back(jackclient);
-  }
-}
-
-bool CBobDSP::LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues)
-{
-  bool success = true;
-
-  for (TiXmlElement* port = client->FirstChildElement("port"); port != NULL; port = port->NextSiblingElement("port"))
-  {
-    LogDebug("Read <port> element");
-
-    bool loadfailed = false;
-
-    LOADELEMENT(port, name, MANDATORY);
-    LOADFLOATELEMENT(port, value, MANDATORY, 0, POSTCHECK_NONE);
-
-    if (loadfailed)
-    {
-      success = false;
-      continue;
-    }
-
-    LogDebug("name:\"%s\" value:%.2f", name->GetText(), value_p);
-    portvalues.push_back(make_pair(name->GetText(), value_p));
-  }
-
-  return success;
 }
 
 #define CONNECTIONSFILE "connections.xml"
@@ -910,64 +693,11 @@ bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
 
 void CBobDSP::JackError(const char* jackerror)
 {
-  Log("%s", jackerror);
+  LogDebug("%s", jackerror);
 }
 
 void CBobDSP::JackInfo(const char* jackinfo)
 {
-  Log("%s", jackinfo);
-}
-
-std::string CBobDSP::ClientsToJSON()
-{
-  JSON::CJSONGenerator generator;
-
-  generator.MapOpen();
-  generator.AddString("clients");
-  generator.ArrayOpen();
-
-  CLock lock(m_mutex);
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-  {
-    generator.MapOpen();
-
-    generator.AddString("name");
-    generator.AddString((*it)->Name());
-    generator.AddString("instances");
-    generator.AddInt((*it)->NrInstances());
-    generator.AddString("pregain");
-    generator.AddDouble((*it)->PreGain());
-    generator.AddString("postgain");
-    generator.AddDouble((*it)->PostGain());
-
-    generator.AddString("controls");
-    generator.ArrayOpen();
-    const vector<portvalue>& controls = (*it)->ControlInputs();
-    for (vector<portvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
-    {
-      generator.MapOpen();
-      generator.AddString("name");
-      generator.AddString(control->first.c_str());
-      generator.AddString("value");
-      generator.AddDouble(control->second);
-      generator.MapClose();
-    }
-    generator.ArrayClose();
-
-    generator.AddString("plugin");
-    generator.MapOpen();
-    generator.AddString("label");
-    generator.AddString((*it)->Plugin()->Label());
-    generator.AddString("uniqueid");
-    generator.AddInt((*it)->Plugin()->UniqueID());
-    generator.MapClose();
-
-    generator.MapClose();
-  }
-
-  generator.ArrayClose();
-  generator.MapClose();
-
-  return generator.ToString();
+  LogDebug("%s", jackinfo);
 }
 
