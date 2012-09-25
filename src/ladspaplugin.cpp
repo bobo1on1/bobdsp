@@ -63,10 +63,9 @@ void CLadspaPlugin::LoadAllSymbols()
 int CLadspaPlugin::AudioInputPorts()
 {
   int ports = 0;
-  for (unsigned long i = 0; i < m_descriptor->PortCount; i++)
+  for (unsigned long port = 0; port < m_descriptor->PortCount; port++)
   {
-    if (LADSPA_IS_PORT_INPUT(m_descriptor->PortDescriptors[i]) &&
-        LADSPA_IS_PORT_AUDIO(m_descriptor->PortDescriptors[i]))
+    if (IsAudioInput(port))
       ports++;
   }
 
@@ -76,10 +75,33 @@ int CLadspaPlugin::AudioInputPorts()
 int CLadspaPlugin::AudioOutputPorts()
 {
   int ports = 0;
-  for (unsigned long i = 0; i < m_descriptor->PortCount; i++)
+  for (unsigned long port = 0; port < m_descriptor->PortCount; port++)
   {
-    if (LADSPA_IS_PORT_OUTPUT(m_descriptor->PortDescriptors[i]) &&
-        LADSPA_IS_PORT_AUDIO(m_descriptor->PortDescriptors[i]))
+    if (IsAudioOutput(port))
+      ports++;
+  }
+
+  return ports;
+}
+
+int CLadspaPlugin::ControlOutputPorts()
+{
+  int ports = 0;
+  for (unsigned long port = 0; port < m_descriptor->PortCount; port++)
+  {
+    if (IsControlOutput(port))
+      ports++;
+  }
+
+  return ports;
+}
+
+int CLadspaPlugin::ControlInputPorts()
+{
+  int ports = 0;
+  for (unsigned long port = 0; port < m_descriptor->PortCount; port++)
+  {
+    if (IsControlInput(port))
       ports++;
   }
 
@@ -150,11 +172,22 @@ const char* CLadspaPlugin::PortName(unsigned long port)
     return NULL;
 }
 
+long CLadspaPlugin::PortByName(const std::string& portname)
+{
+  for (unsigned long port = 0; port < PortCount(); port++)
+  {
+    if (portname == PortName(port))
+      return port;
+  }
+
+  return -1;
+}
+
 const char* CLadspaPlugin::DirectionStr(unsigned long port)
 {
-  if (LADSPA_IS_PORT_INPUT(PortDescriptor(port)))
+  if (IsInput(port))
     return "input";
-  else if (LADSPA_IS_PORT_OUTPUT(PortDescriptor(port)))
+  else if (IsOutput(port))
     return "output";
   else
     return "unknown";
@@ -162,9 +195,9 @@ const char* CLadspaPlugin::DirectionStr(unsigned long port)
 
 const char* CLadspaPlugin::TypeStr(unsigned long port)
 {
-  if (LADSPA_IS_PORT_CONTROL(PortDescriptor(port)))
+  if (IsControl(port))
     return "control";
-  else if (LADSPA_IS_PORT_AUDIO(PortDescriptor(port)))
+  else if (IsAudio(port))
     return "audio";
   else
     return "unknown";
@@ -178,12 +211,48 @@ bool CLadspaPlugin::IsControl(unsigned long port)
     return false;
 }
 
+bool CLadspaPlugin::IsAudio(unsigned long port)
+{
+  if (LADSPA_IS_PORT_AUDIO(PortDescriptor(port)))
+    return true;
+  else
+    return false;
+}
+
 bool CLadspaPlugin::IsInput(unsigned long port)
 {
   if (LADSPA_IS_PORT_INPUT(PortDescriptor(port)))
     return true;
   else
     return false;
+}
+
+bool CLadspaPlugin::IsOutput(unsigned long port)
+{
+  if (LADSPA_IS_PORT_OUTPUT(PortDescriptor(port)))
+    return true;
+  else
+    return false;
+}
+
+bool CLadspaPlugin::IsControlInput(unsigned long port)
+{
+  return IsControl(port) && IsInput(port);
+}
+
+bool CLadspaPlugin::IsControlOutput(unsigned long port)
+{
+  return IsControl(port) && IsOutput(port);
+}
+
+bool CLadspaPlugin::IsAudioInput(unsigned long port)
+{
+  return IsAudio(port) && IsInput(port);
+}
+
+bool CLadspaPlugin::IsAudioOutput(unsigned long port)
+{
+  return IsAudio(port) && IsOutput(port);
 }
 
 bool CLadspaPlugin::HasLowerBound(unsigned long port)

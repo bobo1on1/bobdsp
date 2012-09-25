@@ -120,8 +120,7 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
       bool found = false;
       for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
       {
-        LADSPA_PortDescriptor p = ladspaplugin->PortDescriptor(port);
-        if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p) && it->first == ladspaplugin->PortName(port))
+        if (ladspaplugin->IsControlInput(port) && it->first == ladspaplugin->PortName(port))
         {
           LogDebug("Found port \"%s\"", it->first.c_str());
           found = true;
@@ -138,13 +137,12 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
     //check if all control input ports are mapped
     for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
     {
-      LADSPA_PortDescriptor p = ladspaplugin->PortDescriptor(port);
-      if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p))
+      if (ladspaplugin->IsControlInput(port))
       {
         bool found = false;
         for (vector<portvalue>::iterator it = portvalues.begin(); it != portvalues.end(); it++)
         {
-          if (LADSPA_IS_PORT_INPUT(p) && LADSPA_IS_PORT_CONTROL(p) && it->first == ladspaplugin->PortName(port))
+          if (it->first == ladspaplugin->PortName(port))
           {
             found = true;
             break;

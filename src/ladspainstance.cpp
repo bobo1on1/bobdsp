@@ -100,10 +100,9 @@ bool CLadspaInstance::Connect()
   //connect the control ports
   for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
   {
-    const LADSPA_PortDescriptor p = m_plugin->PortDescriptor(port);
-    if (LADSPA_IS_PORT_CONTROL(p))
+    if (m_plugin->IsControl(port))
     {
-      if (LADSPA_IS_PORT_OUTPUT(p))
+      if (m_plugin->IsOutput(port))
       {
         //only allocate a value for the output port
         //since any call to push_back might do a realloc, and invalidate the pointer
@@ -127,8 +126,7 @@ bool CLadspaInstance::Connect()
   vector<portvalue>::iterator it = m_controloutputs.begin();
   for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
   {
-    const LADSPA_PortDescriptor p = m_plugin->PortDescriptor(port);
-    if (LADSPA_IS_PORT_CONTROL(p) && LADSPA_IS_PORT_OUTPUT(p))
+    if (m_plugin->IsControlOutput(port))
     {
       m_descriptor->connect_port(m_handle, port, &(it->second));
       it++;
@@ -141,11 +139,10 @@ bool CLadspaInstance::Connect()
   //create jack ports for each audio port of the ladspa plugin
   for (unsigned long ladspaport = 0; ladspaport < m_plugin->PortCount(); ladspaport++)
   {
-    const LADSPA_PortDescriptor p = m_plugin->PortDescriptor(ladspaport);
-    if (LADSPA_IS_PORT_AUDIO(p))
+    if (m_plugin->IsAudio(ladspaport))
     {
       int portflags;
-      if (LADSPA_IS_PORT_INPUT(p))
+      if (m_plugin->IsInput(ladspaport))
         portflags = JackPortIsInput;
       else
         portflags = JackPortIsOutput;
@@ -164,7 +161,7 @@ bool CLadspaInstance::Connect()
         return false;
       }
 
-      m_ports.push_back(CPort(jackport, ladspaport, LADSPA_IS_PORT_INPUT(p)));
+      m_ports.push_back(CPort(jackport, ladspaport, m_plugin->IsInput(ladspaport)));
     }
   }
 

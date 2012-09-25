@@ -46,10 +46,17 @@ class CLadspaPlugin
     bool                        PortDescriptorSanityCheck(unsigned long port);
     const LADSPA_PortRangeHint  PortRangeHint(unsigned long port);
     const char*                 PortName(unsigned long port);
+    long                        PortByName(const std::string& portname);
     const char*                 DirectionStr(unsigned long port);
     const char*                 TypeStr(unsigned long port);
     bool                        IsControl(unsigned long port);
+    bool                        IsAudio(unsigned long port);
     bool                        IsInput(unsigned long port);
+    bool                        IsOutput(unsigned long port);
+    bool                        IsControlInput(unsigned long port);
+    bool                        IsControlOutput(unsigned long port);
+    bool                        IsAudioInput(unsigned long port);
+    bool                        IsAudioOutput(unsigned long port);
     bool                        HasLowerBound(unsigned long port);
     bool                        HasUpperBound(unsigned long port);
     float                       LowerBound(unsigned long port, int samplerate = 48000);
@@ -62,6 +69,8 @@ class CLadspaPlugin
 
     int AudioInputPorts();
     int AudioOutputPorts();
+    int ControlInputPorts();
+    int ControlOutputPorts();
 
   private:
     float MakeDefault(bool islog, float low, float high, float interpolate);
