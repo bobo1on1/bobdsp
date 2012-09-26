@@ -19,7 +19,6 @@
 #include "pluginmanager.h"
 #include "util/log.h"
 #include "util/misc.h"
-#include "util/JSON.h"
 #include "util/lock.h"
 
 #include <dirent.h>
@@ -177,45 +176,10 @@ std::string CPluginManager::PluginsToJSON()
 
     generator.AddString("ports");
     generator.ArrayOpen();
+
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
-    {
-      generator.MapOpen();
+      PortDescriptionToJSON(generator, *it, port);
 
-      generator.AddString("name");
-      generator.AddString((*it)->PortName(port));
-      generator.AddString("direction");
-      generator.AddString((*it)->DirectionStr(port));
-      generator.AddString("type");
-      generator.AddString((*it)->TypeStr(port));
-
-      if ((*it)->IsControl(port) && (*it)->IsInput(port))
-      {
-        generator.AddString("toggled");
-        generator.AddBool((*it)->IsToggled(port));
-        generator.AddString("logarithmic");
-        generator.AddBool((*it)->IsLogarithmic(port));
-        generator.AddString("integer");
-        generator.AddBool((*it)->IsInteger(port));
-
-        if ((*it)->HasDefault(port))
-        {
-          generator.AddString("default");
-          generator.AddDouble((*it)->DefaultValue(port, m_samplerate));
-        }
-        if ((*it)->HasUpperBound(port))
-        {
-          generator.AddString("upperbound");
-          generator.AddDouble((*it)->UpperBound(port, m_samplerate));
-        }
-        if ((*it)->HasLowerBound(port))
-        {
-          generator.AddString("lowerbound");
-          generator.AddDouble((*it)->LowerBound(port, m_samplerate));
-        }
-      }
-
-      generator.MapClose();
-    }
     generator.ArrayClose();
 
     generator.MapClose();
@@ -226,6 +190,48 @@ std::string CPluginManager::PluginsToJSON()
   generator.MapClose();
 
   return generator.ToString();
+}
+
+void CPluginManager::PortDescriptionToJSON(JSON::CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
+{
+  CLock lock(m_mutex);
+
+  generator.MapOpen();
+
+  generator.AddString("name");
+  generator.AddString(plugin->PortName(port));
+  generator.AddString("direction");
+  generator.AddString(plugin->DirectionStr(port));
+  generator.AddString("type");
+  generator.AddString(plugin->TypeStr(port));
+
+  if (plugin->IsControl(port) && plugin->IsInput(port))
+  {
+    generator.AddString("toggled");
+    generator.AddBool(plugin->IsToggled(port));
+    generator.AddString("logarithmic");
+    generator.AddBool(plugin->IsLogarithmic(port));
+    generator.AddString("integer");
+    generator.AddBool(plugin->IsInteger(port));
+
+    if (plugin->HasDefault(port))
+    {
+      generator.AddString("default");
+      generator.AddDouble(plugin->DefaultValue(port, m_samplerate));
+    }
+    if (plugin->HasUpperBound(port))
+    {
+      generator.AddString("upperbound");
+      generator.AddDouble(plugin->UpperBound(port, m_samplerate));
+    }
+    if (plugin->HasLowerBound(port))
+    {
+      generator.AddString("lowerbound");
+      generator.AddDouble(plugin->LowerBound(port, m_samplerate));
+    }
+  }
+
+  generator.MapClose();
 }
 
 void CPluginManager::SetSamplerate(int samplerate)
