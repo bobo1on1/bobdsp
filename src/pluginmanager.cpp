@@ -178,7 +178,20 @@ std::string CPluginManager::PluginsToJSON()
     generator.ArrayOpen();
 
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
-      PortDescriptionToJSON(generator, *it, port);
+    {
+      generator.MapOpen();
+
+      generator.AddString("name");
+      generator.AddString((*it)->PortName(port));
+      generator.AddString("direction");
+      generator.AddString((*it)->DirectionStr(port));
+      generator.AddString("type");
+      generator.AddString((*it)->TypeStr(port));
+
+      PortRangeDescriptionToJSON(generator, *it, port);
+
+      generator.MapClose();
+    }
 
     generator.ArrayClose();
 
@@ -192,20 +205,9 @@ std::string CPluginManager::PluginsToJSON()
   return generator.ToString();
 }
 
-void CPluginManager::PortDescriptionToJSON(JSON::CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
+void CPluginManager::PortRangeDescriptionToJSON(JSON::CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
 {
-  CLock lock(m_mutex);
-
-  generator.MapOpen();
-
-  generator.AddString("name");
-  generator.AddString(plugin->PortName(port));
-  generator.AddString("direction");
-  generator.AddString(plugin->DirectionStr(port));
-  generator.AddString("type");
-  generator.AddString(plugin->TypeStr(port));
-
-  if (plugin->IsControl(port) && plugin->IsInput(port))
+  if (plugin->IsControlInput(port))
   {
     generator.AddString("toggled");
     generator.AddBool(plugin->IsToggled(port));
@@ -213,6 +215,8 @@ void CPluginManager::PortDescriptionToJSON(JSON::CJSONGenerator& generator, CLad
     generator.AddBool(plugin->IsLogarithmic(port));
     generator.AddString("integer");
     generator.AddBool(plugin->IsInteger(port));
+
+    CLock lock(m_mutex);
 
     if (plugin->HasDefault(port))
     {
@@ -230,8 +234,6 @@ void CPluginManager::PortDescriptionToJSON(JSON::CJSONGenerator& generator, CLad
       generator.AddDouble(plugin->LowerBound(port, m_samplerate));
     }
   }
-
-  generator.MapClose();
 }
 
 void CPluginManager::SetSamplerate(int samplerate)

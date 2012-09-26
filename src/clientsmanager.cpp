@@ -220,10 +220,17 @@ std::string CClientsManager::ClientsToJSON()
     for (vector<portvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
     {
       generator.MapOpen();
+
       generator.AddString("name");
-      generator.AddString(control->first.c_str());
+      generator.AddString(control->first);
       generator.AddString("value");
       generator.AddDouble(control->second);
+
+      //add the port description of this port
+      CLadspaPlugin* plugin = (*it)->Plugin();
+      long port = plugin->PortByName(control->first);
+      m_bobdsp.PluginManager().PortRangeDescriptionToJSON(generator, plugin, port);
+
       generator.MapClose();
     }
     generator.ArrayClose();
