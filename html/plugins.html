@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Plugins settings</title>
+    <script type="text/javascript" src="js/jquery-1.8.0.min.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+  </head>
+  <body>
+    <script>
+
+      function getScrollBarHeight ()
+      {
+        var inner = document.createElement('p');
+        inner.style.width = "200px";
+        inner.style.height = "100%";
+
+        var outer = document.createElement('div');
+        outer.style.position = "absolute";
+        outer.style.top = "0px";
+        outer.style.left = "0px";
+        outer.style.visibility = "hidden";
+        outer.style.width = "150px";
+        outer.style.height = "200px";
+        outer.style.overflow = "hidden";
+        outer.appendChild (inner);
+
+        document.body.appendChild (outer);
+        var h1 = inner.offsetHeight;
+        outer.style.overflow = 'scroll';
+        var h2 = inner.offsetHeight;
+        if (h1 == h2) h2 = outer.clientHeight;
+
+        document.body.removeChild (outer);
+
+        return (h1 - h2);
+      };
+
+      var scrollbarheight = 10; //safe minimum
+
+      function CPlugins(selectdiv, tablediv, buttonsdiv)
+      {
+        var m_pluginselect = document.createElement("select");
+        selectdiv.appendChild(m_pluginselect);
+
+        var m_controltable = document.createElement("table");
+        m_controltable.border = "1";
+
+        tablediv.appendChild(m_controltable);
+
+        $.getJSON('./plugins', GetPlugins);
+
+        var m_pluginsjson;
+        var m_plugins;
+
+        function GetPlugins(plugins)
+        {
+          m_pluginsjson = plugins;
+          m_plugins = m_pluginsjson.plugins;
+          BuildSelect();
+        }
+
+        function BuildSelect()
+        {
+          var option = document.createElement("option");
+          option.text = "Select a plugin";
+          m_pluginselect.add(option);
+          m_pluginselect.onchange = OnSelectChange;
+          m_pluginselect.onfocus = FillSelect;
+        }
+
+        function FillSelect()
+        {
+          m_pluginselect.length = 0;
+          for (var i = 0; i < m_plugins.length; i++)
+          {
+            var option = document.createElement("option");
+            option.text = m_plugins[i].name + " (" + m_plugins[i].label + ":" +
+                          m_plugins[i].uniqueid + " " + m_plugins[i].filename + ")";
+            m_pluginselect.add(option);
+          }
+          m_pluginselect.onfocus = undefined;
+        }
+
+        function OnSelectChange()
+        {
+          BuildControlTable(m_plugins[m_pluginselect.selectedIndex]);
+          BuildButtons(buttonsdiv);
+        }
+
+        function Control()
+        {
+          this.name = "";
+          this.default = 1;
+          this.toggled = false;
+          this.integer = false;
+          this.logarithmic = false;
+          this.lowerbound = undefined;
+          this.upperbound = undefined;
+        }
+
+        var m_selectedplugin;
+        var m_namevalue;
+        var m_instancevalue;
+        var m_gainvalues;
+        var m_ctrlvalues;
+
+        function BuildControlTable(plugin)
+        {
+          m_selectedplugin = plugin;
+          m_controltable.innerHTML = "";
+
+          m_namevalue = new Array();
+          m_ctrlvalues = new Array();
+          m_gainvalues = new Array();
+          m_instancevalue = new Array();
+
+          var scrolldivs = new Array();
+          var scrollcontrols = new Array();
+          var scrollctrlvalues = new Array();
+
+          AddHeader(m_controltable, "bobdsp controls");
+          //create name
+          {
+            var row = document.createElement("tr");
+            var control = new Control();
+
+            control.name = "name";
+            control.default = plugin.name;
+
+            BuildRow(row, control, m_namevalue, scrolldivs, scrollcontrols, scrollctrlvalues);
+            m_controltable.appendChild(row);
+          }
+            
+          //create instances
+          {
+            var row = document.createElement("tr");
+            var control = new Control();
+
+            control.name = "instances";
+            control.lowerbound = 1;
+            control.upperbound = 10;
+            control.integer = true;
+
+            BuildRow(row, control, m_instancevalue, scrolldivs, scrollcontrols, scrollctrlvalues);
+            m_controltable.appendChild(row);
+          }
+
+          //create pregain and postgain
+          for (var i = 0; i < 2; i++)
+          {
+            var row = document.createElement("tr");
+            var control = new Control();
+
+            if (i == 0)
+              control.name = "pregain";
+            else
+              control.name = "postgain";
+
+            control.lowerbound = -10;
+            control.upperbound = 10;
+
+            BuildRow(row, control, m_gainvalues, scrolldivs, scrollcontrols, scrollctrlvalues);
+            m_controltable.appendChild(row);
+          }
+
+          //add ladspa controls
+          if (plugin.controls.length > 0)
+          {
+            AddHeader(m_controltable, "LADSPA controls");
+            for (var i = 0; i < plugin.controls.length; i++)
+            {
+              var row = document.createElement("tr");
+              BuildRow(row, plugin.controls[i], m_ctrlvalues, scrolldivs, scrollcontrols, scrollctrlvalues);
+              m_controltable.appendChild(row);
+            }
+          }
+
+          //set the scrollbar default position and callback, this is done in a separate loop
+          //because when scrolldiv.offsetWidth is accessed, the browser renders the entire table
+          SetScrollPositions(scrolldivs, scrollcontrols, scrollctrlvalues);
+        }
+
+        function AddHeader(table, text)
+        {
+          var row = document.createElement("tr");
+          var header = document.createElement("th");
+          header.colSpan = "100%";
+          header.innerHTML = text;
+          row.appendChild(header);
+          table.appendChild(row);
+        }
+
+        function BuildRow(row, control, ctrlvalues, scrolldivs, scrollcontrols, scrollctrlvalues)
+        {
+          var ctrlname = document.createElement("td");
+          ctrlname.innerHTML = control.name;
+          row.appendChild(ctrlname);
+
+          var ctrlvaluecell = document.createElement("td");
+          var ctrlvalue = document.createElement("input");
+          ctrlvalue.setAttribute("type", "text");
+          ctrlvalue.value = control.default;
+          ctrlvaluecell.appendChild(ctrlvalue);
+          row.appendChild(ctrlvaluecell);
+          ctrlvalues.push(ctrlvalue);
+
+          var ctrlcell = document.createElement("td");
+          row.appendChild(ctrlcell);
+
+          if (control.toggled)
+          {
+            var ctrlbox = document.createElement("input");
+            ctrlbox.setAttribute("type", "checkbox");
+            ctrlbox.checked = control.default >= 0.5;
+            ctrlbox.onchange = (function(ctrl, checkbox)
+                               { return function() { ctrl.value = checkbox.checked ? "1" : "0"; }; })
+                               (ctrlvalue, ctrlbox);
+
+            ctrlvalue.onchange = (function(ctrl, checkbox)
+                                 { return function() { checkbox.checked = parseFloat(ctrl.value) > 0.5; }; })
+                                 (ctrlvalue, ctrlbox)
+            ctrlvalue.onkeyup = ctrlvalue.onchange;
+
+            ctrlcell.appendChild(ctrlbox);
+          }
+          else if (control.lowerbound != undefined && control.upperbound != undefined)
+          {
+            //create a div with a scrollbar, put a wider div inside
+            //this way, the div's onscroll event and scrollLeft property can be used to set the control value
+            var width = 500;
+            var height = scrollbarheight;
+            var steps = 1000;
+
+            var innerdiv = document.createElement("div");
+            innerdiv.style.width = (steps + width) + "px";
+            innerdiv.style.height = height + "px";
+            innerdiv.innerHTML = "&nbsp;";
+
+            var scrolldiv = document.createElement("div");
+            scrolldiv.style.width = width + "px";
+            scrolldiv.style.height = height + "px";
+            scrolldiv.style.overflow = "scroll";
+            scrolldiv.appendChild(innerdiv);
+
+            ctrlcell.appendChild(scrolldiv);
+
+            //save references, they're needed later
+            scrolldivs.push(scrolldiv);
+            scrollcontrols.push(control);
+            scrollctrlvalues.push(ctrlvalue);
+          }
+        }
+
+        function SetScrollPositions(scrolldivs, scrollcontrols, scrollctrlvalues)
+        {
+          while (scrolldivs.length > 0)
+          {
+            var scrolldiv = scrolldivs.pop();
+            var control = scrollcontrols.pop();
+            var ctrlvalue = scrollctrlvalues.pop();
+
+            var scrolldefault = ControlToScroll(scrolldiv, control.lowerbound, control.upperbound,
+                                                control.logarithmic, control.default);
+
+            ctrlvalue.onchange = ValueScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault);
+            ctrlvalue.onkeyup = ctrlvalue.onchange;
+            scrolldiv.scrollLeft = scrolldefault;
+
+            scrolldiv.onscroll = ScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault);
+          }
+        }
+
+        function ValueScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault)
+        {
+          return function()
+          {
+            var value = parseFloat(ctrlvalue.value);
+            if (!isNaN(value))
+            {
+              //assigning to scrollLeft generates an onscroll event, so set onscroll to a callback
+              //function that does nothing except restore the original callback, this way, the onscroll
+              //event is ignored once
+              scrolldiv.onscroll = DelayScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault);
+              scrolldiv.scrollLeft = ControlToScroll(scrolldiv, control.lowerbound, control.upperbound,
+                                                     control.logarithmic, value);
+            }
+          };
+        }
+
+        function ScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault)
+        {
+          return function()
+          {
+            //because of the resolution of the scrollbar, the default value of the control can't always be exactly
+            //mapped to a step, so if the value of the scrollbar is the same as the default control value converted
+            //to the scrollbar value, set the control value to the default
+            if (scrolldiv.scrollLeft == scrolldefault)
+            {
+              ctrlvalue.value = control.default;
+            }
+            else
+            {
+              if (control.integer)
+                ctrlvalue.value = Math.round(ScrollToControl(scrolldiv, Math.round(control.lowerbound) - 0.49,
+                                             Math.round(control.upperbound) + 0.49, control.logarithmic));
+              else
+                ctrlvalue.value = ScrollToControl(scrolldiv, control.lowerbound, control.upperbound,
+                                                  control.logarithmic).toFixed(3);
+            }
+          };
+        }
+
+        function DelayScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault)
+        {
+          return function()
+          {
+            scrolldiv.onscroll = ScrollCallback(ctrlvalue, scrolldiv, control, scrolldefault);
+          }
+        }
+
+        function ScrollRange(scrolldiv)
+        {
+          return scrolldiv.scrollWidth - scrolldiv.offsetWidth;
+        }
+
+        var base = 100;
+
+        function ScrollToControl(scrolldiv, lowerbound, upperbound, logarithmic)
+        {
+          var scrollvalue = (float = scrolldiv.scrollLeft) / ScrollRange(scrolldiv);
+          if (logarithmic)
+            scrollvalue = (Math.pow(base, scrollvalue) - 1) / (base - 1);
+
+          return scrollvalue * (upperbound - lowerbound) + lowerbound;
+        }
+
+        function ControlToScroll(scrolldiv, lowerbound, upperbound, logarithmic, value)
+        {
+          var scaled = ((float = value) - lowerbound) / (upperbound - lowerbound);
+          if (logarithmic)
+            scaled = Math.log(scaled * (base - 1) + 1) / Math.log(base);
+
+          var scrollrange = ScrollRange(scrolldiv);
+          return Math.min(Math.max(Math.round(scaled * scrollrange), 0), scrollrange);
+        }
+
+        function BuildButtons(buttonsdiv)
+        {
+          buttonsdiv.innerHTML = "";
+          var button = document.createElement("button");
+          button.type = "button";
+          button.innerHTML = "Add";
+          button.onclick = AddButtonCallback();
+          buttonsdiv.appendChild(button);
+        }
+
+        function AddButtonCallback()
+        {
+          return function()
+          {
+            var instances = parseInt(m_instancevalue[0].value);
+            var pregain = parseFloat(m_gainvalues[0].value);
+            var postgain = parseFloat(m_gainvalues[1].value);
+
+            if (m_namevalue[0].value.length == 0)
+            {
+              alert("ERROR: name is empty");
+              return;
+            }
+            else if (isNaN(instances))
+            {
+              alert("ERROR: invalid value \"" + m_instancevalue[0].value + "\" for instances");
+              return;
+            }
+            else if (isNaN(pregain))
+            {
+              alert("ERROR: invalid value \"" + m_gainvalues[0].value + "\" for pregain");
+              return;
+            }
+            else if (isNaN(postgain))
+            {
+              alert("ERROR: invalid value \"" + m_gainvalues[1].value + "\" for postgain");
+              return;
+            }
+            
+            var client = {"name" : m_namevalue[0].value,
+                          "plugin" : m_selectedplugin,
+                          "instances" : instances,
+                          "pregain" : pregain,
+                          "postgain" : postgain,
+                          "controls" : []};
+
+            for (var i = 0; i < m_selectedplugin.controls.length; i++)
+            {
+              var parsedvalue = parseFloat(m_ctrlvalues[i].value);
+              if (isNaN(parsedvalue))
+              {
+                if (m_ctrlvalues[i].value.length == 0)
+                  alert("ERROR: value for control \"" + m_selectedplugin.controls[i].name + "\" is empty");
+                else
+                  alert("ERROR: invalid value \"" + m_ctrlvalues[i].value + "\" for control \"" +
+                        m_selectedplugin.controls[i].name + "\"");
+                return;
+              }
+              client.controls[i] = {"name" : m_selectedplugin.controls[i].name, "value" : parseFloat(m_ctrlvalues[i].value)};
+            }
+
+            var postjson = JSON.stringify({"add" : [client]});
+            $.post("./clients", postjson);
+          };
+        }
+      }
+
+      $(document).ready(function()
+      {
+        scrollbarheight = Math.max(getScrollBarHeight(), scrollbarheight);
+        var plugins = new CPlugins(document.getElementById("pluginselect"), document.getElementById("controltable"),
+                                   document.getElementById("buttons"));
+      });
+
+    </script>
+    <div id="pluginselect"></div>
+    <div id="test"></div>
+    <div id="controltable"></div>
+    <div id="buttons"></div>
+  </body>
+</html>
