@@ -178,23 +178,32 @@ std::string CPluginManager::PluginsToJSON()
 
     generator.AddString("ports");
     generator.ArrayOpen();
-
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
     {
       generator.MapOpen();
-
       generator.AddString("name");
       generator.AddString((*it)->PortName(port));
       generator.AddString("direction");
       generator.AddString((*it)->DirectionStr(port));
       generator.AddString("type");
       generator.AddString((*it)->TypeStr(port));
-
-      PortRangeDescriptionToJSON(generator, *it, port);
-
       generator.MapClose();
     }
+    generator.ArrayClose();
 
+    generator.AddString("controls");
+    generator.ArrayOpen();
+    for (unsigned long port = 0; port < (*it)->PortCount(); port++)
+    {
+      if ((*it)->IsControlInput(port))
+      {
+        generator.MapOpen();
+        generator.AddString("name");
+        generator.AddString((*it)->PortName(port));
+        PortRangeDescriptionToJSON(generator, *it, port);
+        generator.MapClose();
+      }
+    }
     generator.ArrayClose();
 
     generator.MapClose();
