@@ -229,11 +229,11 @@ void CPluginManager::PortRangeDescriptionToJSON(JSON::CJSONGenerator& generator,
 
     CLock lock(m_mutex);
 
-    if (plugin->HasDefault(port))
-    {
-      generator.AddString("default");
-      generator.AddDouble(plugin->DefaultValue(port, m_samplerate));
-    }
+    generator.AddString("hasdefault");
+    generator.AddBool(plugin->HasDefault(port));
+    generator.AddString("default");
+    generator.AddDouble(plugin->DefaultValue(port, m_samplerate));
+
     if (plugin->HasUpperBound(port))
     {
       generator.AddString("upperbound");
