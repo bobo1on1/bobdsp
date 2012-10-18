@@ -173,6 +173,8 @@ std::string CPluginManager::PluginsToJSON()
     generator.AddString((*it)->Copyright());
     generator.AddString("uniqueid");
     generator.AddInt((*it)->UniqueID());
+    generator.AddString("filename");
+    generator.AddString((*it)->FileName());
 
     generator.AddString("ports");
     generator.ArrayOpen();
