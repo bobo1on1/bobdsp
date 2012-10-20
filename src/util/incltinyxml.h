@@ -54,17 +54,30 @@ if (!name)\
     loadfailed = true;\
   }\
 }\
-else if (!name->GetText() || strlen(name->GetText()) == 0)\
+(void)loadfailed;\
+
+#define LOADPARENTELEMENT(element, name, mandatory)\
+LOADELEMENT(element, name, mandatory);\
+if (!name ## _loadfailed && (!name->FirstChild()))\
+{\
+  name ## _loadfailed = true;\
+  LogError("<" #name "> element has no children");\
+  if (mandatory)\
+    loadfailed = true;\
+}\
+
+#define LOADSTRELEMENT(element, name, mandatory)\
+LOADELEMENT(element, name, mandatory);\
+if (!name ## _loadfailed && (!name->GetText() || strlen(name->GetText()) == 0))\
 {\
   name ## _loadfailed = true;\
   LogError("<" #name "> element empty");\
   if (mandatory)\
     loadfailed = true;\
 }\
-(void)loadfailed;\
 
 #define PARSEELEMENT(element, name, mandatory, default, type, parsefunc, postcheck)\
-LOADELEMENT(element, name, mandatory);\
+LOADSTRELEMENT(element, name, mandatory);\
 type name ## _p = default;\
 bool name ## _parsefailed = false;\
 (void) name ## _parsefailed;\

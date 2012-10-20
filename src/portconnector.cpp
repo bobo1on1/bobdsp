@@ -83,9 +83,9 @@ bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
 
     bool loadfailed = false;
 
-    LOADELEMENT(xmlconnection, in, MANDATORY);
-    LOADELEMENT(xmlconnection, out, MANDATORY);
-    LOADELEMENT(xmlconnection, disconnect, OPTIONAL);
+    LOADSTRELEMENT(xmlconnection, in, MANDATORY);
+    LOADSTRELEMENT(xmlconnection, out, MANDATORY);
+    LOADSTRELEMENT(xmlconnection, disconnect, OPTIONAL);
 
     if (loadfailed)
     {

@@ -48,9 +48,11 @@ void CClientsManager::Stop()
 <clients>
   <client>
     <name>Audio limiter</name>
-    <label>fastLookaheadLimiter</label>
-    <uniqueid>1913</uniqueid>
     <instances>1</instances>
+    <plugin>
+      <label>fastLookaheadLimiter</label>
+      <uniqueid>1913</uniqueid>
+    </plugin>
     <pregain>1.0</pregain>
     <postgain>1.0</postgain>
     <control>
@@ -87,14 +89,19 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root, std::vector<CJackClient
 
     bool loadfailed = false;
 
-    LOADELEMENT(client, name, MANDATORY);
-    LOADELEMENT(client, label, MANDATORY);
-    LOADINTELEMENT(client, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
+    LOADSTRELEMENT(client, name, MANDATORY);
     LOADINTELEMENT(client, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
     LOADFLOATELEMENT(client, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
     LOADFLOATELEMENT(client, postgain, OPTIONAL, 1.0, POSTCHECK_NONE);
+    LOADPARENTELEMENT(client, plugin, MANDATORY);
 
     if (loadfailed || instances_parsefailed || pregain_parsefailed || postgain_parsefailed)
+      continue;
+
+    LOADSTRELEMENT(plugin, label, MANDATORY);
+    LOADINTELEMENT(plugin, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
+
+    if (loadfailed)
       continue;
 
     LogDebug("name:\"%s\" label:\"%s\" uniqueid:%" PRIi64 " instances:%" PRIi64 " pregain:%.2f postgain:%.2f",
@@ -180,7 +187,7 @@ bool CClientsManager::LoadControlsFromClient(TiXmlElement* client, std::vector<c
 
     bool loadfailed = false;
 
-    LOADELEMENT(control, name, MANDATORY);
+    LOADSTRELEMENT(control, name, MANDATORY);
     LOADFLOATELEMENT(control, value, MANDATORY, 0, POSTCHECK_NONE);
 
     if (loadfailed)
