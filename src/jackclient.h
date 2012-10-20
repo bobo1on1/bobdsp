@@ -31,7 +31,7 @@ class CJackClient
 {
   public:
     CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                float pregain, float postgain, std::vector<portvalue> controlinputs);
+                float pregain, float postgain, std::vector<controlvalue> controlinputs);
     ~CJackClient();
 
     bool Connect();
@@ -43,13 +43,13 @@ class CJackClient
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
 
-    CLadspaPlugin*                Plugin()        { return m_plugin;        }
-    const std::string&            Name()          { return m_name;          }
-    int                           NrInstances()   { return m_nrinstances;   }
-    float                         PreGain()       { return m_pregain;       }
-    float                         PostGain()      { return m_postgain;      }
-    int                           Samplerate()    { return m_samplerate;    }
-    const std::vector<portvalue>& ControlInputs() { return m_controlinputs; }
+    CLadspaPlugin*                Plugin()           { return m_plugin;        }
+    const std::string&            Name()             { return m_name;          }
+    int                           NrInstances()      { return m_nrinstances;   }
+    float                         PreGain()          { return m_pregain;       }
+    float                         PostGain()         { return m_postgain;      }
+    int                           Samplerate()       { return m_samplerate;    }
+    const std::vector<controlvalue>& ControlInputs() { return m_controlinputs; }
 
   private:
     bool           m_connected;
@@ -67,7 +67,7 @@ class CJackClient
     int            m_pipe[2];
 
     std::vector<CLadspaInstance*> m_instances;
-    std::vector<portvalue>        m_controlinputs;
+    std::vector<controlvalue>     m_controlinputs;
 
     bool        ConnectInternal();
     bool        ConnectJackPorts();

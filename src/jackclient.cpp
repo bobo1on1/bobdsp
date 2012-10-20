@@ -37,7 +37,7 @@
 using namespace std;
 
 CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                         float pregain, float postgain, std::vector<portvalue> controlinputs)
+                         float pregain, float postgain, std::vector<controlvalue> controlinputs)
 {
   m_plugin          = plugin;
   m_name            = name;

@@ -54,7 +54,7 @@ class CClientsManager
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
 
-    bool LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues);
+    bool LoadControlsFromClient(TiXmlElement* client, std::vector<controlvalue>& controlvalues);
 };
 
 #endif //CLIENTSMANAGER_H

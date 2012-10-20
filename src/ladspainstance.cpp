@@ -63,7 +63,7 @@ void CPort::CheckBufferSize(jack_nframes_t nframes, float gain)
 }
 
 CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances, 
-    CLadspaPlugin* plugin, std::vector<portvalue>& controlinputs, int samplerate) :
+    CLadspaPlugin* plugin, std::vector<controlvalue>& controlinputs, int samplerate) :
   m_controlinputs(controlinputs)
 {
   m_client         = client;
@@ -110,7 +110,7 @@ bool CLadspaInstance::Connect()
       }
       else
       {
-        for (vector<portvalue>::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
+        for (vector<controlvalue>::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
         {
           if (it->first == m_plugin->PortName(port))
           {
@@ -123,7 +123,7 @@ bool CLadspaInstance::Connect()
   }
 
   //connect output control ports here, since the vector size won't change
-  vector<portvalue>::iterator it = m_controloutputs.begin();
+  vector<controlvalue>::iterator it = m_controloutputs.begin();
   for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
   {
     if (m_plugin->IsControlOutput(port))

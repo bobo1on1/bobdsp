@@ -97,8 +97,8 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
     LogDebug("name:\"%s\" label:\"%s\" uniqueid:%" PRIi64 " instances:%" PRIi64 " pregain:%.2f postgain:%.2f",
              name->GetText(), label->GetText(), uniqueid_p, instances_p, pregain_p, postgain_p);
 
-    vector<portvalue> portvalues;
-    if (!LoadPortsFromClient(client, portvalues))
+    vector<controlvalue> controlvalues;
+    if (!LoadControlsFromClient(client, controlvalues))
       continue;
 
     CLadspaPlugin* ladspaplugin = m_bobdsp.PluginManager().GetPlugin(uniqueid_p, label->GetText());
@@ -113,24 +113,24 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
       continue;
     }
 
-    //check if all ports from the xml match the ladspa plugin
-    bool allportsok = true;
-    for (vector<portvalue>::iterator it = portvalues.begin(); it != portvalues.end(); it++)
+    //check if all controls from the xml match the ladspa plugin
+    bool allcontrolsok = true;
+    for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
     {
       bool found = false;
       for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
       {
         if (ladspaplugin->IsControlInput(port) && it->first == ladspaplugin->PortName(port))
         {
-          LogDebug("Found port \"%s\"", it->first.c_str());
+          LogDebug("Found control port \"%s\"", it->first.c_str());
           found = true;
           break;
         }
       }
       if (!found)
       {
-        LogError("Did not find port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
-        allportsok = false;
+        LogError("Did not find control port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
+        allcontrolsok = false;
       }
     }
 
@@ -140,7 +140,7 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
       if (ladspaplugin->IsControlInput(port))
       {
         bool found = false;
-        for (vector<portvalue>::iterator it = portvalues.begin(); it != portvalues.end(); it++)
+        for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
         {
           if (it->first == ladspaplugin->PortName(port))
           {
@@ -150,35 +150,35 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
         }
         if (!found)
         {
-          LogError("Port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
-          allportsok = false;
+          LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
+          allcontrolsok = false;
         }
       }
 
       if (!ladspaplugin->PortDescriptorSanityCheck(port))
-        allportsok = false;
+        allcontrolsok = false;
     }
 
-    if (!allportsok)
+    if (!allcontrolsok)
       continue;
 
-    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, portvalues);
+    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, controlvalues);
     m_clients.push_back(jackclient);
   }
 }
 
-bool CClientsManager::LoadPortsFromClient(TiXmlElement* client, std::vector<portvalue>& portvalues)
+bool CClientsManager::LoadControlsFromClient(TiXmlElement* client, std::vector<controlvalue>& controlvalues)
 {
   bool success = true;
 
-  for (TiXmlElement* port = client->FirstChildElement("port"); port != NULL; port = port->NextSiblingElement("port"))
+  for (TiXmlElement* control = client->FirstChildElement("control"); control != NULL; control = control->NextSiblingElement("control"))
   {
-    LogDebug("Read <port> element");
+    LogDebug("Read <control> element");
 
     bool loadfailed = false;
 
-    LOADELEMENT(port, name, MANDATORY);
-    LOADFLOATELEMENT(port, value, MANDATORY, 0, POSTCHECK_NONE);
+    LOADELEMENT(control, name, MANDATORY);
+    LOADFLOATELEMENT(control, value, MANDATORY, 0, POSTCHECK_NONE);
 
     if (loadfailed)
     {
@@ -187,7 +187,7 @@ bool CClientsManager::LoadPortsFromClient(TiXmlElement* client, std::vector<port
     }
 
     LogDebug("name:\"%s\" value:%.2f", name->GetText(), value_p);
-    portvalues.push_back(make_pair(name->GetText(), value_p));
+    controlvalues.push_back(make_pair(name->GetText(), value_p));
   }
 
   return success;
@@ -216,8 +216,8 @@ std::string CClientsManager::ClientsToJSON()
 
     generator.AddString("controls");
     generator.ArrayOpen();
-    const vector<portvalue>& controls = (*it)->ControlInputs();
-    for (vector<portvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
+    const vector<controlvalue>& controls = (*it)->ControlInputs();
+    for (vector<controlvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
     {
       generator.MapOpen();
 
