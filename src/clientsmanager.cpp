@@ -53,18 +53,18 @@ void CClientsManager::Stop()
     <instances>1</instances>
     <pregain>1.0</pregain>
     <postgain>1.0</postgain>
-    <port>
+    <control>
       <name>Input gain (dB)</name>
       <value>0</value>
-    </port>
-    <port>
+    </control>
+    <control>
       <name>Limit (dB)</name>
       <value>0</value>
-    </port>
-    <port>
+    </control>
+    <control>
       <name>Release time (s)</name>
       <value>0.1</value>
-    </port>
+    </control>
   </client>
 </clients>
 
@@ -76,8 +76,11 @@ void CClientsManager::Stop()
   <postgain> is the audio gain for the ladspa output ports
 */
 
-void CClientsManager::ClientsFromXML(TiXmlElement* root)
+void CClientsManager::ClientsFromXML(TiXmlElement* root, std::vector<CJackClient*>* clients /*= NULL*/)
 {
+  if (clients == NULL)
+    clients = &m_clients;
+
   for (TiXmlElement* client = root->FirstChildElement("client"); client != NULL; client = client->NextSiblingElement("client"))
   {
     LogDebug("Read <client> element");
@@ -163,7 +166,7 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
       continue;
 
     CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, controlvalues);
-    m_clients.push_back(jackclient);
+    clients->push_back(jackclient);
   }
 }
 
