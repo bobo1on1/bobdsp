@@ -39,7 +39,8 @@ class CClientsManager
 
     void        Stop();
 
-    void        ClientsFromXML(TiXmlElement* root, std::vector<CJackClient*>* clients = NULL);
+    void        ClientsFromXML(TiXmlElement* root);
+    bool        ClientsFromJSON(const std::string& json);
     std::string ClientsToJSON();
 
     bool        Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);

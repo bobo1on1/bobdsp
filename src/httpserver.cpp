@@ -223,6 +223,15 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
         delete ((string*)*con_cls);
         return returnv;
       }
+      else if (strurl == "/clients")
+      {
+        string& postdata = *(string*)*con_cls;
+        LogDebug("%s", postdata.c_str());
+        httpserver->m_bobdsp.ClientsManager().ClientsFromJSON(postdata);
+        httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
+        delete ((string*)*con_cls);
+        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
+      }
       else
       {
         delete ((string*)*con_cls);

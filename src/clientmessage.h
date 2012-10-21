@@ -30,6 +30,7 @@ enum ClientMessage
   MsgPortConnected,
   MsgPortDisconnected,
   MsgConnectionsUpdated,
+  MsgClientAdded,
 };
 
 inline const char* MsgToString(ClientMessage msg)
@@ -43,6 +44,7 @@ inline const char* MsgToString(ClientMessage msg)
     "MsgPortConnected",
     "MsgPortDisconnected",
     "MsgConnectionsUpdated",
+    "MsgClientAdded",
   };
 
   if (msg >= 0 && (size_t)msg < (sizeof(msgstrings) / sizeof(msgstrings[0])))

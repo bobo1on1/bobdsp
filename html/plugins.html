@@ -406,7 +406,7 @@
               client.controls[i] = {"name" : m_selectedplugin.controls[i].name, "value" : parseFloat(m_ctrlvalues[i].value)};
             }
 
-            var postjson = JSON.stringify({"add" : [client]});
+            var postjson = JSON.stringify({"method" : "add", "clients" : [client]});
             $.post("./clients", postjson);
           };
         }

@@ -37,6 +37,8 @@ CClientsManager::~CClientsManager()
 
 void CClientsManager::Stop()
 {
+  CLock lock(m_mutex);
+
   Log("Stopping %zu jack client(s)", m_clients.size());
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     delete *it;
@@ -78,14 +80,14 @@ void CClientsManager::Stop()
   <postgain> is the audio gain for the ladspa output ports
 */
 
-void CClientsManager::ClientsFromXML(TiXmlElement* root, std::vector<CJackClient*>* clients /*= NULL*/)
+void CClientsManager::ClientsFromXML(TiXmlElement* root)
 {
-  if (clients == NULL)
-    clients = &m_clients;
-
-  for (TiXmlElement* client = root->FirstChildElement("client"); client != NULL; client = client->NextSiblingElement("client"))
+  for (TiXmlElement* client = root->FirstChildElement(); client != NULL; client = client->NextSiblingElement())
   {
-    LogDebug("Read <client> element");
+    if (client->ValueStr() != "client" && client->ValueStr() != "clients")
+      continue;
+
+    LogDebug("Read <%s> element", client->Value());
 
     bool loadfailed = false;
 
@@ -173,7 +175,9 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root, std::vector<CJackClient
       continue;
 
     CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, controlvalues);
-    clients->push_back(jackclient);
+
+    CLock lock(m_mutex);
+    m_clients.push_back(jackclient);
   }
 }
 
@@ -181,9 +185,12 @@ bool CClientsManager::LoadControlsFromClient(TiXmlElement* client, std::vector<c
 {
   bool success = true;
 
-  for (TiXmlElement* control = client->FirstChildElement("control"); control != NULL; control = control->NextSiblingElement("control"))
+  for (TiXmlElement* control = client->FirstChildElement(); control != NULL; control = control->NextSiblingElement())
   {
-    LogDebug("Read <control> element");
+    if (control->ValueStr() != "control" && control->ValueStr() != "controls")
+      continue;
+
+    LogDebug("Read <%s> element", control->Value());
 
     bool loadfailed = false;
 
@@ -203,6 +210,28 @@ bool CClientsManager::LoadControlsFromClient(TiXmlElement* client, std::vector<c
   return success;
 }
 
+bool CClientsManager::ClientsFromJSON(const std::string& json)
+{
+  TiXmlElement* root = JSON::JSONToXML(json);
+
+  bool loadfailed = false;
+
+  LOADSTRELEMENT(root, method, MANDATORY);
+
+  if (loadfailed)
+    return false;
+
+  if (strcmp(method->GetText(), "add") == 0)
+  {
+    ClientsFromXML(root);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
 std::string CClientsManager::ClientsToJSON()
 {
   JSON::CJSONGenerator generator;
@@ -210,6 +239,8 @@ std::string CClientsManager::ClientsToJSON()
   generator.MapOpen();
   generator.AddString("clients");
   generator.ArrayOpen();
+
+  CLock lock(m_mutex);
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -264,6 +295,8 @@ std::string CClientsManager::ClientsToJSON()
 
 bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t lastconnect)
 {
+  CLock lock(m_mutex);
+
   bool connected = false;
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
@@ -301,6 +334,8 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
 
 int CClientsManager::ClientPipes(pollfd* fds)
 {
+  CLock lock(m_mutex);
+
   int nrfds = 0;
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -322,6 +357,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
   //since in case of a jack event, every client sends a message
   for (int i = 0; i < 2; i++)
   {
+    CLock lock(m_mutex);
     bool gotmessage = false;
     for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
@@ -343,6 +379,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
         gotmessage = true;
       }
     }
+    lock.Leave();
 
     //in case of a jack event, every connected client sends a message
     //to make sure we get them all in one go, if a message from one client is received
