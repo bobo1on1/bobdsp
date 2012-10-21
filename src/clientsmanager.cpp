@@ -82,6 +82,7 @@ void CClientsManager::Stop()
 
 void CClientsManager::ClientsFromXML(TiXmlElement* root)
 {
+  CLock lock(m_mutex);
   for (TiXmlElement* client = root->FirstChildElement(); client != NULL; client = client->NextSiblingElement())
   {
     if (client->ValueStr() != "client" && client->ValueStr() != "clients")
@@ -108,6 +109,18 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
 
     LogDebug("name:\"%s\" label:\"%s\" uniqueid:%" PRIi64 " instances:%" PRIi64 " pregain:%.2f postgain:%.2f",
              name->GetText(), label->GetText(), uniqueid_p, instances_p, pregain_p, postgain_p);
+
+    bool exists = false;
+    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    {
+      if ((*it)->Name() == name->GetText())
+      {
+        LogError("Client with name \"%s\" already exists", name->GetText());
+        exists = true;
+      }
+    }
+    if (exists)
+      continue;
 
     vector<controlvalue> controlvalues;
     if (!LoadControlsFromClient(client, controlvalues))
@@ -174,9 +187,8 @@ void CClientsManager::ClientsFromXML(TiXmlElement* root)
     if (!allcontrolsok)
       continue;
 
+    Log("Adding client \"%s\"", name->GetText());
     CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, controlvalues);
-
-    CLock lock(m_mutex);
     m_clients.push_back(jackclient);
   }
 }
