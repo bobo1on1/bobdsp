@@ -368,7 +368,7 @@
               alert("ERROR: name is empty");
               return;
             }
-            else if (isNaN(instances))
+            else if (isNaN(instances) || instances < 1)
             {
               alert("ERROR: invalid value \"" + m_instancevalue[0].value + "\" for instances");
               return;
