@@ -385,7 +385,7 @@
             }
             
             var client = {"name" : m_namevalue[0].value,
-                          "plugin" : m_selectedplugin,
+                          "plugin" : {"label" : m_selectedplugin.label, "uniqueid" : m_selectedplugin.uniqueid},
                           "instances" : instances,
                           "pregain" : pregain,
                           "postgain" : postgain,
