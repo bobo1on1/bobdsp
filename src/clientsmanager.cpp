@@ -344,9 +344,11 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
   return connected;
 }
 
-int CClientsManager::ClientPipes(pollfd* fds)
+int CClientsManager::ClientPipes(pollfd*& fds, int extra)
 {
   CLock lock(m_mutex);
+
+  fds = new pollfd[m_clients.size() + extra];
 
   int nrfds = 0;
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)

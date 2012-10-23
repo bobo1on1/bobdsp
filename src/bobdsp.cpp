@@ -384,8 +384,8 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 
 void CBobDSP::ProcessMessages(int64_t timeout)
 {
-  pollfd* fds = new pollfd[m_clientsmanager.NrClients() + 4];
-  int nrclientpipes = m_clientsmanager.ClientPipes(fds);
+  pollfd* fds;
+  int nrclientpipes = m_clientsmanager.ClientPipes(fds, 4);
   unsigned int nrfds = nrclientpipes;
 
   int pipes[4] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe() };

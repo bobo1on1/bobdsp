@@ -45,8 +45,7 @@ class CClientsManager
 
     bool        Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
 
-    int         NrClients() { return m_clients.size(); }
-    int         ClientPipes(pollfd* fds);
+    int         ClientPipes(pollfd*& fds, int extra);
 
     void        ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
