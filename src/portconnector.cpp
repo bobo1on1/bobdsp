@@ -35,6 +35,7 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   m_wasconnected = true;
   m_stop = false;
   m_portindex = 0;
+  m_waitingthreads = 0;
 }
 
 CPortConnector::~CPortConnector()
@@ -285,6 +286,8 @@ std::string CPortConnector::PortsToJSON()
   return generator.ToString();
 }
 
+#define MAXWAITINGTHREADS 100
+
 std::string CPortConnector::PortsToJSON(const std::string& postjson)
 {
   TiXmlElement* root = JSON::JSONToXML(postjson);
@@ -296,11 +299,23 @@ std::string CPortConnector::PortsToJSON(const std::string& postjson)
 
   delete root;
 
+  CLock lock(m_condition);
+
+  //limit the maximum number of threads waiting on the condition variable
+  m_waitingthreads++;
+  if (m_waitingthreads > MAXWAITINGTHREADS)
+  {
+    LogError("%i waiting threads, releasing one", m_waitingthreads);
+    m_portindex++;
+    m_condition.Signal();
+  }
+
   //wait for the port index to change with the client requested timeout
   //the maximum timeout is one hour
-  CLock lock(m_condition);
   if (portindex_p == (int64_t)m_portindex && timeout_p > 0 && !m_stop)
     m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000, m_portindex, (unsigned int)portindex_p);
+
+  m_waitingthreads--;
 
   //if the portindex is the same, only send that, if it changed, send the ports too
   if (portindex_p == (int64_t)m_portindex)

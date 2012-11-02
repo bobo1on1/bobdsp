@@ -147,6 +147,7 @@ class CPortConnector
     bool                         m_stop;
     unsigned int                 m_portindex;
     CCondition                   m_condition;
+    int                          m_waitingthreads;
 
     CBobDSP&       m_bobdsp;
     jack_client_t* m_client;
