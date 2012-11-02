@@ -31,6 +31,7 @@ def configure(conf):
   conf.check(header_name='poll.h')
   conf.check(header_name='pthread.h')
   conf.check(header_name='signal.h')
+  conf.check(header_name='stddef.h')
   conf.check(header_name='stdio.h')
   conf.check(header_name='stdlib.h')
   conf.check(header_name='string.h')
@@ -87,3 +88,15 @@ def build(bld):
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')
+
+#set cssshlib_PATTERN to produce bobdsp.so from target='bobdsp'
+  bld.env.cxxshlib_PATTERN = '%s.so'
+  bld.shlib(source='src/ladspa/biquad.cpp\
+                    src/ladspa/biquadcoefs.cpp\
+                    src/ladspa/filterdescriptions.cpp\
+                    src/ladspa/filterinterface.cpp',
+            use=['m'],
+            includes='./src',
+            cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPLadspa',
+            target='bobdsp',
+            install_path='${PREFIX}/lib/ladspa')
