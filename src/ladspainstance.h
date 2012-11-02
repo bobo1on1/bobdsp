@@ -65,7 +65,6 @@ class CLadspaInstance
     int                        m_totalinstances;
     CLadspaPlugin*             m_plugin;
     int                        m_samplerate;
-    LADSPA_Descriptor*         m_descriptor;
     LADSPA_Handle              m_handle;
     std::vector<CPort>         m_ports;
     bool                       m_activated;

@@ -74,23 +74,17 @@ CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name,
   m_samplerate     = samplerate;
   m_activated      = false;
   m_handle         = NULL;
-
-  //copy the descriptor, so that we can have a private void * ImplementationData
-  //for each instance of the ladspa plugin
-  m_descriptor = new LADSPA_Descriptor;
-  memcpy(m_descriptor, m_plugin->Descriptor(), sizeof(LADSPA_Descriptor));
 }
 
 CLadspaInstance::~CLadspaInstance()
 {
   Disconnect();
-  delete m_descriptor;
 }
 
 bool CLadspaInstance::Connect()
 {
   //instantiate the ladspa plugin
-  m_handle = m_descriptor->instantiate(m_descriptor, m_samplerate);
+  m_handle = m_plugin->Descriptor()->instantiate(m_plugin->Descriptor(), m_samplerate);
   if (!m_handle)
   {
     LogError("Instantiate of client \"%s\" plugin \"%s\" failed", m_name.c_str(), m_plugin->Label());
@@ -114,7 +108,7 @@ bool CLadspaInstance::Connect()
         {
           if (it->first == m_plugin->PortName(port))
           {
-            m_descriptor->connect_port(m_handle, port, &(it->second));
+            m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
             break;
           }
         }
@@ -128,7 +122,7 @@ bool CLadspaInstance::Connect()
   {
     if (m_plugin->IsControlOutput(port))
     {
-      m_descriptor->connect_port(m_handle, port, &(it->second));
+      m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
       it++;
     }
   }
@@ -174,7 +168,7 @@ void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
   Deactivate();
   if (m_handle)
   {
-    m_descriptor->cleanup(m_handle);
+    m_plugin->Descriptor()->cleanup(m_handle);
     m_handle = NULL;
   }
 
@@ -192,8 +186,8 @@ void CLadspaInstance::Activate()
 {
   if (m_handle && !m_activated)
   {
-    if (m_descriptor->activate)
-      m_descriptor->activate(m_handle);
+    if (m_plugin->Descriptor()->activate)
+      m_plugin->Descriptor()->activate(m_handle);
 
     m_activated = true;
   }
@@ -203,8 +197,8 @@ void CLadspaInstance::Deactivate()
 {
   if (m_handle && m_activated)
   {
-    if (m_descriptor->deactivate)
-      m_descriptor->deactivate(m_handle);
+    if (m_plugin->Descriptor()->deactivate)
+      m_plugin->Descriptor()->deactivate(m_handle);
 
     m_activated = false;
   }
@@ -234,24 +228,24 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
         //connect the ladspa port to the temp buffer
         //it would probably be better to apply gain directly to the jack buffer
         //but I don't know if that'll work right
-        m_descriptor->connect_port(m_handle, it->m_ladspaport, it->m_buf);
+        m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, it->m_buf);
       }
       else
       {
         //no gain needed, copy the ladspa port directly to the jack buffer
-        m_descriptor->connect_port(m_handle, it->m_ladspaport, jackptr);
+        m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, jackptr);
       }
     }
     else
     {
       //connect the ladspa output port to the jack output port
       //gain is applied directly on the jack output buffer afterwards
-      m_descriptor->connect_port(m_handle, it->m_ladspaport, jackptr);
+      m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, jackptr);
     }
   }
 
   //run the ladspa plugin on the audio data
-  m_descriptor->run(m_handle, nframes);
+  m_plugin->Descriptor()->run(m_handle, nframes);
 
   //apply gain for all jack output ports
   if (postgain != 1.0f)
