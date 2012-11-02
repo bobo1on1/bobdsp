@@ -85,5 +85,5 @@ def build(bld):
                       src/util/timeutils.cpp',
               use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'yajl'],        
               includes='./src',
-              cxxflags='-Wall -g',
+              cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')

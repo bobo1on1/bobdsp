@@ -25,142 +25,144 @@
 
 using namespace std;
 
-void PrintError(const std::string& error)
+namespace UTILNAMESPACE
 {
-  std::cerr << "ERROR: " << error << "\n";
-}
-
-//get the first word (separated by whitespace) from string data and place that in word
-//then remove that word from string data
-bool GetWord(string& data, string& word)
-{
-  stringstream datastream(data);
-  string end;
-
-  datastream >> word;
-  if (datastream.fail())
+  void PrintError(const std::string& error)
   {
-    data.clear();
-    return false;
+    std::cerr << "ERROR: " << error << "\n";
   }
 
-  size_t pos = data.find(word) + word.length();
-
-  if (pos >= data.length())
+  //get the first word (separated by whitespace) from string data and place that in word
+  //then remove that word from string data
+  bool GetWord(string& data, string& word)
   {
-    data.clear();
-    return true;
-  }
+    stringstream datastream(data);
+    string end;
 
-  data = data.substr(pos);
-  
-  datastream.clear();
-  datastream.str(data);
-
-  datastream >> end;
-  if (datastream.fail())
-    data.clear();
-
-  return true;
-}
-
-//convert . or , to the current locale for correct conversion of ascii float
-void ConvertFloatLocale(std::string& strfloat)
-{
-  static struct lconv* locale = localeconv();
-  
-  size_t pos = strfloat.find_first_of(",.");
-
-  while (pos != string::npos)
-  {
-    strfloat.replace(pos, 1, 1, *locale->decimal_point);
-    pos++;
-
-    if (pos >= strfloat.size())
-      break;
-
-    pos = strfloat.find_first_of(",.", pos);
-  }
-}
-
-bool GetHomePath(std::string& homepath)
-{
-  const char* homeptr = getenv("HOME");
-  if (homeptr && strlen(homeptr) > 0)
-  {
-    homepath = PutSlashAtEnd(homeptr);
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-std::string PutSlashAtEnd(const std::string& path)
-{
-  if (!path.empty() && path[path.length() - 1] != '/')
-    return path + '/';
-  else
-    return path;
-}
-
-std::string RemoveSlashAtEnd(const std::string& path)
-{
-  if (path.length() > 0 && path[path.length() - 1] == '/')
-    return path.substr(0, path.length() - 1);
-  else
-    return path;
-}
-
-std::string FileNameExtension(const std::string& path)
-{
-  size_t pos = path.rfind('.');
-  if (pos == string::npos || pos >= path.length() - 1)
-    return "";
-  else
-    return path.substr(pos + 1);
-}
-
-std::string ToLower(const std::string& in)
-{
-  string out;
-  for (string::const_iterator it = in.begin(); it != in.end(); it++)
-    out += (char)tolower(*it);
-
-  return out;
-}
-
-bool StrToBool(const std::string& data, bool& value)
-{
-  std::string data2 = data;
-  std::string word;
-  if (!GetWord(data2, word))
-    return false;
-  
-  for (std::string::iterator it = word.begin(); it != word.end(); it++)
-    *it = tolower(*it);
-
-  if (word == "1" || word == "true" || word == "on" || word == "yes")
-  {
-    value = true;
-    return true;
-  }
-  else if (word == "0" || word == "false" || word == "off" || word == "no")
-  {
-    value = false;
-    return true;
-  }
-  else
-  {
-    int ivalue;
-    if (StrToInt(word, ivalue))
+    datastream >> word;
+    if (datastream.fail())
     {
-      value = ivalue != 0;
+      data.clear();
+      return false;
+    }
+
+    size_t pos = data.find(word) + word.length();
+
+    if (pos >= data.length())
+    {
+      data.clear();
       return true;
+    }
+
+    data = data.substr(pos);
+    
+    datastream.clear();
+    datastream.str(data);
+
+    datastream >> end;
+    if (datastream.fail())
+      data.clear();
+
+    return true;
+  }
+
+  //convert . or , to the current locale for correct conversion of ascii float
+  void ConvertFloatLocale(std::string& strfloat)
+  {
+    static struct lconv* locale = localeconv();
+    
+    size_t pos = strfloat.find_first_of(",.");
+
+    while (pos != string::npos)
+    {
+      strfloat.replace(pos, 1, 1, *locale->decimal_point);
+      pos++;
+
+      if (pos >= strfloat.size())
+        break;
+
+      pos = strfloat.find_first_of(",.", pos);
     }
   }
 
-  return false;
-}
+  bool GetHomePath(std::string& homepath)
+  {
+    const char* homeptr = getenv("HOME");
+    if (homeptr && strlen(homeptr) > 0)
+    {
+      homepath = PutSlashAtEnd(homeptr);
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
 
+  std::string PutSlashAtEnd(const std::string& path)
+  {
+    if (!path.empty() && path[path.length() - 1] != '/')
+      return path + '/';
+    else
+      return path;
+  }
+
+  std::string RemoveSlashAtEnd(const std::string& path)
+  {
+    if (path.length() > 0 && path[path.length() - 1] == '/')
+      return path.substr(0, path.length() - 1);
+    else
+      return path;
+  }
+
+  std::string FileNameExtension(const std::string& path)
+  {
+    size_t pos = path.rfind('.');
+    if (pos == string::npos || pos >= path.length() - 1)
+      return "";
+    else
+      return path.substr(pos + 1);
+  }
+
+  std::string ToLower(const std::string& in)
+  {
+    string out;
+    for (string::const_iterator it = in.begin(); it != in.end(); it++)
+      out += (char)tolower(*it);
+
+    return out;
+  }
+
+  bool StrToBool(const std::string& data, bool& value)
+  {
+    std::string data2 = data;
+    std::string word;
+    if (!GetWord(data2, word))
+      return false;
+    
+    for (std::string::iterator it = word.begin(); it != word.end(); it++)
+      *it = tolower(*it);
+
+    if (word == "1" || word == "true" || word == "on" || word == "yes")
+    {
+      value = true;
+      return true;
+    }
+    else if (word == "0" || word == "false" || word == "off" || word == "no")
+    {
+      value = false;
+      return true;
+    }
+    else
+    {
+      int ivalue;
+      if (StrToInt(word, ivalue))
+      {
+        value = ivalue != 0;
+        return true;
+      }
+    }
+
+    return false;
+  }
+}

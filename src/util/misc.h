@@ -33,145 +33,150 @@
 #include <pthread.h>
 #include <ctype.h>
 
-void PrintError(const std::string& error);
-bool GetWord(std::string& data, std::string& word);
-void ConvertFloatLocale(std::string& strfloat);
-bool GetHomePath(std::string& homepath);
-std::string PutSlashAtEnd(const std::string& path);
-std::string RemoveSlashAtEnd(const std::string& path);
-std::string FileNameExtension(const std::string& path);
-std::string ToLower(const std::string& in);
-bool StrToBool(const std::string& data, bool& value);
-
-template <class Value>
-inline std::string ToString(Value value)
+namespace UTILNAMESPACE
 {
-  std::string data;
-  std::stringstream valuestream;
-  valuestream << value;
-  valuestream >> data;
-  return data;
-}
+  void PrintError(const std::string& error);
+  bool GetWord(std::string& data, std::string& word);
+  void ConvertFloatLocale(std::string& strfloat);
+  bool GetHomePath(std::string& homepath);
+  std::string PutSlashAtEnd(const std::string& path);
+  std::string RemoveSlashAtEnd(const std::string& path);
+  std::string FileNameExtension(const std::string& path);
+  std::string ToLower(const std::string& in);
+  bool StrToBool(const std::string& data, bool& value);
 
-inline std::string ToString(bool value)
-{
-  if (value)
-    return "true";
-  else
-    return "false";
-}
-
-inline std::string GetErrno()
-{
-  return strerror(errno);
-}
-
-inline std::string GetErrno(int err)
-{
-  return strerror(err);
-}
-
-template <class A, class B, class C>
-inline A Clamp(A value, B min, C max)
-{
-  return value < max ? (value > min ? value : min) : max;
-}
-
-template <class A, class B>
-inline A Max(A value1, B value2)
-{
-  return value1 > value2 ? value1 : value2;
-}
-
-template <class A, class B, class C>
-inline A Max(A value1, B value2, C value3)
-{
-  return (value1 > value2) ? (value1 > value3 ? value1 : value3) : (value2 > value3 ? value2 : value3);
-}
-
-template <class A, class B>
-inline A Min(A value1, B value2)
-{
-  return value1 < value2 ? value1 : value2;
-}
-
-template <class A, class B, class C>
-inline A Min(A value1, B value2, C value3)
-{
-  return (value1 < value2) ? (value1 < value3 ? value1 : value3) : (value2 < value3 ? value2 : value3);
-}
-
-template <class T>
-inline T Abs(T value)
-{
-  return value > 0 ? value : -value;
-}
-
-template <class A, class B>
-inline A Round(B value)
-{
-  if (value == 0.0)
+  template <class Value>
+  inline std::string ToString(Value value)
   {
-    return 0;
+    std::string data;
+    std::stringstream valuestream;
+    valuestream << value;
+    valuestream >> data;
+    return data;
   }
-  else if (value > 0.0)
+
+  inline std::string ToString(bool value)
   {
-    return (A)(value + 0.5);
+    if (value)
+      return "true";
+    else
+      return "false";
   }
-  else
+
+  inline std::string GetErrno()
   {
-    return (A)(value - 0.5);
+    return strerror(errno);
+  }
+
+  inline std::string GetErrno(int err)
+  {
+    return strerror(err);
+  }
+
+  template <class A, class B, class C>
+  inline A Clamp(A value, B min, C max)
+  {
+    return value < max ? (value > min ? value : min) : max;
+  }
+
+  template <class A, class B>
+  inline A Max(A value1, B value2)
+  {
+    return value1 > value2 ? value1 : value2;
+  }
+
+  template <class A, class B, class C>
+  inline A Max(A value1, B value2, C value3)
+  {
+    return (value1 > value2) ? (value1 > value3 ? value1 : value3) : (value2 > value3 ? value2 : value3);
+  }
+
+  template <class A, class B>
+  inline A Min(A value1, B value2)
+  {
+    return value1 < value2 ? value1 : value2;
+  }
+
+  template <class A, class B, class C>
+  inline A Min(A value1, B value2, C value3)
+  {
+    return (value1 < value2) ? (value1 < value3 ? value1 : value3) : (value2 < value3 ? value2 : value3);
+  }
+
+  template <class T>
+  inline T Abs(T value)
+  {
+    return value > 0 ? value : -value;
+  }
+
+  template <class A, class B>
+  inline A Round(B value)
+  {
+    if (value == 0.0)
+    {
+      return 0;
+    }
+    else if (value > 0.0)
+    {
+      return (A)(value + 0.5);
+    }
+    else
+    {
+      return (A)(value - 0.5);
+    }
+  }
+
+  inline int32_t Round32(float value)
+  {
+    return lroundf(value);
+  }
+
+  inline int32_t Round32(double value)
+  {
+    return lround(value);
+  }
+
+  inline int64_t Round64(float value)
+  {
+    return llroundf(value);
+  }
+
+  inline int64_t Round64(double value)
+  {
+    return llround(value);
+  }
+
+  inline bool StrToInt(const std::string& data, int32_t& value)
+  {
+    return sscanf(data.c_str(), "%" PRIi32, &value) == 1;
+  }
+
+  inline bool StrToInt(const std::string& data, int64_t& value)
+  {
+    return sscanf(data.c_str(), "%" PRIi64, &value) == 1;
+  }
+
+  inline bool HexStrToInt(const std::string& data, int32_t& value)
+  {
+    return sscanf(data.c_str(), "%" PRIx32, &value) == 1;
+  }
+
+  inline bool HexStrToInt(const std::string& data, int64_t& value)
+  {
+    return sscanf(data.c_str(), "%" PRIx64, &value) == 1;
+  }
+
+  inline bool StrToFloat(const std::string& data, float& value)
+  {
+    return sscanf(data.c_str(), "%f", &value) == 1;
+  }
+
+  inline bool StrToFloat(const std::string& data, double& value)
+  {
+    return sscanf(data.c_str(), "%lf", &value) == 1;
   }
 }
 
-inline int32_t Round32(float value)
-{
-  return lroundf(value);
-}
-
-inline int32_t Round32(double value)
-{
-  return lround(value);
-}
-
-inline int64_t Round64(float value)
-{
-  return llroundf(value);
-}
-
-inline int64_t Round64(double value)
-{
-  return llround(value);
-}
-
-inline bool StrToInt(const std::string& data, int32_t& value)
-{
-  return sscanf(data.c_str(), "%" PRIi32, &value) == 1;
-}
-
-inline bool StrToInt(const std::string& data, int64_t& value)
-{
-  return sscanf(data.c_str(), "%" PRIi64, &value) == 1;
-}
-
-inline bool HexStrToInt(const std::string& data, int32_t& value)
-{
-  return sscanf(data.c_str(), "%" PRIx32, &value) == 1;
-}
-
-inline bool HexStrToInt(const std::string& data, int64_t& value)
-{
-  return sscanf(data.c_str(), "%" PRIx64, &value) == 1;
-}
-
-inline bool StrToFloat(const std::string& data, float& value)
-{
-  return sscanf(data.c_str(), "%f", &value) == 1;
-}
-
-inline bool StrToFloat(const std::string& data, double& value)
-{
-  return sscanf(data.c_str(), "%lf", &value) == 1;
-}
+using namespace UTILNAMESPACE;
 
 #endif //MISCUTIL
