@@ -352,7 +352,7 @@ float CLadspaPlugin::DefaultValue(unsigned long port, int samplerate /*= 48000*/
 float CLadspaPlugin::MakeDefault(bool islog, float low, float high, float interpolate)
 {
   if (islog)
-    return exp(log(low) * interpolate + log(high) * (1.0f - interpolate));
+    return exp(log(Max(low, 0.0000001)) * interpolate + log(Max(high, 0.0000001)) * (1.0f - interpolate));
   else
     return low * interpolate + high * (1.0f - interpolate);
 }
