@@ -42,6 +42,7 @@ def configure(conf):
   conf.check(header_name='time.h')
   conf.check(header_name='tinyxml.h')
   conf.check(header_name='unistd.h')
+  conf.check(header_name='uriparser/Uri.h')
   conf.check(header_name='yajl/yajl_gen.h')
   conf.check(header_name='yajl/yajl_parse.h')
   conf.check(header_name='yajl/yajl_version.h', mandatory=False)
@@ -60,6 +61,7 @@ def configure(conf):
   conf.check(lib='jack', uselib_store='jack')
   conf.check(lib='pcrecpp', uselib_store='pcrecpp')
   conf.check(lib='microhttpd', uselib_store='microhttpd')
+  conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='yajl', uselib_store='yajl')
 
   conf.check(function_name='clock_gettime', header_name='time.h', mandatory=False)
@@ -84,7 +86,7 @@ def build(bld):
                       src/util/misc.cpp\
                       src/util/mutex.cpp\
                       src/util/timeutils.cpp',
-              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'yajl'],        
+              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'uriparser', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')

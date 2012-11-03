@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <uriparser/Uri.h>
 
 using namespace std;
 
@@ -141,7 +142,12 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
   CHttpServer* httpserver = (CHttpServer*)cls;
 
-  string strurl = RemoveSlashAtEnd(url);
+  //convert percent encoded chars
+  char* tmpurl = new char[strlen(url) + 1];
+  strcpy(tmpurl, url);
+  uriUnescapeInPlaceA(tmpurl);
+  string strurl = RemoveSlashAtEnd(tmpurl);
+  delete[] tmpurl;
 
   if (strcmp(method, "GET") == 0)
   {
