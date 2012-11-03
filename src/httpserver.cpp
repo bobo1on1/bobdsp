@@ -300,7 +300,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   }
 
   int* hfd = new int(fd);
-  struct MHD_Response* response = MHD_create_response_from_callback(-1, 10240, FileReadCallback, (void*)hfd, FileReadFreeCallback);
+  struct MHD_Response* response = MHD_create_response_from_callback(-1, 1024 * 1024, FileReadCallback, (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
   returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
