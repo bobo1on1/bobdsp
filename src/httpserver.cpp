@@ -251,7 +251,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
 int CHttpServer::CreateErrorResponse(struct MHD_Connection *connection, int errorcode)
 {
-  string errorstr = ToString(errorcode);
+  string errorstr = ToString(errorcode) + "\n";
 
   struct MHD_Response* response = MHD_create_response_from_data(errorstr.length(), (void*)errorstr.c_str(), MHD_NO, MHD_YES);
   MHD_add_response_header(response, "Content-Type", "text/plain");
