@@ -146,7 +146,9 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   char* tmpurl = new char[strlen(url) + 1];
   strcpy(tmpurl, url);
   uriUnescapeInPlaceA(tmpurl);
-  string strurl = RemoveSlashAtEnd(tmpurl);
+
+  //make sure any url has no slash and end, and has a slash at the start
+  string strurl = PutSlashAtStart(RemoveSlashAtEnd(tmpurl));
   delete[] tmpurl;
 
   if (strcmp(method, "GET") == 0)
@@ -154,7 +156,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     if (strurl == "/log")
     {
       if (!g_logfilename.empty())
-        return CreateFileDownloadResponse(connection, g_logfilename, "text/plain");
+        return CreateFileDownloadResponse(connection, g_logfilename, "", "text/plain");
     }
     else if (strurl == "/connections")
     {
@@ -174,8 +176,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else
     {
-      //TODO: add some security, since now you can download every file
-      return CreateFileDownloadResponse(connection, string("html") + strurl);
+      return CreateFileDownloadResponse(connection, strurl, "html");
     }
   }
   else if (strcmp(method, "POST") == 0)
@@ -261,8 +262,18 @@ int CHttpServer::CreateErrorResponse(struct MHD_Connection *connection, int erro
   return returnv;
 }
 
-int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename, const char* mime /*= NULL*/)
+int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename,
+                                            const std::string& root /*= ""*/, const char* mime /*= NULL*/)
 {
+  //make sure no file outside the root is accessed
+  if (!root.empty() && DirLevel(filename) < 0)
+  {
+    LogError("Not allowing access to \"%s\", it's outside the root", string(root + filename).c_str());
+    return CreateErrorResponse(connection, MHD_HTTP_FORBIDDEN);
+  }
+
+  filename = root + filename;
+
   int returnv;
   struct stat statinfo;
   returnv = stat(filename.c_str(), &statinfo);
@@ -273,7 +284,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   }
 
   if (S_ISDIR(statinfo.st_mode))
-    filename += "/index.html";
+    filename = PutSlashAtEnd(filename) + "index.html";
 
   LogDebug("Opening \"%s\"", filename.c_str());
 

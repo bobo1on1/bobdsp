@@ -101,7 +101,9 @@ namespace UTILNAMESPACE
 
   std::string PutSlashAtEnd(const std::string& path)
   {
-    if (!path.empty() && path[path.length() - 1] != '/')
+    if (path.empty())
+      return "/";
+    else if (path[path.length() - 1] != '/')
       return path + '/';
     else
       return path;
@@ -111,6 +113,16 @@ namespace UTILNAMESPACE
   {
     if (path.length() > 0 && path[path.length() - 1] == '/')
       return path.substr(0, path.length() - 1);
+    else
+      return path;
+  }
+
+  std::string PutSlashAtStart(const std::string& path)
+  {
+    if (path.empty())
+      return "/";
+    else if (path[0] != '/')
+      return string("/") + path;
     else
       return path;
   }
@@ -164,5 +176,34 @@ namespace UTILNAMESPACE
     }
 
     return false;
+  }
+
+  //returns < 0 if a directory outside the root is accessed through ..
+  int DirLevel(const std::string& url)
+  {
+    size_t start = 0;
+    size_t pos;
+
+    int level = 0;
+    while (1)
+    {
+      pos = url.find('/', start);
+
+      string filename;
+      if (pos == string::npos)
+        filename = url.substr(start);
+      else if (pos > start)
+        filename = url.substr(start, pos - start);
+
+      if (filename == "..")
+        level--;
+      else if (!filename.empty() && filename != ".")
+        level++;
+
+      if (level < 0 || pos == string::npos || pos == url.length() - 1)
+        return level;
+
+      start = pos + 1;
+    }
   }
 }
