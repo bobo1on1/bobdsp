@@ -284,9 +284,17 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   }
 
   if (S_ISDIR(statinfo.st_mode))
+  {
     filename = PutSlashAtEnd(filename) + "index.html";
+    returnv = stat64(filename.c_str(), &statinfo);
+    if (returnv == -1)
+    {
+      LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
+      return CreateErrorResponse(connection, MHD_HTTP_NOT_FOUND);
+    }
+  }
 
-  LogDebug("Opening \"%s\"", filename.c_str());
+  LogDebug("Opening \"%s\" size:%" PRIi64, filename.c_str(), (int64_t)statinfo.st_size);
 
   int fd = open(filename.c_str(), O_RDONLY);
   if (fd == -1)
@@ -311,7 +319,8 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   }
 
   int* hfd = new int(fd);
-  struct MHD_Response* response = MHD_create_response_from_callback(-1, Clamp(statinfo.st_size, 1024, 10 * 1024 * 1024), FileReadCallback, (void*)hfd, FileReadFreeCallback);
+  struct MHD_Response* response = MHD_create_response_from_callback(-1, Clamp(statinfo.st_size, 1024, 10 * 1024 * 1024),
+                                                                    FileReadCallback, (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
   returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
