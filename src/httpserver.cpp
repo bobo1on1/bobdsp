@@ -296,7 +296,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
 
   LogDebug("Opening \"%s\" size:%" PRIi64, filename.c_str(), (int64_t)statinfo.st_size);
 
-  int fd = open(filename.c_str(), O_RDONLY);
+  int fd = open64(filename.c_str(), O_RDONLY);
   if (fd == -1)
   {
     LogError("Unable to open \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
@@ -335,7 +335,7 @@ RETHTSIZE CHttpServer::FileReadCallback(void *cls, uint64_t pos, char *buf, ARGH
   ssize_t bytesread;
   do
   {
-    bytesread = pread(fd, buf, max, pos);
+    bytesread = pread64(fd, buf, max, pos);
     if (bytesread == -1)
       LogError("Reading file: \"%s\"", GetErrno().c_str());
   }
