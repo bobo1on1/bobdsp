@@ -32,7 +32,7 @@
 
 using namespace std;
 
-#define POSTDATA_SIZELIMIT (1024 * 1024 * 1024) //1 gigabye
+#define POSTDATA_SIZELIMIT (100 * 1024 * 1024) //100 mb
 
 CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_bobdsp(bobdsp)
