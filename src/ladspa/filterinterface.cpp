@@ -28,7 +28,7 @@ extern "C"
 {
   const LADSPA_Descriptor* ladspa_descriptor(unsigned long Index)
   {
-    const LADSPA_Descriptor* descriptor = CFilterDescriptions::Descriptor((EFILTER)Index);
+    const LADSPA_Descriptor* descriptor = CFilterDescriptions::Descriptor(Index);
     return descriptor;
   }
 }
