@@ -185,63 +185,75 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
     if (!*con_cls) //on the first call, just alloc a string
     {
-      *con_cls = new string();
+      *con_cls = new CPostData();
       return MHD_YES;
     }
     else if (*upload_data_size) //on every next call with data, process
     {
-      //use strnlen here to exclude any null characters
-      size_t length = strnlen(upload_data, *upload_data_size);
-      ((string*)*con_cls)->append(upload_data, length);
-      *upload_data_size = 0; //signal that we processed this data
-
-      //check if all post data combined doesn't use more than the memory limit
-      CLock lock(httpserver->m_mutex);
-      httpserver->m_postdatasize += length;
-      if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
+      if (!((CPostData*)*con_cls)->error)
       {
-        LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
-        httpserver->m_postdatasize -= ((string*)*con_cls)->length();
-        delete (string*)*con_cls;
-        return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
+        std::string& postdata = ((CPostData*)*con_cls)->data;
+
+        //use strnlen here to exclude any null characters
+        size_t length = strnlen(upload_data, *upload_data_size);
+        postdata.append(upload_data, length);
+
+        //check if all post data combined doesn't use more than the memory limit
+        CLock lock(httpserver->m_mutex);
+        httpserver->m_postdatasize += length;
+        if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
+        {
+          LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
+          httpserver->m_postdatasize -= postdata.length();
+          ((CPostData*)*con_cls)->error = true;
+          postdata.clear();
+        }
       }
+
+      *upload_data_size = 0; //signal that we processed this data
 
       return MHD_YES;
     }
     else 
     {
+      if (((CPostData*)*con_cls)->error)
+      {
+        delete ((CPostData*)*con_cls);
+        return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
+      }
+
+      std::string& postdata = ((CPostData*)*con_cls)->data;
+
       CLock lock(httpserver->m_mutex);
-      httpserver->m_postdatasize -= ((string*)*con_cls)->length();
+      httpserver->m_postdatasize -= postdata.length();
       lock.Leave();
 
       if (strurl == "/connections")
       {
-        LogDebug("%s", ((string*)*con_cls)->c_str());
-        httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(*((string*)*con_cls));
+        LogDebug("%s", postdata.c_str());
+        httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(postdata);
         httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
-        delete ((string*)*con_cls);
+        delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
       }
       else if (strurl == "/ports")
       {
-        string& postdata = *(string*)*con_cls;
         LogDebug("%s", postdata.c_str());
         int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
-        delete ((string*)*con_cls);
+        delete ((CPostData*)*con_cls);
         return returnv;
       }
       else if (strurl == "/clients")
       {
-        string& postdata = *(string*)*con_cls;
         LogDebug("%s", postdata.c_str());
         httpserver->m_bobdsp.ClientsManager().ClientsFromJSON(postdata);
         httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
-        delete ((string*)*con_cls);
+        delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
       }
       else
       {
-        delete ((string*)*con_cls);
+        delete ((CPostData*)*con_cls);
       }
     }
   }

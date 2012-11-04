@@ -43,6 +43,18 @@
 
 class CBobDSP;
 
+class CPostData
+{
+  public:
+    CPostData()
+    {
+      error = false;
+    }
+
+    std::string data;
+    bool error;
+};
+
 class CHttpServer
 {
   public:
