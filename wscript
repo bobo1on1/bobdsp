@@ -15,6 +15,7 @@ def options(opt):
 def configure(conf):
   conf.load('compiler_cxx')
 
+  conf.check(header_name='arpa/inet.h')
   conf.check(header_name='assert.h')
   conf.check(header_name='ctype.h')
   conf.check(header_name='dirent.h')
@@ -27,6 +28,7 @@ def configure(conf):
   conf.check(header_name='locale.h')
   conf.check(header_name='malloc.h')
   conf.check(header_name='math.h')
+  conf.check(header_name='netinet/in.h')
   conf.check(header_name='pcrecpp.h')
   conf.check(header_name='poll.h')
   conf.check(header_name='pthread.h')

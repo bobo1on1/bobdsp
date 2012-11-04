@@ -29,6 +29,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <uriparser/Uri.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 using namespace std;
 
@@ -138,7 +140,21 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
                                     const char *version, const char *upload_data,
                                     size_t *upload_data_size, void **con_cls)
 {
-  LogDebug("method: \"%s\" url: \"%s\"", method, url);
+  const MHD_ConnectionInfo* connectioninfo = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
+
+  //convert ip:port to string
+  char* ipbuf = new char[256];
+  string host;
+  if (inet_ntop(connectioninfo->client_addr->sin_family, &connectioninfo->client_addr->sin_addr.s_addr, ipbuf, 256))
+    host = ipbuf;
+  else
+    host = "unknown";
+
+  delete[] ipbuf;
+  host += ':';
+  host += ToString(connectioninfo->client_addr->sin_port);
+
+  LogDebug("%s method: \"%s\" url: \"%s\"", host.c_str(), method, url);
 
   CHttpServer* httpserver = (CHttpServer*)cls;
 
@@ -181,7 +197,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   }
   else if (strcmp(method, "POST") == 0)
   {
-    LogDebug("upload_data_size: %zi", *upload_data_size);
+    LogDebug("%s upload_data_size: %zi", host.c_str(), *upload_data_size);
 
     if (!*con_cls) //on the first call, just alloc a string
     {
@@ -203,7 +219,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
         httpserver->m_postdatasize += length;
         if (httpserver->m_postdatasize > POSTDATA_SIZELIMIT)
         {
-          LogError("hit post data size limit, %" PRIi64 " bytes allocated", httpserver->m_postdatasize);
+          LogError("%s hit post data size limit, %" PRIi64 " bytes allocated", host.c_str(), httpserver->m_postdatasize);
           httpserver->m_postdatasize -= postdata.length();
           ((CPostData*)*con_cls)->error = true;
           postdata.clear();
@@ -230,7 +246,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
       if (strurl == "/connections")
       {
-        LogDebug("%s", postdata.c_str());
+        LogDebug("%s %s", host.c_str(), postdata.c_str());
         httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(postdata);
         httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
         delete ((CPostData*)*con_cls);
@@ -238,14 +254,14 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       }
       else if (strurl == "/ports")
       {
-        LogDebug("%s", postdata.c_str());
+        LogDebug("%s %s", host.c_str(), postdata.c_str());
         int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
         delete ((CPostData*)*con_cls);
         return returnv;
       }
       else if (strurl == "/clients")
       {
-        LogDebug("%s", postdata.c_str());
+        LogDebug("%s %s", host.c_str(), postdata.c_str());
         httpserver->m_bobdsp.ClientsManager().ClientsFromJSON(postdata);
         httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
         delete ((CPostData*)*con_cls);
