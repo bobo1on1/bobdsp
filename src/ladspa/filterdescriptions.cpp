@@ -62,16 +62,8 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     (LADSPA_PortRangeHint[])
     {
-      {
-        0,
-        -1.0f,
-        1.0f
-      },
-      {
-        0,
-        -1.0f,
-        1.0f
-      },
+      {},
+      {},
       {
         LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_SAMPLE_RATE |
         LADSPA_HINT_LOGARITHMIC | LADSPA_HINT_DEFAULT_100,
