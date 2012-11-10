@@ -42,7 +42,7 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     "Bob",
     "GPLv3",
     6,
-    (int[])
+    (const int[])
     {
       LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
       LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
@@ -60,7 +60,7 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       "f(p)",
       "Q(p)"
     },
-    (LADSPA_PortRangeHint[])
+    (const LADSPA_PortRangeHint[])
     {
       {},
       {},
