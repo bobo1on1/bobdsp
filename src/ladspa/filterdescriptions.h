@@ -21,9 +21,11 @@
 
 #include <ladspa.h>
 
+//bobdsp has ladspa plugin id's 4901 to 4940 reserved
+
 enum EFILTER
 {
-  LINKWITZTRANSFORM = 19333,
+  LINKWITZTRANSFORM = 4901,
   //TODO: implement these
   SECONDORDERLOWPASS,
   SECONDORDERHIGHPASS,
