@@ -106,9 +106,9 @@ void CBiquadCoef::LinkwitzTransform(float samplerate, LADSPA_Data** ports, bool 
 
   //clamp frequencies and Q factors to something sane
   LADSPA_Data f0 = Clamp(*ports[2], 1.0f, samplerate * 0.4f);
-  LADSPA_Data q0 = Clamp(*ports[3], 0.01f, 5.0f);
+  LADSPA_Data q0 = Clamp(*ports[3], 0.001f, 50.0f);
   LADSPA_Data fp = Clamp(*ports[4], 1.0f, samplerate * 0.4f);
-  LADSPA_Data qp = Clamp(*ports[5], 0.01f, 5.0f);
+  LADSPA_Data qp = Clamp(*ports[5], 0.001f, 50.0f);
 
   LADSPA_Data B11 = (f0 + fp) / 2.0f;
   LADSPA_Data B26 = powf(2.0f * M_PI * f0, 2.0f);
