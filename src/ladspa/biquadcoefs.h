@@ -30,7 +30,7 @@ namespace BobDSPLadspa
       CBiquadCoef();
       ~CBiquadCoef();
 
-      void Calculate(EFILTER type, float samplerate, LADSPA_Data** ports);
+      void Calculate(EFILTER type, float samplerate, LADSPA_Data** ports, bool force);
 
       LADSPA_Data a0;
       LADSPA_Data a1;
@@ -41,7 +41,9 @@ namespace BobDSPLadspa
 
     private:
       void Passthrough();
-      void LinkwitzTransform(float samplerate, LADSPA_Data** ports);
+      void LinkwitzTransform(float samplerate, LADSPA_Data** ports, bool force);
+
+      LADSPA_Data m_oldsettings[4];
   };
 }
 

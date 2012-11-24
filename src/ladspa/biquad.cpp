@@ -43,12 +43,14 @@ void CBiquad::Activate()
   memset(m_outdelay, 0, sizeof(m_outdelay));
   m_delay1 = 0;
   m_delay2 = 1;
+
+  m_coefs.Calculate(m_type, m_samplerate, m_ports, true);
 }
 
 void CBiquad::Run(unsigned long samplecount)
 {
   //calculate the coeffients on each run, since they might change
-  m_coefs.Calculate(m_type, m_samplerate, m_ports);
+  m_coefs.Calculate(m_type, m_samplerate, m_ports, false);
 
   LADSPA_Data* in    = m_ports[0];
   LADSPA_Data* inend = in + samplecount;
