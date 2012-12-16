@@ -1,0 +1,20 @@
+requirements:
+  fully concurrent safe
+  json
+  updated by events (http long poll)
+
+tasks:
+  add jack connections
+  remove jack connections
+  send list of jack ports (updates on event)
+  send list of jack connections (updates on event)
+  add clients
+  remove clients
+  configure client controls
+  send list of clients with control values (updates on event)
+  add custom controls that can be mapped to client controls
+  remove custom controls
+  set custom controls
+  send list of custom control values (updates on event)
+  add custom select controls to which connections can be mapped to be active
+  use only one http connection for all type of events
