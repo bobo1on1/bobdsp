@@ -16,36 +16,28 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FILTERDESCRIPTIONS_H
-#define FILTERDESCRIPTIONS_H
+#ifndef DITHER_H
+#define DITHER_H
 
-#include <ladspa.h>
-
-//bobdsp has ladspa plugin id's 4901 to 4940 reserved
-
-enum EFILTER
-{
-  LINKWITZTRANSFORM = 4901,
-  DITHER,
-  //TODO: implement these
-  SECONDORDERLOWPASS,
-  SECONDORDERHIGHPASS,
-  PEAKING,
-  SECONDORDERLOWSHELF,
-  SECONDORDERHIGHSHELF,
-};
+#include "filterdescriptions.h"
+#include "filterinterface.h"
 
 namespace BobDSPLadspa
 {
-  class CFilterDescriptions
+  class CDither : public IFilter
   {
     public:
-      static const LADSPA_Descriptor* Descriptor(unsigned long index);
-      static unsigned long NrDescriptors();
+      CDither();
+      ~CDither();
+
+      void ConnectPort(unsigned long port, LADSPA_Data* datalocation);
+      void Activate();
+      void Run(unsigned long samplecount);
+      void Deactivate();
 
     private:
-      static const LADSPA_Descriptor m_descriptors[];
+      LADSPA_Data* m_ports[3];
+      unsigned int m_rand;
   };
 }
-
-#endif //FILTERDESCRIPTIONS_H
+#endif //DITHER_H

@@ -89,6 +89,40 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    DITHER,
+    "bobdspdither",
+    LADSPA_PROPERTY_HARD_RT_CAPABLE,
+    "BobDSP Dither",
+    "Bob",
+    "GPLv3",
+    3,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+    },
+    (const char*[])
+    {
+      "Input",
+      "Output",
+      "Bit depth",
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_INTEGER | LADSPA_HINT_DEFAULT_MIDDLE,
+        0.0f,
+        32.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 

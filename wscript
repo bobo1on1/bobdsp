@@ -98,7 +98,8 @@ def build(bld):
   bld.shlib(source='src/ladspa/biquad.cpp\
                     src/ladspa/biquadcoefs.cpp\
                     src/ladspa/filterdescriptions.cpp\
-                    src/ladspa/filterinterface.cpp',
+                    src/ladspa/filterinterface.cpp\
+                    src/ladspa/dither.cpp',
             use=['m'],
             includes='./src',
             cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPLadspa',

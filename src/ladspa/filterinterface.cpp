@@ -19,6 +19,7 @@
 #include <ladspa.h>
 #include <stddef.h>
 #include "biquad.h"
+#include "dither.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
@@ -37,6 +38,8 @@ LADSPA_Handle BobDSPLadspa::Instantiate(const struct _LADSPA_Descriptor* Descrip
 {
   if (Descriptor->UniqueID == LINKWITZTRANSFORM)
     return new CBiquad((EFILTER)Descriptor->UniqueID, samplerate);
+  else if (Descriptor->UniqueID == DITHER)
+    return new CDither();
   else
     return NULL;
 }
