@@ -102,8 +102,9 @@ ClientMessage CHttpServer::GetMessage()
   }
   else if (returnv == -1 && errno != EAGAIN)
   {
+    int tmperrno = errno;
     LogError("httpserver error reading msg from pipe: \"%s\"", GetErrno().c_str());
-    if (errno != EINTR)
+    if (tmperrno != EINTR)
     {
       close(m_pipe[0]);
       m_pipe[0] = -1;
@@ -126,8 +127,9 @@ void CHttpServer::WriteMessage(uint8_t msg)
 
   if (returnv == -1)
   {
+    int tmperrno = errno;
     LogError("httpserver error writing msg %i to pipe: \"%s\"", msg, GetErrno().c_str());
-    if (errno != EINTR && errno != EAGAIN)
+    if (tmperrno != EINTR && tmperrno != EAGAIN)
     {
       close(m_pipe[1]); //pipe broken, close it
       m_pipe[1] = -1;
@@ -361,13 +363,15 @@ RETHTSIZE CHttpServer::FileReadCallback(void *cls, uint64_t pos, char *buf, ARGH
   int fd = *(int*)cls;
 
   ssize_t bytesread;
+  int tmperrno;
   do
   {
     bytesread = pread64(fd, buf, max, pos);
+    tmperrno = errno;
     if (bytesread == -1)
       LogError("Reading file: \"%s\"", GetErrno().c_str());
   }
-  while (bytesread == -1 && errno == EINTR);
+  while (bytesread == -1 && tmperrno == EINTR);
 
   if (bytesread == 0 || bytesread == -1)
     return -1; //done reading, returning 0 here is against api

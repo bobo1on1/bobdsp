@@ -243,8 +243,9 @@ bool CJackClient::WriteMessage(uint8_t msg)
 
   if (returnv == -1 && errno != EAGAIN)
   {
+    int tmperrno = errno;
     LogError("Client \"%s\" error writing msg %s to pipe: \"%s\"", m_name.c_str(), MsgToString(msg), GetErrno().c_str());
-    if (errno != EINTR)
+    if (tmperrno != EINTR)
     {
       close(m_pipe[1]);
       m_pipe[1] = -1;
@@ -268,8 +269,9 @@ ClientMessage CJackClient::GetMessage()
   }
   else if (returnv == -1 && errno != EAGAIN)
   {
+    int tmperrno = errno;
     LogError("Client \"%s\" error reading msg from pipe: \"%s\"", m_name.c_str(), GetErrno().c_str());
-    if (errno != EINTR)
+    if (tmperrno != EINTR)
     {
       close(m_pipe[0]);
       m_pipe[0] = -1;

@@ -466,8 +466,9 @@ void CBobDSP::ProcessSignalfd()
   int returnv = read(m_signalfd, &siginfo, sizeof(siginfo));
   if (returnv == -1 && errno != EAGAIN)
   {
+    int tmperrno = errno;
     LogError("reading signals fd: %s", GetErrno().c_str());
-    if (errno != EINTR)
+    if (tmperrno != EINTR)
     {
       close(m_signalfd);
       m_signalfd = -1;
@@ -497,14 +498,15 @@ void CBobDSP::ProcessStdFd(const char* name, int& fd)
     buf[returnv] = 0;
     logstr += buf;
   }
+  int tmperrno = errno;
 
   if (!logstr.empty())
     LogDebug("%s: %s", name, logstr.c_str());
 
-  if (returnv == -1 && errno != EAGAIN)
+  if (returnv == -1 && tmperrno != EAGAIN)
   {
     LogError("reading %s fd: \"%s\"", name, GetErrno().c_str());
-    if (errno != EINTR)
+    if (tmperrno != EINTR)
     {
       close(fd);
       fd = -1;
