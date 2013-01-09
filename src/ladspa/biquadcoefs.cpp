@@ -24,12 +24,7 @@ using namespace BobDSPLadspa;
 
 CBiquadCoef::CBiquadCoef()
 {
-  a0 = 1.0f;
-  a1 = 0.0f;
-  a2 = 0.0f;
-  b0 = 1.0f;
-  b1 = 0.0f;
-  b2 = 0.0f;
+  Passthrough();
 
   for (size_t i = 0; i < sizeof(m_oldsettings) / sizeof(m_oldsettings[0]); i++)
     m_oldsettings[i] = -1.0f;
