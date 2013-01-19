@@ -158,6 +158,9 @@ void CBobDSP::Setup()
   //load the port connections
   LoadConnectionsFromFile();
 
+  //load the visualizers
+  LoadVisualizersFromFile();
+
   //set up signal handlers
   SetupSignals();
 
@@ -174,6 +177,8 @@ void CBobDSP::Process()
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
   //make sure to retrieve the ports list
   m_updateports = true;
+
+  m_visualizer.Start();
 
   while(!m_stop)
   {
@@ -245,9 +250,11 @@ void CBobDSP::Process()
 
 void CBobDSP::Cleanup()
 {
+  m_visualizer.AsyncStopThread();
   m_portconnector.Stop();
   m_httpserver.Stop();
   m_clientsmanager.Stop();
+  m_visualizer.StopThread();
 
   if (m_signalfd != -1)
     close(m_signalfd);
@@ -689,6 +696,41 @@ bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
     LogError("Error saving connections: \"%s\"", doc.ErrorDesc());
     return false;
   }
+
+  return true;
+}
+
+bool CBobDSP::LoadVisualizersFromFile()
+{
+  string homepath;
+  if (!GetHomePath(homepath))
+  {
+    LogError("Unable to get home path");
+    return false;
+  }
+
+  string filename = homepath + ".bobdsp/visualizers.xml";
+  Log("Loading visualizer settings from %s", filename.c_str());
+
+  TiXmlDocument visfile;
+  visfile.LoadFile(filename.c_str());
+
+  if (visfile.Error())
+  {
+    LogError("Unable to load %s: %s %s %s", filename.c_str(), visfile.ErrorDesc(),
+        visfile.ErrorRow() ? (string("Row: ") + ToString(visfile.ErrorRow())).c_str() : "",
+        visfile.ErrorCol() ? (string("Col: ") + ToString(visfile.ErrorCol())).c_str() : "");
+    return false;
+  }
+
+  TiXmlElement* root = visfile.RootElement();
+  if (!root)
+  {
+    LogError("Unable to get <visualizers> root node from %s", filename.c_str());
+    return false;
+  }
+
+  m_visualizer.VisualizersFromXML(root);
 
   return true;
 }

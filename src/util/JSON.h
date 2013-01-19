@@ -49,6 +49,8 @@ namespace JSON
 
       void        Reset();
       std::string ToString();
+      void        ToString(std::string& jsonstr);
+      void        AppendToString(std::string& jsonstr);
 
       void MapOpen()    { yajl_gen_map_open(m_handle);    }
       void MapClose()   { yajl_gen_map_close(m_handle);   }

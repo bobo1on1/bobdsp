@@ -224,6 +224,22 @@ std::string JSON::CJSONGenerator::ToString()
   return string((const char *)str, length);
 }
 
+void JSON::CJSONGenerator::ToString(std::string& jsonstr)
+{
+  const unsigned char* str;
+  YAJLSTRINGLEN length;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  jsonstr.assign((const char*)str, length);
+}
+
+void JSON::CJSONGenerator::AppendToString(std::string& jsonstr)
+{
+  const unsigned char* str;
+  YAJLSTRINGLEN length;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  jsonstr.append((const char*)str, length);
+}
+
 void JSON::CJSONGenerator::AddInt(int64_t in)
 {
   string number = ::ToString(in);

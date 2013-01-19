@@ -192,6 +192,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
     }
+    else if (strurl == "/visualizer")
+    {
+      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON());
+    }
     else
     {
       return CreateFileDownloadResponse(connection, strurl, "html");
@@ -268,6 +272,13 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
         httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
         delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
+      }
+      else if (strurl == "/visualizer")
+      {
+        LogDebug("%s %s", host.c_str(), postdata.c_str());
+        int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
+        delete ((CPostData*)*con_cls);
+        return returnv;
       }
       else
       {

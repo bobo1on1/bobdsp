@@ -32,6 +32,7 @@ def configure(conf):
   conf.check(header_name='pcrecpp.h')
   conf.check(header_name='poll.h')
   conf.check(header_name='pthread.h')
+  conf.check(header_name='samplerate.h')
   conf.check(header_name='signal.h')
   conf.check(header_name='stddef.h')
   conf.check(header_name='stdio.h')
@@ -56,13 +57,14 @@ def configure(conf):
 
   conf.check(header_name='microhttpd.h')
 
-  conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
-  conf.check(lib='m', uselib_store='m', mandatory=False)
   conf.check(lib='dl', uselib_store='dl', mandatory=False)
-  conf.check(lib='tinyxml', uselib_store='tinyxml')
   conf.check(lib='jack', uselib_store='jack')
-  conf.check(lib='pcrecpp', uselib_store='pcrecpp')
+  conf.check(lib='m', uselib_store='m', mandatory=False)
   conf.check(lib='microhttpd', uselib_store='microhttpd')
+  conf.check(lib='pcrecpp', uselib_store='pcrecpp')
+  conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
+  conf.check(lib='samplerate', uselib_store='samplerate')
+  conf.check(lib='tinyxml', uselib_store='tinyxml')
   conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='yajl', uselib_store='yajl')
 
@@ -82,13 +84,15 @@ def build(bld):
                       src/ladspaplugin.cpp\
                       src/pluginmanager.cpp\
                       src/portconnector.cpp\
+                      src/visualizer.cpp\
                       src/util/condition.cpp\
                       src/util/JSON.cpp\
                       src/util/log.cpp\
                       src/util/misc.cpp\
                       src/util/mutex.cpp\
-                      src/util/timeutils.cpp',
-              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'uriparser', 'yajl'],        
+                      src/util/timeutils.cpp\
+                      src/util/thread.cpp',
+              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')

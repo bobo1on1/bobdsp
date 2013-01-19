@@ -33,6 +33,7 @@
 #include "clientmessage.h"
 #include "pluginmanager.h"
 #include "clientsmanager.h"
+#include "visualizer.h"
 
 #define CONNECTINTERVAL 1000000
 
@@ -46,9 +47,10 @@ class CBobDSP
     void Process();
     void Cleanup();
 
-    CPortConnector& PortConnector()   { return m_portconnector;  }
-    CPluginManager& PluginManager()   { return m_pluginmanager;  }
-    CClientsManager& ClientsManager() { return m_clientsmanager; }
+    CPortConnector&  PortConnector()   { return m_portconnector;  }
+    CPluginManager&  PluginManager()   { return m_pluginmanager;  }
+    CClientsManager& ClientsManager()  { return m_clientsmanager; }
+    CVisualizer&     Visualizer()      { return m_visualizer;     }
 
     bool SaveConnectionsToFile(TiXmlElement* connections);
     bool LoadConnectionsFromFile();
@@ -58,6 +60,7 @@ class CBobDSP
     CPortConnector  m_portconnector;
     CPluginManager  m_pluginmanager;
     CClientsManager m_clientsmanager;
+    CVisualizer     m_visualizer;
     bool            m_checkconnect;
     bool            m_checkdisconnect;
     bool            m_updateports;
@@ -77,6 +80,7 @@ class CBobDSP
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     bool LoadClientsFromFile();
+    bool LoadVisualizersFromFile();
 
     static void JackError(const char* jackerror);
     static void JackInfo(const char* jackinfo);

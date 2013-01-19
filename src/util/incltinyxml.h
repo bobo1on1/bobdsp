@@ -95,7 +95,7 @@ if (!name ## _loadfailed)\
 
 #define POSTCHECK_NONE(value) (true)
 #define POSTCHECK_ONEORHIGHER(value) (value >= 1)
-#define POSTCHECK_ZEROORHIGHER(value) (value >= 1)
+#define POSTCHECK_ZEROORHIGHER(value) (value >= 0)
 
 #define MANDATORY true
 #define OPTIONAL  false
