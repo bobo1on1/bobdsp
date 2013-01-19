@@ -18,3 +18,8 @@ tasks:
   send list of custom control values (updates on event)
   add custom select controls to which connections can be mapped to be active
   use only one http connection for all type of events
+
+webinterface:
+  configure connections (regular expressions)
+  configure clients (add, remove, client settings)
+  configure controls (map client controls to custom controls, map connections to controls)
