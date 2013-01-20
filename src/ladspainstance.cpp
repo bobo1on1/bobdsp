@@ -176,7 +176,12 @@ void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
   while (!m_ports.empty())
   {
     if (unregisterjack)
-      jack_port_unregister(m_client, m_ports.back().m_jackport);
+    {
+      int returnv = jack_port_unregister(m_client, m_ports.back().m_jackport);
+      if (returnv != 0)
+        LogError("Client \"%s\" error %i unregistering port: \"%s\"",
+                  m_name.c_str(), returnv, GetErrno().c_str());
+    }
 
     m_ports.pop_back();
   }
