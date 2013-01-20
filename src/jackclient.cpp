@@ -112,7 +112,7 @@ bool CJackClient::ConnectInternal()
 
   m_samplerate = jack_get_sample_rate(m_client);
 
-  Log("Client \"%s\" connected to jackd, got name \"%s\", samplerate %" PRIi32,
+  Log("Client \"%s\" connected to jackd, got name \"%s\", samplerate %i",
       m_name.c_str(), jack_get_client_name(m_client), m_samplerate);
 
   int returnv;
