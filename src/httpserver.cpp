@@ -66,7 +66,7 @@ bool CHttpServer::Start()
   if (m_daemon)
     return true;
 
-  unsigned int options = MHD_USE_THREAD_PER_CONNECTION;
+  unsigned int options = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_IPv6;
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 
