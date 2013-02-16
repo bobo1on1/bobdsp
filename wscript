@@ -28,6 +28,7 @@ def configure(conf):
   conf.check(header_name='locale.h')
   conf.check(header_name='malloc.h')
   conf.check(header_name='math.h')
+  conf.check(header_name='netdb.h')
   conf.check(header_name='netinet/in.h')
   conf.check(header_name='pcrecpp.h')
   conf.check(header_name='poll.h')

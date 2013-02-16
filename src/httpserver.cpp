@@ -31,6 +31,7 @@
 #include <uriparser/Uri.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 using namespace std;
 
@@ -144,17 +145,36 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 {
   const MHD_ConnectionInfo* connectioninfo = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
 
-  //convert ip:port to string
-  char* ipbuf = new char[256];
-  string host;
-  if (inet_ntop(connectioninfo->client_addr->sin_family, &connectioninfo->client_addr->sin_addr.s_addr, ipbuf, 256))
-    host = ipbuf;
+  sockaddr* sock = (sockaddr*)connectioninfo->client_addr;
+  socklen_t size;
+  if (sock->sa_family == AF_INET)
+    size = sizeof(sockaddr_in);
+  else if (sock->sa_family == AF_INET6)
+    size = sizeof(sockaddr_in6);
   else
-    host = "unknown";
+  {
+    size = 0;
+    LogError("Unknown protocol %u", sock->sa_family);
+  }
 
-  delete[] ipbuf;
-  host += ':';
-  host += ToString(connectioninfo->client_addr->sin_port);
+  //convert ip:port to string
+  char hostbuf[NI_MAXHOST];
+  char servbuf[NI_MAXSERV];
+  string host;
+  if (size > 0)
+  {
+    //pass NI_NUMERICHOST to prevent a dns lookup, this might take a long time
+    //and will slow down the http request
+    int returnv = getnameinfo(sock, size, hostbuf, sizeof(hostbuf), servbuf,
+                              sizeof(servbuf), NI_NUMERICHOST | NI_NUMERICSERV);
+    if (returnv == 0)
+      host = string(hostbuf) + ":" + servbuf;
+    else
+      LogError("getnameinfo(): %s", gai_strerror(returnv));
+  }
+
+  if (host.empty())
+    host = "unknown";
 
   LogDebug("%s method: \"%s\" url: \"%s\"", host.c_str(), method, url);
 
