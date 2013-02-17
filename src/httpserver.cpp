@@ -168,9 +168,16 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     int returnv = getnameinfo(sock, size, hostbuf, sizeof(hostbuf), servbuf,
                               sizeof(servbuf), NI_NUMERICHOST | NI_NUMERICSERV);
     if (returnv == 0)
-      host = string(hostbuf) + ":" + servbuf;
+    {
+      if (sock->sa_family == AF_INET6)
+        host = string("[") + hostbuf + "]:" + servbuf;
+      else
+        host = string(hostbuf) + ":" + servbuf;
+    }
     else
+    {
       LogError("getnameinfo(): %s", gai_strerror(returnv));
+    }
   }
 
   if (host.empty())
