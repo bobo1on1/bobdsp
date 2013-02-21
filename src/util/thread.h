@@ -34,6 +34,8 @@ class CThread
     void AsyncStopThread();
     void JoinThread();
     bool IsRunning();
+    void SetThreadName(const char* name);
+    static void SetCurrentThreadName(const char* name);
 
   protected:
     pthread_t     m_thread;

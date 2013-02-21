@@ -116,6 +116,7 @@ class CVisualizer : public CThread
     jack_client_t*        m_client;
     jack_status_t         m_exitstatus;
     std::string           m_exitreason;
+    bool                  m_nameset;
     int                   m_samplerate;
     CCondition            m_jackcond;
     int64_t               m_interval;

@@ -64,6 +64,7 @@ class CJackClient
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
     int            m_portevents;
+    bool           m_nameset;
     int            m_pipe[2];
 
     std::vector<CLadspaInstance*> m_instances;

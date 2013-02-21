@@ -69,6 +69,7 @@ def configure(conf):
   conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='yajl', uselib_store='yajl')
 
+  conf.check(function_name='pthread_setname_np', header_name='pthread.h', lib='pthread', mandatory=False)
   conf.check(function_name='clock_gettime', header_name='time.h', mandatory=False)
   conf.check(function_name='clock_gettime', header_name='time.h', lib='rt', uselib_store='rt', mandatory=False,
              msg='Checking for clock_gettime in librt')

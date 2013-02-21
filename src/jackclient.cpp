@@ -26,6 +26,7 @@
 #include "util/misc.h"
 #include "util/timeutils.h"
 #include "util/log.h"
+#include "util/thread.h"
 
 #include "jackclient.h"
 
@@ -151,6 +152,9 @@ bool CJackClient::ConnectInternal()
              m_name.c_str(), returnv, GetErrno().c_str());
     return false;
   }
+
+  //make sure the threadname is set in the jack callback
+  m_nameset = false;
 
   return true;
 }
@@ -295,6 +299,13 @@ void CJackClient::PJackProcessCallback(jack_nframes_t nframes)
 
   //check if we need to send a message to the main loop
   CheckMessages();
+
+  //set the name of this thread if needed
+  if (!m_nameset)
+  {
+    CThread::SetCurrentThreadName(m_name.c_str());
+    m_nameset = true;
+  }
 }
 
 void CJackClient::SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg)

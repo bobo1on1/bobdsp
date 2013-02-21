@@ -17,6 +17,7 @@
  */
 
 #include "thread.h"
+#include "config.h"
 
 CThread::CThread()
 {
@@ -69,3 +70,16 @@ bool CThread::IsRunning()
   return m_running;
 }
 
+void CThread::SetThreadName(const char* name)
+{
+#ifdef HAVE_PTHREAD_SETNAME_NP
+  pthread_setname_np(m_thread, name);
+#endif
+}
+
+void CThread::SetCurrentThreadName(const char* name)
+{
+#ifdef HAVE_PTHREAD_SETNAME_NP
+  pthread_setname_np(pthread_self(), name);
+#endif
+}

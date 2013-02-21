@@ -17,9 +17,13 @@
  */
 
 #include "bobdsp.h"
+#include "util/thread.h"
+
 
 int main (int argc, char *argv[])
 {
+  CThread::SetCurrentThreadName("main");
+
   CBobDSP bobdsp(argc, argv);
 
   bobdsp.Setup();

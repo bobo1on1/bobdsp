@@ -21,6 +21,7 @@
 #include "util/log.h"
 #include "util/timeutils.h"
 #include "util/lock.h"
+#include "util/thread.h"
 
 using namespace std;
 
@@ -400,6 +401,8 @@ void CVisualizer::Start()
 
 void CVisualizer::Process()
 {
+  SetThreadName("visualizer");
+
   while(!m_stop)
   {
     m_connected = Connect();
@@ -529,6 +532,9 @@ bool CVisualizer::Connect()
   //initialize the visualizer time
   m_vistime = GetTimeUs() + m_interval;
 
+  //jack thread name needs to be set in the jack callback
+  m_nameset = false;
+
   return true;
 }
 
@@ -604,6 +610,13 @@ void CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
 
   if (lock.HasLock())
     m_jackcond.Signal();
+
+  //set the name of this thread if needed
+  if (!m_nameset)
+  {
+    CThread::SetCurrentThreadName("jack visualizer");
+    m_nameset = true;
+  }
 }
 
 void CVisualizer::SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg)
