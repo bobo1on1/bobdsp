@@ -16,8 +16,17 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//#define JSONDEBUG
+
 #include "JSON.h"
-#include "util/misc.h"
+#include "misc.h"
+
+#ifdef JSONDEBUG
+#include "log.h"
+#define JSONLOG(fmt, ...) LogDebug(fmt, ##__VA_ARGS__)
+#else
+#define JSONLOG(fmd, ...)
+#endif
 
 using namespace std;
 
@@ -189,6 +198,416 @@ int JSON::EndArray(void* ctx)
   }
 
   return 1;
+}
+
+static int JNull(void* ctx)
+{
+  JSONLOG(" ");
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+
+  //an element's type is set to TYPENULL in the constructor
+  if (element->GetType() == TYPEARRAY)
+    element->AsArray().push_back(new CJSONElement());
+  else
+    element = element->GetParent();
+
+  return 1;
+}
+
+static int Boolean(void* ctx, int boolVal)
+{
+  JSONLOG("%i", boolVal);
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+
+  if (element->GetType() == TYPEARRAY)
+  {
+    CJSONElement* child = new CJSONElement();
+    child->SetType(TYPEBOOL);
+    child->AsBool() = boolVal ? true : false;
+    child->SetParent(element);
+    element->AsArray().push_back(child);
+  }
+  else
+  {
+    element->SetType(TYPEBOOL);
+    element->AsBool() = boolVal ? true : false;
+    element = element->GetParent();
+  }
+
+  return 1;
+}
+
+static int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)
+{
+  JSONLOG("%.*s", numberLen, numberVal);
+
+  const char* ptr = numberVal;
+  const char* end = numberVal + numberLen;
+  
+  //check if the string contains a decimal point, or an exponent, if it does read it in as a double
+  //otherwise read it as int64_t
+  bool isfloat = false;
+  while (ptr != end)
+  {
+    if (*ptr == '.' || *ptr == 'e' || *ptr == 'E')
+    {
+      isfloat = true;
+      break;
+    }
+    ptr++;
+  }
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  CJSONElement* parse;
+  if (element->GetType() == TYPEARRAY)
+  {
+    CJSONElement* child = new CJSONElement();
+    child->SetParent(element);
+    element->AsArray().push_back(child);
+    parse = child;
+  }
+  else
+  {
+    parse = element;
+    element = element->GetParent();
+  }
+
+  bool parsed;
+  if (isfloat)
+  {
+    parse->SetType(TYPEDOUBLE);
+    parsed = StrToFloat(string(numberVal, numberLen), parse->AsDouble());
+  }
+  else
+  {
+    parse->SetType(TYPEINT64);
+    parsed = StrToInt(string(numberVal, numberLen), parse->AsInt64());
+  }
+
+  return parsed;
+}
+
+static int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stringLen)
+{
+  JSONLOG("%.*s", stringLen, stringVal);
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+
+  if (element->GetType() == TYPEARRAY)
+  {
+    CJSONElement* child = new CJSONElement();
+    child->SetType(TYPESTRING);
+    child->AsString().assign((const char*)stringVal, stringLen);
+    child->SetParent(element);
+    element->AsArray().push_back(child);
+  }
+  else
+  {
+    element->SetType(TYPESTRING);
+    element->AsString().assign((const char*)stringVal, stringLen);
+    element = element->GetParent();
+  }
+
+  return 1;
+}
+
+static int StartMap(void* ctx)
+{
+  JSONLOG(" ");
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  if (element->GetType() == TYPEARRAY)
+  {
+    CJSONElement* child = new CJSONElement();
+    child->SetType(TYPEMAP);
+    child->SetParent(element);
+    element->AsArray().push_back(child);
+    element = child;
+  }
+  else
+  {
+    element->SetType(TYPEMAP);
+  }
+
+  return 1;
+}
+
+static int MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
+{
+  JSONLOG("%.*s", stringLen, key);
+
+  //allocate a new child element on the current map
+  //then update the pointer, the parse functions will use the pointer to access the child
+  //and afterwards set the pointer back to the parent
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  CJSONElement*& child = element->AsMap()[string((const char*)key, stringLen)];
+  child = new CJSONElement();
+  child->SetParent(element);
+  element = child;
+
+  return 1;
+}
+
+static int EndMap(void* ctx)
+{
+  JSONLOG(" ");
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  element = element->GetParent();
+
+  return 1;
+}
+
+static int StartArray(void* ctx)
+{
+  //start of an array, all parse functions check if they need to allocate a new element in an array
+  JSONLOG(" ");
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+
+  if (element->GetType() == TYPEARRAY)
+  {
+    CJSONElement* child = new CJSONElement();
+    child->SetType(TYPEARRAY);
+    child->SetParent(element);
+    element->AsArray().push_back(child);
+    element = child;
+  }
+  else
+  {
+    element->SetType(TYPEARRAY);
+  }
+
+  return 1;
+}
+
+static int EndArray(void* ctx)
+{
+  JSONLOG(" ");
+
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  element = element->GetParent();
+
+  return 1;
+}
+
+static yajl_callbacks parsecallbacks =
+{
+  JNull,
+  Boolean,
+  NULL,
+  NULL,
+  Number,
+  String,
+  StartMap,
+  MapKey,
+  EndMap,
+  StartArray,
+  EndArray,
+};
+
+//converts JSON into a tree structure of CJSONElement, using libyajl for parsing
+CJSONElement* ParseJSON(const std::string& json, std::string*& error)
+{
+  //allocate a root element, this will always be set to TYPEMAP
+  CJSONElement* root = new CJSONElement();
+  CJSONElement* rootptr = root; //pointer for the yajl functions
+
+  yajl_handle handle;
+
+#if YAJL_MAJOR == 2
+  handle = yajl_alloc(&parsecallbacks, NULL, &rootptr);
+  yajl_config(handle, yajl_allow_comments, 1);
+  yajl_config(handle, yajl_dont_validate_strings, 0);
+#else
+  yajl_parser_config yajlconfig;
+  yajlconfig.allowComments = 1;
+  yajlconfig.checkUTF8 = 1;
+  handle = yajl_alloc(&parsecallbacks, &yajlconfig, NULL, &rootptr);
+#endif
+
+  yajl_status status = yajl_parse(handle, (const unsigned char*)json.c_str(), json.length());
+
+  if (status == yajl_status_ok)
+  {
+#if YAJL_MAJOR == 2
+    status = yajl_complete_parse(handle);
+#else
+    status = yajl_parse_complete(handle);
+#endif
+  }
+
+  if (status != yajl_status_ok)
+  {
+    unsigned char* yajlerror = yajl_get_error(handle, 1, (unsigned char*)json.c_str(), json.length());
+    error = new string((char*)yajlerror);
+    yajl_free_error(handle, yajlerror);
+  }
+  else
+  {
+    error = NULL;
+  }
+
+  yajl_free(handle);
+
+  return root;
+}
+
+void PrintElement(CJSONElement* element, JSON::CJSONGenerator& generator)
+{
+  if (element->GetType() == TYPEMAP)
+  {
+    generator.MapOpen();
+    for (JSONMap::iterator it = element->AsMap().begin(); it != element->AsMap().end(); it++)
+    {
+      generator.AddString(it->first);
+      PrintElement(it->second, generator);
+    }
+    generator.MapClose();
+  }
+  else if (element->GetType() == TYPEARRAY)
+  {
+    generator.ArrayOpen();
+    for (JSONArray::iterator it = element->AsArray().begin(); it != element->AsArray().end(); it++)
+      PrintElement(*it, generator);
+    generator.ArrayClose();
+  }
+  else if (element->GetType() == TYPEBOOL)
+  {
+    generator.AddBool(element->AsBool());
+  }
+  else if (element->GetType() == TYPENULL)
+  {
+    generator.AddNull();
+  }
+  else if (element->GetType() == TYPEINT64)
+  {
+    generator.AddInt(element->AsInt64());
+  }
+  else if (element->GetType() == TYPEDOUBLE)
+  {
+    generator.AddDouble(element->AsDouble());
+  }
+  else if (element->GetType() == TYPESTRING)
+  {
+    generator.AddString(element->AsString());
+  }
+}
+
+//for testing
+void PrintJSON(CJSONElement* root)
+{
+  JSON::CJSONGenerator generator;
+  PrintElement(root, generator);
+
+  printf("%s\n", generator.ToString().c_str());
+}
+
+CJSONElement::CJSONElement()
+{
+  m_type = TYPENULL;
+  memset(&m_data, 0, sizeof(m_data));
+  m_parent = NULL;
+}
+
+void CJSONElement::SetType(ELEMENTTYPE type)
+{
+  assert(m_type == TYPENULL);
+
+  m_type = type;
+  if (type == TYPESTRING)
+    m_data.m_ptr = new string;
+  else if (type == TYPEMAP)
+    m_data.m_ptr = new JSONMap;
+  else if (type == TYPEARRAY)
+    m_data.m_ptr = new JSONArray;
+}
+
+CJSONElement::~CJSONElement()
+{
+  if (m_type == TYPESTRING)
+  {
+    delete (string*)m_data.m_ptr;
+  }
+  else if (m_type == TYPEMAP)
+  {
+    JSONMap* map = (JSONMap*)m_data.m_ptr;
+    for (JSONMap::iterator it = map->begin(); it != map->end(); it++)
+      delete it->second;
+
+    delete (JSONMap*)m_data.m_ptr;
+  }
+  else if (m_type == TYPEARRAY)
+  {
+    JSONArray* array = (JSONArray*)m_data.m_ptr;
+    for (JSONArray::iterator it = array->begin(); it != array->end(); it++)
+      delete *it;
+
+    delete (JSONArray*)m_data.m_ptr;
+  }
+}
+
+int64_t CJSONElement::ToInt64()
+{
+  assert(IsNumber());
+
+  if (m_type == TYPEINT64)
+    return AsInt64();
+  else if (m_type == TYPEDOUBLE)
+    return Round64(AsDouble());
+  else
+    return 0;
+}
+
+double CJSONElement::ToDouble()
+{
+  assert(IsNumber());
+
+  if (m_type == TYPEDOUBLE)
+    return AsDouble();
+  else if (m_type == TYPEINT64)
+    return AsInt64();
+  else
+    return 0.0;
+}
+
+
+bool& CJSONElement::AsBool()
+{
+  assert(m_type == TYPEBOOL);
+  return m_data.m_bvalue;
+}
+
+int64_t& CJSONElement::AsInt64()
+{
+  assert(m_type == TYPEINT64);
+  return m_data.m_ivalue;
+}
+
+double& CJSONElement::AsDouble()
+{
+  assert(m_type == TYPEDOUBLE);
+  return m_data.m_fvalue;
+}
+
+std::string& CJSONElement::AsString()
+{
+  assert(m_type == TYPESTRING);
+  return *(string*)m_data.m_ptr;
+}
+
+JSONMap& CJSONElement::AsMap()
+{
+  assert(m_type == TYPEMAP);
+  return *(JSONMap*)m_data.m_ptr;
+}
+
+JSONArray& CJSONElement::AsArray()
+{
+  assert(m_type == TYPEARRAY);
+  return *(JSONArray*)m_data.m_ptr;
 }
 
 JSON::CJSONGenerator::CJSONGenerator()

@@ -24,6 +24,8 @@
 #include "util/incltinyxml.h"
 #include <string>
 #include <cstring>
+#include <map>
+#include <vector>
 
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
@@ -56,6 +58,7 @@ namespace JSON
       void MapClose()   { yajl_gen_map_close(m_handle);   }
       void ArrayOpen()  { yajl_gen_array_open(m_handle);  }
       void ArrayClose() { yajl_gen_array_close(m_handle); }
+      void AddNull()    { yajl_gen_null(m_handle);        }
       void AddString(const std::string& in)
         { yajl_gen_string(m_handle, (const unsigned char*)in.c_str(), in.length()); }
       void AddString(const char* in)
@@ -69,5 +72,59 @@ namespace JSON
       yajl_gen m_handle;
   };
 }
+
+enum ELEMENTTYPE
+{
+  TYPENULL,
+  TYPEBOOL,
+  TYPEINT64,
+  TYPEDOUBLE,
+  TYPESTRING,
+  TYPEMAP,
+  TYPEARRAY,
+};
+
+class CJSONElement;
+typedef std::map<std::string, CJSONElement*> JSONMap;
+typedef std::vector<CJSONElement*>           JSONArray;
+
+CJSONElement* ParseJSON(const std::string& json, std::string*& error);
+void PrintJSON(CJSONElement* root);
+
+class CJSONElement
+{
+  public:
+    CJSONElement();
+    ~CJSONElement();
+
+    ELEMENTTYPE   GetType() { return m_type; }
+    void          SetType(ELEMENTTYPE type);
+    CJSONElement* GetParent() { return m_parent; }
+    void          SetParent(CJSONElement* parent) { m_parent = parent; }
+
+    bool          IsNumber() { return m_type == TYPEINT64 || m_type == TYPEDOUBLE; }
+    int64_t       ToInt64();
+    double        ToDouble();
+
+    bool&         AsBool();
+    int64_t&      AsInt64();
+    double&       AsDouble();
+    std::string&  AsString();
+    JSONMap&      AsMap();
+    JSONArray&    AsArray();
+
+  private:
+    union
+    {
+      void*       m_ptr;
+      double      m_fvalue;
+      int64_t     m_ivalue;
+      bool        m_bvalue;
+    }
+    m_data;
+
+    ELEMENTTYPE   m_type;
+    CJSONElement* m_parent;
+};
 
 #endif //JSON_H
