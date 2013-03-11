@@ -21,6 +21,7 @@
 
 #include "util/inclstdint.h"
 #include "util/mutex.h"
+#include "util/JSON.h"
 #include <string>
 #include <cstdarg>
 #include <cstdio>
@@ -91,7 +92,10 @@ class CHttpServer
     static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
     static void      FileReadFreeCallback(void* cls);
 
-    static int    CreateJSONDownloadResponse(struct MHD_Connection* connection, const std::string& json);
+    static int       CreateJSONDownloadResponse(struct MHD_Connection* connection, const std::string& json);
+    static int       CreateJSONDownloadResponse(struct MHD_Connection* connection, CJSONGenerator* generator);
+    static RETHTSIZE JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
+    static void      JSONReadFreeCallback(void* cls);
 };
 
 #endif //HTTPSERVER_H

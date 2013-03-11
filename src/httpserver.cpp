@@ -297,10 +297,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       else if (strurl == "/clients")
       {
         LogDebug("%s %s", host.c_str(), postdata.c_str());
-        httpserver->m_bobdsp.ClientsManager().ClientsFromJSON(postdata);
+        CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadSettingsFromString(postdata, host, true);
         httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
         delete ((CPostData*)*con_cls);
-        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
+        return CreateJSONDownloadResponse(connection, generator);
       }
       else if (strurl == "/visualizer")
       {
@@ -435,5 +435,36 @@ int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, c
   MHD_destroy_response(response);
 
   return returnv;
+}
+
+//accepts a CJSONGenerator which is allocated in one of the managers
+//this way the callback can read directly from the libyajl buffer
+//and delete the CJSONGenerator afterwards
+int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, CJSONGenerator* generator)
+{
+  uint64_t size = generator->GetGenBufSize();
+  struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1024, (uint64_t)10 * 1024 * 1024),
+                                                                    JSONReadCallback, generator, JSONReadFreeCallback);
+  MHD_add_response_header(response, "Content-Type", "application/json");
+  int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
+  MHD_destroy_response(response);
+
+  return returnv;
+}
+
+RETHTSIZE CHttpServer::JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max)
+{
+  CJSONGenerator* generator = (CJSONGenerator*)cls;
+  uint64_t size = Min(generator->GetGenBufSize() - pos, (uint64_t)max);
+  if (size == 0)
+    return -1; //done reading
+
+  memcpy(buf, generator->GetGenBuf() + pos, size);
+  return size;
+}
+
+void CHttpServer::JSONReadFreeCallback(void* cls)
+{
+  delete (CJSONGenerator*)cls;
 }
 

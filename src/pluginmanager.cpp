@@ -152,7 +152,7 @@ CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const char* label)
 
 std::string CPluginManager::PluginsToJSON()
 {
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator;
 
   generator.MapOpen();
   generator.AddString("plugins");
@@ -216,7 +216,7 @@ std::string CPluginManager::PluginsToJSON()
   return generator.ToString();
 }
 
-void CPluginManager::PortRangeDescriptionToJSON(JSON::CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
+void CPluginManager::PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
 {
   if (plugin->IsControlInput(port))
   {

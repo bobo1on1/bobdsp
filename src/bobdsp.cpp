@@ -152,8 +152,7 @@ void CBobDSP::Setup()
   //load ladspa plugins
   m_pluginmanager.LoadPlugins(ladspapaths);
 
-  //load the clients we want to use
-  LoadClientsFromFile();
+  LoadSettings();
 
   //load the port connections
   LoadConnectionsFromFile();
@@ -606,39 +605,18 @@ void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)
   }
 }
 
-bool CBobDSP::LoadClientsFromFile()
+void CBobDSP::LoadSettings()
 {
   string homepath;
   if (!GetHomePath(homepath))
   {
     LogError("Unable to get home path");
-    return false;
+    return;
   }
 
-  string filename = homepath + ".bobdsp/clients.xml";
-  Log("Loading client settings from %s", filename.c_str());
-
-  TiXmlDocument clientsfile;
-  clientsfile.LoadFile(filename.c_str());
-
-  if (clientsfile.Error())
-  {
-    LogError("Unable to load %s: %s %s %s", filename.c_str(), clientsfile.ErrorDesc(),
-        clientsfile.ErrorRow() ? (string("Row: ") + ToString(clientsfile.ErrorRow())).c_str() : "",
-        clientsfile.ErrorCol() ? (string("Col: ") + ToString(clientsfile.ErrorCol())).c_str() : "");
-    return false;
-  }
-
-  TiXmlElement* root = clientsfile.RootElement();
-  if (!root)
-  {
-    LogError("Unable to get <clients> root node from %s", filename.c_str());
-    return false;
-  }
-
-  m_clientsmanager.ClientsFromXML(root);
-
-  return true;
+  m_clientsmanager.LoadSettingsFromFile(homepath + ".bobdsp/clients.json");
+  m_portconnector.LoadSettingsFromFile(homepath + ".bobdsp/connections.json");
+  m_visualizer.LoadSettingsFromFile(homepath + ".bobdsp/visualizers.json");
 }
 
 #define CONNECTIONSFILE "connections.xml"

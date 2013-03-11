@@ -79,7 +79,7 @@ class CBobDSP
     void ProcessHttpServerMessages();
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
-    bool LoadClientsFromFile();
+    void LoadSettings();
     bool LoadVisualizersFromFile();
 
     static void JackError(const char* jackerror);

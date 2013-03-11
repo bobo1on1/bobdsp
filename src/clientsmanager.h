@@ -26,8 +26,9 @@
 #include <poll.h>
 
 #include "jackclient.h"
-#include "util/incltinyxml.h"
+#include "ladspaplugin.h"
 #include "util/mutex.h"
+#include "util/JSON.h"
 
 class CBobDSP;
 
@@ -37,24 +38,28 @@ class CClientsManager
     CClientsManager(CBobDSP& bobdsp);
     ~CClientsManager();
 
-    void        Stop();
+    void            Stop();
 
-    void        ClientsFromXML(TiXmlElement* root);
-    bool        ClientsFromJSON(const std::string& json);
-    std::string ClientsToJSON();
+    void            LoadSettingsFromFile(const std::string& filename);
+    CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
+    void            LoadSettings(CJSONElement* json, const std::string& source);
+    void            LoadClientSettings(CJSONElement* jsonclient, std::string source);
+    CJSONGenerator* ClientsToJSON();
 
-    bool        Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
+    bool            Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
 
-    int         ClientPipes(pollfd*& fds, int extra);
+    int             ClientPipes(pollfd*& fds, int extra);
 
-    void        ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
+    void            ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
   private:
     CBobDSP&                  m_bobdsp;
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
 
-    bool LoadControlsFromClient(TiXmlElement* client, std::vector<controlvalue>& controlvalues);
+    CLadspaPlugin*  LoadPlugin(const std::string& source, JSONMap& client);
+    bool            LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues);
+    bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin, std::vector<controlvalue>& controlvalues);
 };
 
 #endif //CLIENTSMANAGER_H

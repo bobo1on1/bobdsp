@@ -18,6 +18,7 @@
 
 //#define JSONDEBUG
 
+#include <fstream>
 #include "JSON.h"
 #include "misc.h"
 
@@ -207,7 +208,7 @@ static int JNull(void* ctx)
   CJSONElement*& element = *(CJSONElement**)ctx;
 
   //an element's type is set to TYPENULL in the constructor
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
     element->AsArray().push_back(new CJSONElement());
   else
     element = element->GetParent();
@@ -221,7 +222,7 @@ static int Boolean(void* ctx, int boolVal)
 
   CJSONElement*& element = *(CJSONElement**)ctx;
 
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
   {
     CJSONElement* child = new CJSONElement();
     child->SetType(TYPEBOOL);
@@ -261,7 +262,7 @@ static int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)
 
   CJSONElement*& element = *(CJSONElement**)ctx;
   CJSONElement* parse;
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
   {
     CJSONElement* child = new CJSONElement();
     child->SetParent(element);
@@ -286,6 +287,9 @@ static int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)
     parsed = StrToInt(string(numberVal, numberLen), parse->AsInt64());
   }
 
+  if (!parsed && element)
+    element->SetError(new string(string("Unable to parse ") + string(numberVal, numberLen) + " as number"));
+
   return parsed;
 }
 
@@ -295,7 +299,7 @@ static int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stri
 
   CJSONElement*& element = *(CJSONElement**)ctx;
 
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
   {
     CJSONElement* child = new CJSONElement();
     child->SetType(TYPESTRING);
@@ -318,7 +322,7 @@ static int StartMap(void* ctx)
   JSONLOG(" ");
 
   CJSONElement*& element = *(CJSONElement**)ctx;
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
   {
     CJSONElement* child = new CJSONElement();
     child->SetType(TYPEMAP);
@@ -338,10 +342,20 @@ static int MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
 {
   JSONLOG("%.*s", stringLen, key);
 
+  CJSONElement*& element = *(CJSONElement**)ctx;
+  
+  std::string strkey((const char*)key, stringLen);
+
+  //check if this key already exists
+  if (element->AsMap().find(strkey) != element->AsMap().end())
+  {
+    element->SetError(new string(string("duplicate key ") + strkey));
+    return 0;
+  }
+
   //allocate a new child element on the current map
   //then update the pointer, the parse functions will use the pointer to access the child
   //and afterwards set the pointer back to the parent
-  CJSONElement*& element = *(CJSONElement**)ctx;
   CJSONElement*& child = element->AsMap()[string((const char*)key, stringLen)];
   child = new CJSONElement();
   child->SetParent(element);
@@ -367,7 +381,7 @@ static int StartArray(void* ctx)
 
   CJSONElement*& element = *(CJSONElement**)ctx;
 
-  if (element->GetType() == TYPEARRAY)
+  if (element->IsArray())
   {
     CJSONElement* child = new CJSONElement();
     child->SetType(TYPEARRAY);
@@ -408,28 +422,27 @@ static yajl_callbacks parsecallbacks =
   EndArray,
 };
 
-//converts JSON into a tree structure of CJSONElement, using libyajl for parsing
-CJSONElement* ParseJSON(const std::string& json, std::string*& error)
+static yajl_handle AllocHandle(CJSONElement** rootptr)
 {
-  //allocate a root element, this will always be set to TYPEMAP
-  CJSONElement* root = new CJSONElement();
-  CJSONElement* rootptr = root; //pointer for the yajl functions
-
   yajl_handle handle;
 
 #if YAJL_MAJOR == 2
-  handle = yajl_alloc(&parsecallbacks, NULL, &rootptr);
+  handle = yajl_alloc(&parsecallbacks, NULL, rootptr);
   yajl_config(handle, yajl_allow_comments, 1);
   yajl_config(handle, yajl_dont_validate_strings, 0);
 #else
   yajl_parser_config yajlconfig;
   yajlconfig.allowComments = 1;
   yajlconfig.checkUTF8 = 1;
-  handle = yajl_alloc(&parsecallbacks, &yajlconfig, NULL, &rootptr);
+  handle = yajl_alloc(&parsecallbacks, &yajlconfig, NULL, rootptr);
 #endif
 
-  yajl_status status = yajl_parse(handle, (const unsigned char*)json.c_str(), json.length());
+  return handle;
+}
 
+static void PostProcess(yajl_handle handle, yajl_status status, string*& error,
+                        const string& json, int linenr, CJSONElement* jsonelement)
+{
   if (status == yajl_status_ok)
   {
 #if YAJL_MAJOR == 2
@@ -441,9 +454,27 @@ CJSONElement* ParseJSON(const std::string& json, std::string*& error)
 
   if (status != yajl_status_ok)
   {
-    unsigned char* yajlerror = yajl_get_error(handle, 1, (unsigned char*)json.c_str(), json.length());
-    error = new string((char*)yajlerror);
-    yajl_free_error(handle, yajlerror);
+    error = new string;
+    if (linenr > 0)
+      *error = string("line ") + ToString(linenr) + ": ";
+
+    if (status == yajl_status_error)
+    {
+      unsigned char* yajlerror = yajl_get_error(handle, 1, (unsigned char*)json.c_str(), json.length());
+      error->append((char*)yajlerror);
+      yajl_free_error(handle, yajlerror);
+    }
+    else if (status == yajl_status_client_canceled)
+    {
+      if (jsonelement && jsonelement->GetError())
+        error->append(*jsonelement->GetError());
+      else
+        error->append(yajl_status_to_string(status));
+    }
+    else
+    {
+      error->append(yajl_status_to_string(status));
+    }
   }
   else
   {
@@ -451,13 +482,62 @@ CJSONElement* ParseJSON(const std::string& json, std::string*& error)
   }
 
   yajl_free(handle);
+}
+
+//converts JSON into a tree structure of CJSONElement, using libyajl for parsing
+CJSONElement* ParseJSON(const std::string& json, std::string*& error)
+{
+  //allocate a root element, this will always be set to TYPEMAP
+  CJSONElement* root = new CJSONElement();
+  CJSONElement* rootptr = root; //pointer for the yajl functions
+
+  yajl_handle handle = AllocHandle(&rootptr);
+
+  yajl_status status = yajl_parse(handle, (const unsigned char*)json.c_str(), json.length());
+
+  PostProcess(handle, status, error, json, 0, rootptr);
 
   return root;
 }
 
-void PrintElement(CJSONElement* element, JSON::CJSONGenerator& generator)
+CJSONElement* ParseJSONFile(const std::string& filename, std::string*& error)
 {
-  if (element->GetType() == TYPEMAP)
+  //allocate a root element, this will always be set to TYPEMAP
+  CJSONElement* root = new CJSONElement();
+  CJSONElement* rootptr = root; //pointer for the yajl functions
+
+  ifstream infile(filename.c_str());
+  if (!infile.is_open())
+  {
+    error = new string(string("Unable to open \"") + filename + "\": " + GetErrno());
+    return root;
+  }
+
+  yajl_handle handle = AllocHandle(&rootptr);
+
+  string line;
+  int linenr = 0;
+  yajl_status status = yajl_status_ok;
+  while (infile.good())
+  {
+    getline(infile, line);
+    line += '\n';
+    linenr++;
+
+    status = yajl_parse(handle, (const unsigned char*)line.c_str(), line.length());
+
+    if (status != yajl_status_ok && status != yajl_status_insufficient_data)
+      break;
+  }
+
+  PostProcess(handle, status, error, line, linenr, rootptr);
+
+  return root;
+}
+
+static void PrintElement(CJSONElement* element, CJSONGenerator& generator)
+{
+  if (element->IsMap())
   {
     generator.MapOpen();
     for (JSONMap::iterator it = element->AsMap().begin(); it != element->AsMap().end(); it++)
@@ -467,42 +547,42 @@ void PrintElement(CJSONElement* element, JSON::CJSONGenerator& generator)
     }
     generator.MapClose();
   }
-  else if (element->GetType() == TYPEARRAY)
+  else if (element->IsArray())
   {
     generator.ArrayOpen();
     for (JSONArray::iterator it = element->AsArray().begin(); it != element->AsArray().end(); it++)
       PrintElement(*it, generator);
     generator.ArrayClose();
   }
-  else if (element->GetType() == TYPEBOOL)
+  else if (element->IsBool())
   {
     generator.AddBool(element->AsBool());
   }
-  else if (element->GetType() == TYPENULL)
+  else if (element->IsNull())
   {
     generator.AddNull();
   }
-  else if (element->GetType() == TYPEINT64)
+  else if (element->IsInt64())
   {
     generator.AddInt(element->AsInt64());
   }
-  else if (element->GetType() == TYPEDOUBLE)
+  else if (element->IsDouble())
   {
     generator.AddDouble(element->AsDouble());
   }
-  else if (element->GetType() == TYPESTRING)
+  else if (element->IsString())
   {
     generator.AddString(element->AsString());
   }
 }
 
-//for testing
-void PrintJSON(CJSONElement* root)
+//converts a CJSONElement* tree to json
+std::string ToJSON(CJSONElement* root, bool beautify/* = false*/)
 {
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator(beautify);
   PrintElement(root, generator);
 
-  printf("%s\n", generator.ToString().c_str());
+  return generator.ToString();
 }
 
 CJSONElement::CJSONElement()
@@ -510,6 +590,7 @@ CJSONElement::CJSONElement()
   m_type = TYPENULL;
   memset(&m_data, 0, sizeof(m_data));
   m_parent = NULL;
+  m_error = NULL;
 }
 
 void CJSONElement::SetType(ELEMENTTYPE type)
@@ -547,6 +628,8 @@ CJSONElement::~CJSONElement()
 
     delete (JSONArray*)m_data.m_ptr;
   }
+
+  delete m_error;
 }
 
 int64_t CJSONElement::ToInt64()
@@ -572,7 +655,6 @@ double CJSONElement::ToDouble()
   else
     return 0.0;
 }
-
 
 bool& CJSONElement::AsBool()
 {
@@ -610,32 +692,32 @@ JSONArray& CJSONElement::AsArray()
   return *(JSONArray*)m_data.m_ptr;
 }
 
-JSON::CJSONGenerator::CJSONGenerator()
+CJSONGenerator::CJSONGenerator(bool beautify/* = false*/)
 {
 #if YAJL_MAJOR == 2
   m_handle = yajl_gen_alloc(NULL);
-  yajl_gen_config(m_handle, yajl_gen_beautify, 1);
+  yajl_gen_config(m_handle, yajl_gen_beautify, beautify);
   yajl_gen_config(m_handle, yajl_gen_indent_string, "  ");
 #else
   yajl_gen_config yajlconfig;
-  yajlconfig.beautify = 1;
+  yajlconfig.beautify = beautify;
   yajlconfig.indentString = "  ";
   m_handle = yajl_gen_alloc(&yajlconfig, NULL);
 #endif
 }
 
-JSON::CJSONGenerator::~CJSONGenerator()
+CJSONGenerator::~CJSONGenerator()
 {
   yajl_gen_clear(m_handle);
   yajl_gen_free(m_handle);
 }
 
-void JSON::CJSONGenerator::Reset()
+void CJSONGenerator::Reset()
 {
   yajl_gen_clear(m_handle);
 }
 
-std::string JSON::CJSONGenerator::ToString()
+std::string CJSONGenerator::ToString()
 {
   const unsigned char* str;
   YAJLSTRINGLEN length;
@@ -643,7 +725,7 @@ std::string JSON::CJSONGenerator::ToString()
   return string((const char *)str, length);
 }
 
-void JSON::CJSONGenerator::ToString(std::string& jsonstr)
+void CJSONGenerator::ToString(std::string& jsonstr)
 {
   const unsigned char* str;
   YAJLSTRINGLEN length;
@@ -651,7 +733,7 @@ void JSON::CJSONGenerator::ToString(std::string& jsonstr)
   jsonstr.assign((const char*)str, length);
 }
 
-void JSON::CJSONGenerator::AppendToString(std::string& jsonstr)
+void CJSONGenerator::AppendToString(std::string& jsonstr)
 {
   const unsigned char* str;
   YAJLSTRINGLEN length;
@@ -659,13 +741,38 @@ void JSON::CJSONGenerator::AppendToString(std::string& jsonstr)
   jsonstr.append((const char*)str, length);
 }
 
-void JSON::CJSONGenerator::AddInt(int64_t in)
+const uint8_t* CJSONGenerator::GetGenBuf(uint64_t& size)
+{
+  YAJLSTRINGLEN length;
+  const unsigned char* str;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  size = length;
+  return str;
+}
+
+const uint8_t* CJSONGenerator::GetGenBuf()
+{
+  YAJLSTRINGLEN length;
+  const unsigned char* str;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  return str;
+}
+
+uint64_t CJSONGenerator::GetGenBufSize()
+{
+  YAJLSTRINGLEN length;
+  const unsigned char* str;
+  yajl_gen_get_buf(m_handle, &str, &length);
+  return length;
+}
+
+void CJSONGenerator::AddInt(int64_t in)
 {
   string number = ::ToString(in);
   yajl_gen_number(m_handle, number.c_str(), number.length());
 }
 
-void JSON::CJSONGenerator::AddDouble(double in)
+void CJSONGenerator::AddDouble(double in)
 {
   string number = ::ToString(in);
   yajl_gen_number(m_handle, number.c_str(), number.length());

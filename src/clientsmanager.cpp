@@ -24,6 +24,8 @@
 #include "clientsmanager.h"
 #include "bobdsp.h"
 
+#include <memory>
+
 using namespace std;
 
 CClientsManager::CClientsManager(CBobDSP& bobdsp):
@@ -44,265 +46,397 @@ void CClientsManager::Stop()
     delete *it;
 }
 
-/* load client settings from clients.xml
-   it may look like this:
-
-<clients>
-  <client>
-    <name>Audio limiter</name>
-    <instances>1</instances>
-    <plugin>
-      <label>fastLookaheadLimiter</label>
-      <uniqueid>1913</uniqueid>
-    </plugin>
-    <pregain>1.0</pregain>
-    <postgain>1.0</postgain>
-    <control>
-      <name>Input gain (dB)</name>
-      <value>0</value>
-    </control>
-    <control>
-      <name>Limit (dB)</name>
-      <value>0</value>
-    </control>
-    <control>
-      <name>Release time (s)</name>
-      <value>0.1</value>
-    </control>
-  </client>
-</clients>
-
-  <name> is the name for the jack client, it's not related to the name of the ladspa plugin
-  <label> is the label of the ladspa plugin
-  <uniqueid> is the unique id of the ladspa plugin
-  <instances> sets the number of instances for the plugin, by increasing instances you can process more audio channels
-  <pregain> is the audio gain for the ladspa input ports
-  <postgain> is the audio gain for the ladspa output ports
-*/
-
-void CClientsManager::ClientsFromXML(TiXmlElement* root)
+void CClientsManager::LoadSettingsFromFile(const std::string& filename)
 {
-  CLock lock(m_mutex);
-  for (TiXmlElement* client = root->FirstChildElement(); client != NULL; client = client->NextSiblingElement())
+  Log("Loading client settings from %s", filename.c_str());
+
+  string* error;
+  CJSONElement* json = ParseJSONFile(filename, error);
+  auto_ptr<CJSONElement> jsonauto(json);
+
+  if (error)
   {
-    if (client->ValueStr() != "client" && client->ValueStr() != "clients")
-      continue;
+    LogError("%s: %s", filename.c_str(), error->c_str());
+    delete error;
+    return;
+  }
 
-    LogDebug("Read <%s> element", client->Value());
+  CLock lock(m_mutex);
+  LoadSettings(json, filename);
+}
 
-    bool loadfailed = false;
+CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjson, const std::string& source,
+                                                        bool returnsettings /*= false*/)
+{
+  string* error;
+  CJSONElement* json = ParseJSON(strjson, error);
+  auto_ptr<CJSONElement> jsonauto(json);
 
-    LOADSTRELEMENT(client, name, MANDATORY);
-    LOADINTELEMENT(client, instances, OPTIONAL, 1, POSTCHECK_ONEORHIGHER);
-    LOADFLOATELEMENT(client, pregain, OPTIONAL, 1.0, POSTCHECK_NONE);
-    LOADFLOATELEMENT(client, postgain, OPTIONAL, 1.0, POSTCHECK_NONE);
-    LOADPARENTELEMENT(client, plugin, MANDATORY);
+  CLock lock(m_mutex);
 
-    if (loadfailed || instances_parsefailed || pregain_parsefailed || postgain_parsefailed)
-      continue;
+  if (error)
+  {
+    LogError("%s: %s", source.c_str(), error->c_str());
+    delete error;
+  }
+  else
+  {
+    LoadSettings(json, source);
+  }
 
-    LOADSTRELEMENT(plugin, label, MANDATORY);
-    LOADINTELEMENT(plugin, uniqueid, MANDATORY, 0, POSTCHECK_NONE);
+  if (returnsettings)
+    return ClientsToJSON();
+  else
+    return NULL;
+}
 
-    if (loadfailed)
-      continue;
+void CClientsManager::LoadSettings(CJSONElement* json, const std::string& source)
+{
+  if (!json->IsMap())
+  {
+    LogError("%s: invalid value for root node: %s", source.c_str(), ToJSON(json).c_str());
+    return;
+  }
 
-    LogDebug("name:\"%s\" label:\"%s\" uniqueid:%" PRIi64 " instances:%" PRIi64 " pregain:%.2f postgain:%.2f",
-             name->GetText(), label->GetText(), uniqueid_p, instances_p, pregain_p, postgain_p);
+  JSONMap::iterator clients = json->AsMap().find("clients");
+  if (clients == json->AsMap().end())
+  {
+    LogError("%s: \"clients\" array missing", source.c_str());
+    return;
+  }
+  else if (!clients->second->IsArray())
+  {
+    LogError("%s: invalid value for \"clients\": %s", source.c_str(), ToJSON(clients->second).c_str());
+    return;
+  }
 
-    bool exists = false;
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
+    LoadClientSettings(*it, source + ": ");
+}
+
+void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string source)
+{
+  if (!jsonclient->IsMap())
+  {
+    LogError("%sinvalid value for client: %s", source.c_str(), ToJSON(jsonclient).c_str());
+    return;
+  }
+
+  JSONMap& client = jsonclient->AsMap();
+
+  JSONMap::iterator name = client.find("name");
+  if (name == client.end())
+  {
+    LogError("%sclient has no name", source.c_str());
+    return;
+  }
+  else if (!name->second->IsString())
+  {
+    LogError("%sinvalid value for client name: %s", source.c_str(), ToJSON(name->second).c_str());
+    return;
+  }
+
+  LogDebug("Loading settings for client \"%s\"", name->second->AsString().c_str());
+
+  //print the client name in the source
+  source += "client \"";
+  source += name->second->AsString();
+  source += "\" ";
+
+  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  {
+    if ((*it)->Name() == name->second->AsString())
     {
-      if ((*it)->Name() == name->GetText())
-      {
-        LogError("Client with name \"%s\" already exists", name->GetText());
-        exists = true;
-      }
+      LogError("%salready exists", source.c_str());
+      return;
     }
-    if (exists)
-      continue;
+  }
 
-    vector<controlvalue> controlvalues;
-    if (!LoadControlsFromClient(client, controlvalues))
-      continue;
+  int iinstances = 1;
 
-    CLadspaPlugin* ladspaplugin = m_bobdsp.PluginManager().GetPlugin(uniqueid_p, label->GetText());
-    if (ladspaplugin)
+  JSONMap::iterator instances = client.find("instances");
+  if (instances != client.end())
+  {
+    if (!instances->second->IsNumber() || instances->second->ToInt64() <= 0)
     {
-      LogDebug("Found matching ladspa plugin in %s", ladspaplugin->FileName().c_str());
+      LogError("%sinvalid value for instances: %s", source.c_str(), ToJSON(instances->second).c_str());
+      return;
     }
     else
+      iinstances = instances->second->ToInt64();
+  }
+
+  double fpregain = 1.0;
+  double fpostgain = 1.0;
+
+  JSONMap::iterator pregain = client.find("pregain");
+  if (pregain != client.end())
+  {
+    if (!pregain->second->IsNumber())
     {
-      LogError("Did not find matching ladspa plugin for \"%s\" label \"%s\" uniqueid %" PRIi64,
-               name->GetText(), label->GetText(), uniqueid_p);
-      continue;
+      LogError("%sinvalid value for pregain: %s", source.c_str(), ToJSON(pregain->second).c_str());
+      return;
+    }
+    else
+      fpregain = pregain->second->ToDouble();
+  }
+
+  JSONMap::iterator postgain = client.find("postgain");
+  if (postgain != client.end())
+  {
+    if (!postgain->second->IsNumber())
+    {
+      LogError("%sinvalid value for postgain: %s", source.c_str(), ToJSON(postgain->second).c_str());
+      return;
+    }
+    else
+      fpostgain = postgain->second->ToDouble();
+  }
+
+  LogDebug("%sinstances:%i pregain:%.3f postgain:%.3f",
+           source.c_str(), iinstances, fpregain, fpostgain);
+
+  CLadspaPlugin* ladspaplugin = LoadPlugin(source, client);
+  if (ladspaplugin == NULL)
+    return;
+
+  std::vector<controlvalue> controlvalues;
+  if (!LoadControls(source, client, controlvalues))
+    return;
+
+  if (!CheckControls(source, ladspaplugin, controlvalues))
+    return;
+
+  CJackClient* jackclient = new CJackClient(ladspaplugin, name->second->AsString(), iinstances,
+                                            fpregain, fpostgain, controlvalues);
+  m_clients.push_back(jackclient);
+}
+
+CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& client)
+{
+  JSONMap::iterator plugin = client.find("plugin");
+  if (plugin == client.end())
+  {
+    LogError("%shas no plugin object", source.c_str());
+    return NULL;
+  }
+  else if (!plugin->second->IsMap())
+  {
+    LogError("%sinvalid value for plugin %s", source.c_str(), ToJSON(plugin->second).c_str());
+    return NULL;
+  }
+
+  JSONMap::iterator label = plugin->second->AsMap().find("label");
+  if (label == plugin->second->AsMap().end())
+  {
+    LogError("%splugin object has no label", source.c_str());
+    return NULL;
+  }
+  else if (!label->second->IsString())
+  {
+    LogError("%sinvalid value for plugin label %s", source.c_str(), ToJSON(label->second).c_str());
+    return NULL;
+  }
+
+  JSONMap::iterator uniqueid = plugin->second->AsMap().find("uniqueid");
+  if (uniqueid == plugin->second->AsMap().end())
+  {
+    LogError("%splugin object has no uniqueid", source.c_str());
+    return NULL;
+  }
+  else if (!uniqueid->second->IsNumber())
+  {
+    LogError("%sinvalid value for plugin uniqueid %s", source.c_str(), ToJSON(uniqueid->second).c_str());
+    return NULL;
+  }
+
+  CLadspaPlugin* ladspaplugin = m_bobdsp.PluginManager().GetPlugin(uniqueid->second->ToInt64(),
+                                                                   label->second->AsString().c_str());
+  if (ladspaplugin == NULL)
+  {
+    LogError("%sdid not find plugin with uniqueid %"PRIi64" and label \"%s\"",
+             source.c_str(), uniqueid->second->ToInt64(), label->second->AsString().c_str());
+    return NULL;
+  }
+  else
+  {
+    LogDebug("Found matching plugin for \"%s\" %"PRIi64" in %s", label->second->AsString().c_str(),
+             uniqueid->second->ToInt64(), ladspaplugin->FileName().c_str());
+
+    return ladspaplugin;
+  }
+}
+
+bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues)
+{
+  JSONMap::iterator controls = client.find("controls");
+  if (controls != client.end() && !controls->second->IsArray())
+  {
+    LogError("%sinvalid value for controls %s", source.c_str(), ToJSON(controls->second).c_str());
+    return false;
+  }
+
+  //check if every control is valid
+  for (JSONArray::iterator control = controls->second->AsArray().begin();
+       control != controls->second->AsArray().end(); control++)
+  {
+    if (!(*control)->IsMap())
+    {
+      LogError("%sinvalid value for control %s", source.c_str(), ToJSON(*control).c_str());
+      return false;
     }
 
-    //check if all controls from the xml match the ladspa plugin
-    bool allcontrolsok = true;
+    JSONMap::iterator name = (*control)->AsMap().find("name");
+    if (name == (*control)->AsMap().end())
+    {
+      LogError("%scontrol has no name", source.c_str());
+      return false;
+    }
+    else if (!name->second->IsString())
+    {
+      LogError("%sinvalid value for control name %s", source.c_str(), ToJSON(name->second).c_str());
+      return false;
+    }
+
+    JSONMap::iterator value = (*control)->AsMap().find("value");
+    if (value == (*control)->AsMap().end())
+    {
+      LogError("%scontrol \"%s\" has no value", source.c_str(), name->second->AsString().c_str());
+      return false;
+    }
+    else if (!value->second->IsNumber())
+    {
+      LogError("%sinvalid value for control \"%s\": %s", source.c_str(),
+               name->second->AsString().c_str(), ToJSON(value->second).c_str());
+      return false;
+    }
+
+    //search back in the controls map, to check if this control has a duplicate
     for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
     {
-      bool found = false;
-      for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
+      if (it->first == name->second->AsString())
       {
-        if (ladspaplugin->IsControlInput(port) && it->first == ladspaplugin->PortName(port))
+        LogError("%scontrol \"%s\" has duplicate", source.c_str(), name->second->AsString().c_str());
+        return false;
+      }
+    }
+
+    //control is valid, store
+    controlvalues.push_back(make_pair(name->second->AsString(), value->second->ToDouble()));
+  }
+
+  return true;
+}
+
+bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin, std::vector<controlvalue>& controlvalues)
+{
+  bool allcontrolsok = true;
+  for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
+  {
+    bool found = false;
+    for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
+    {
+      if (ladspaplugin->IsControlInput(port) && it->first == ladspaplugin->PortName(port))
+      {
+        LogDebug("Found control port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+    {
+      LogError("Did not find control port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
+      allcontrolsok = false;
+    }
+  }
+
+  //check if all control input ports are mapped
+  for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
+  {
+    if (ladspaplugin->IsControlInput(port))
+    {
+      bool found = false;
+      for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
+      {
+        if (it->first == ladspaplugin->PortName(port))
         {
-          LogDebug("Found control port \"%s\"", it->first.c_str());
           found = true;
           break;
         }
       }
       if (!found)
       {
-        LogError("Did not find control port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
+        LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
         allcontrolsok = false;
       }
     }
 
-    //check if all control input ports are mapped
-    for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
-    {
-      if (ladspaplugin->IsControlInput(port))
-      {
-        bool found = false;
-        for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
-        {
-          if (it->first == ladspaplugin->PortName(port))
-          {
-            found = true;
-            break;
-          }
-        }
-        if (!found)
-        {
-          LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
-          allcontrolsok = false;
-        }
-      }
-
-      if (!ladspaplugin->PortDescriptorSanityCheck(port))
-        allcontrolsok = false;
-    }
-
-    if (!allcontrolsok)
-      continue;
-
-    Log("Adding client \"%s\"", name->GetText());
-    CJackClient* jackclient = new CJackClient(ladspaplugin, name->GetText(), instances_p, pregain_p, postgain_p, controlvalues);
-    m_clients.push_back(jackclient);
+    if (!ladspaplugin->PortDescriptorSanityCheck(port))
+      allcontrolsok = false;
   }
+
+  return allcontrolsok;
 }
 
-bool CClientsManager::LoadControlsFromClient(TiXmlElement* client, std::vector<controlvalue>& controlvalues)
+CJSONGenerator* CClientsManager::ClientsToJSON()
 {
-  bool success = true;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  for (TiXmlElement* control = client->FirstChildElement(); control != NULL; control = control->NextSiblingElement())
-  {
-    if (control->ValueStr() != "control" && control->ValueStr() != "controls")
-      continue;
-
-    LogDebug("Read <%s> element", control->Value());
-
-    bool loadfailed = false;
-
-    LOADSTRELEMENT(control, name, MANDATORY);
-    LOADFLOATELEMENT(control, value, MANDATORY, 0, POSTCHECK_NONE);
-
-    if (loadfailed)
-    {
-      success = false;
-      continue;
-    }
-
-    LogDebug("name:\"%s\" value:%.2f", name->GetText(), value_p);
-    controlvalues.push_back(make_pair(name->GetText(), value_p));
-  }
-
-  return success;
-}
-
-bool CClientsManager::ClientsFromJSON(const std::string& json)
-{
-  TiXmlElement* root = JSON::JSONToXML(json);
-
-  bool loadfailed = false;
-
-  LOADSTRELEMENT(root, method, MANDATORY);
-
-  if (loadfailed)
-    return false;
-
-  if (strcmp(method->GetText(), "add") == 0)
-  {
-    ClientsFromXML(root);
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-std::string CClientsManager::ClientsToJSON()
-{
-  JSON::CJSONGenerator generator;
-
-  generator.MapOpen();
-  generator.AddString("clients");
-  generator.ArrayOpen();
+  generator->MapOpen();
+  generator->AddString("clients");
+  generator->ArrayOpen();
 
   CLock lock(m_mutex);
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
-    generator.MapOpen();
+    generator->MapOpen();
 
-    generator.AddString("name");
-    generator.AddString((*it)->Name());
-    generator.AddString("instances");
-    generator.AddInt((*it)->NrInstances());
-    generator.AddString("pregain");
-    generator.AddDouble((*it)->PreGain());
-    generator.AddString("postgain");
-    generator.AddDouble((*it)->PostGain());
+    generator->AddString("name");
+    generator->AddString((*it)->Name());
+    generator->AddString("instances");
+    generator->AddInt((*it)->NrInstances());
+    generator->AddString("pregain");
+    generator->AddDouble((*it)->PreGain());
+    generator->AddString("postgain");
+    generator->AddDouble((*it)->PostGain());
 
-    generator.AddString("controls");
-    generator.ArrayOpen();
+    generator->AddString("controls");
+    generator->ArrayOpen();
     const vector<controlvalue>& controls = (*it)->ControlInputs();
     for (vector<controlvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
     {
-      generator.MapOpen();
+      generator->MapOpen();
 
-      generator.AddString("name");
-      generator.AddString(control->first);
-      generator.AddString("value");
-      generator.AddDouble(control->second);
+      generator->AddString("name");
+      generator->AddString(control->first);
+      generator->AddString("value");
+      generator->AddDouble(control->second);
 
       //add the port description of this port
       CLadspaPlugin* plugin = (*it)->Plugin();
       long port = plugin->PortByName(control->first);
-      m_bobdsp.PluginManager().PortRangeDescriptionToJSON(generator, plugin, port);
+      m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
 
-      generator.MapClose();
+      generator->MapClose();
     }
-    generator.ArrayClose();
+    generator->ArrayClose();
 
-    generator.AddString("plugin");
-    generator.MapOpen();
-    generator.AddString("label");
-    generator.AddString((*it)->Plugin()->Label());
-    generator.AddString("uniqueid");
-    generator.AddInt((*it)->Plugin()->UniqueID());
-    generator.MapClose();
+    generator->AddString("plugin");
+    generator->MapOpen();
+    generator->AddString("label");
+    generator->AddString((*it)->Plugin()->Label());
+    generator->AddString("uniqueid");
+    generator->AddInt((*it)->Plugin()->UniqueID());
+    generator->MapClose();
 
-    generator.MapClose();
+    generator->MapClose();
   }
 
-  generator.ArrayClose();
-  generator.MapClose();
+  generator->ArrayClose();
+  generator->MapClose();
 
-  return generator.ToString();
+  return generator;
 }
 
 bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t lastconnect)

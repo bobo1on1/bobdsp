@@ -58,7 +58,7 @@ class CVisType
     bool HasVisOutput() { return m_hasvisoutput; }
     void ClearVisOutput();
 
-    void ToJSON(JSON::CJSONGenerator& generator);
+    void ToJSON(CJSONGenerator& generator);
 
   private:
 
@@ -97,6 +97,7 @@ class CVisualizer : public CThread
     CVisualizer();
     ~CVisualizer();
 
+    void               LoadSettingsFromFile(const std::string& filename);
     void               VisualizersFromXML(TiXmlElement* root);
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }

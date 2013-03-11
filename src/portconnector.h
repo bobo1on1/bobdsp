@@ -132,6 +132,7 @@ class CPortConnector
 
     void Stop();
 
+    void          LoadSettingsFromFile(const std::string& filename);
     bool          ConnectionsFromXML(TiXmlElement* root, bool strict);
     bool          ConnectionsFromJSON(const std::string& json);
     std::string   ConnectionsToJSON();

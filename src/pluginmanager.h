@@ -36,7 +36,7 @@ class CPluginManager
     void           LoadPlugins(std::vector<std::string>& paths);
     CLadspaPlugin* GetPlugin(int64_t uniqueid, const char* label);
     std::string    PluginsToJSON();
-    void           PortRangeDescriptionToJSON(JSON::CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port);
+    void           PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port);
     void           SetSamplerate(int samplerate);
 
   private:

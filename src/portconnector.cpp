@@ -71,6 +71,10 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
+void CPortConnector::LoadSettingsFromFile(const std::string& filename)
+{
+}
+
 bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
 {
   std::vector<CPortConnection> connections;
@@ -177,7 +181,7 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
 
 std::string CPortConnector::ConnectionsToJSON()
 {
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator;
 
   generator.MapOpen();
   generator.AddString("connections");
@@ -237,7 +241,7 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
 
 std::string CPortConnector::PortIndexToJSON()
 {
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator;
 
   generator.MapOpen();
   generator.AddString("ports");
@@ -256,7 +260,7 @@ std::string CPortConnector::PortsToJSON()
 {
   CLock lock(m_condition);
 
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator;
 
   generator.MapOpen();
 

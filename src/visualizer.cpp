@@ -283,7 +283,7 @@ void CVisType::ClearVisOutput()
   m_visamplitudesamples = 0;
 }
 
-void CVisType::ToJSON(JSON::CJSONGenerator& generator)
+void CVisType::ToJSON(CJSONGenerator& generator)
 {
   generator.MapOpen();
 
@@ -320,6 +320,10 @@ CVisualizer::CVisualizer()
 }
 
 CVisualizer::~CVisualizer()
+{
+}
+
+void CVisualizer::LoadSettingsFromFile(const std::string& filename)
 {
 }
 
@@ -567,7 +571,7 @@ void CVisualizer::Disconnect(bool unregisterjack)
 
 void CVisualizer::VisualizersToJSON()
 {
-  JSON::CJSONGenerator generator;
+  CJSONGenerator generator;
 
   generator.MapOpen();
 
