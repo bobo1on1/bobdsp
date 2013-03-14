@@ -42,8 +42,6 @@ class CClientsManager
 
     void            LoadSettingsFromFile(const std::string& filename);
     CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
-    void            LoadSettings(CJSONElement* json, const std::string& source);
-    void            LoadClientSettings(CJSONElement* jsonclient, std::string source);
     CJSONGenerator* ClientsToJSON();
 
     bool            Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
@@ -57,9 +55,23 @@ class CClientsManager
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
 
+    enum LOADSTATE
+    {
+      NOTFOUND,
+      INVALID,
+      SUCCESS
+    };
+
+    void            LoadSettings(CJSONElement* json, const std::string& source);
+    void            LoadClientSettings(CJSONElement* jsonclient, std::string source);
+    void            AddClient(JSONMap& client, const std::string& name, const std::string& source);
+    void            DeleteClient(JSONMap& client, const std::string& name, const std::string& source);
+    LOADSTATE       LoadDouble(JSONMap& client, double& value, const std::string& name, const std::string& source);
+    LOADSTATE       LoadInt64(JSONMap& client, int64_t& value, const std::string& name, const std::string& source);
     CLadspaPlugin*  LoadPlugin(const std::string& source, JSONMap& client);
     bool            LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues);
     bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin, std::vector<controlvalue>& controlvalues);
+    CJackClient*    FindClient(const std::string& name);
 };
 
 #endif //CLIENTSMANAGER_H

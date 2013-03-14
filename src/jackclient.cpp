@@ -49,6 +49,7 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_client          = NULL;
   m_connected       = false;
   m_wasconnected    = true;
+  m_delete          = false;
   m_exitstatus      = (jack_status_t)0;
   m_samplerate      = 0;
   m_portevents      = 0;

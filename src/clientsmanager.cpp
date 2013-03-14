@@ -136,65 +136,62 @@ void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string s
     return;
   }
 
-  LogDebug("Loading settings for client \"%s\"", name->second->AsString().c_str());
+  LogDebug("Parsing settings for client \"%s\"", name->second->AsString().c_str());
 
   //print the client name in the source
   source += "client \"";
   source += name->second->AsString();
   source += "\" ";
 
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  JSONMap::iterator action = client.find("action");
+  if (action != client.end() && !action->second->IsString())
   {
-    if ((*it)->Name() == name->second->AsString())
-    {
-      LogError("%salready exists", source.c_str());
-      return;
-    }
+    LogError("%sinvalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
+    return;
+  }
+  else if (action == client.end() || action->second->AsString() == "add")
+  {
+    AddClient(client, name->second->AsString(), source);
+  }
+  else if (action->second->AsString() == "delete")
+  {
+    DeleteClient(client, name->second->AsString(), source);
+  }
+  else if (action->second->AsString() == "update")
+  {
+  }
+  else
+  {
+    LogError("%sinvalid action: \"%s\"", source.c_str(), action->second->AsString().c_str());
+    return;
+  }
+}
+
+void CClientsManager::AddClient(JSONMap& client, const std::string& name, const std::string& source)
+{
+  if (FindClient(name) != NULL)
+  {
+    LogError("%salready exists", source.c_str());
+    return;
   }
 
-  int iinstances = 1;
+  int64_t instances = 1;
+  if (LoadInt64(client, instances, "instances", source) == INVALID)
+    return;
 
-  JSONMap::iterator instances = client.find("instances");
-  if (instances != client.end())
+  if (instances < 1)
   {
-    if (!instances->second->IsNumber() || instances->second->ToInt64() <= 0)
-    {
-      LogError("%sinvalid value for instances: %s", source.c_str(), ToJSON(instances->second).c_str());
-      return;
-    }
-    else
-      iinstances = instances->second->ToInt64();
+    LogError("%sinvalid value for instances: %"PRIi64, source.c_str(), instances);
+    return;
   }
 
-  double fpregain = 1.0;
-  double fpostgain = 1.0;
+  double pregain = 1.0;
+  if (LoadDouble(client, pregain, "pregain", source) == INVALID)
+    return;
 
-  JSONMap::iterator pregain = client.find("pregain");
-  if (pregain != client.end())
-  {
-    if (!pregain->second->IsNumber())
-    {
-      LogError("%sinvalid value for pregain: %s", source.c_str(), ToJSON(pregain->second).c_str());
-      return;
-    }
-    else
-      fpregain = pregain->second->ToDouble();
-  }
-
-  JSONMap::iterator postgain = client.find("postgain");
-  if (postgain != client.end())
-  {
-    if (!postgain->second->IsNumber())
-    {
-      LogError("%sinvalid value for postgain: %s", source.c_str(), ToJSON(postgain->second).c_str());
-      return;
-    }
-    else
-      fpostgain = postgain->second->ToDouble();
-  }
-
-  LogDebug("%sinstances:%i pregain:%.3f postgain:%.3f",
-           source.c_str(), iinstances, fpregain, fpostgain);
+  double postgain = 1.0;
+  if (LoadDouble(client, postgain, "postgain", source) == INVALID)
+    return;
 
   CLadspaPlugin* ladspaplugin = LoadPlugin(source, client);
   if (ladspaplugin == NULL)
@@ -207,9 +204,67 @@ void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string s
   if (!CheckControls(source, ladspaplugin, controlvalues))
     return;
 
-  CJackClient* jackclient = new CJackClient(ladspaplugin, name->second->AsString(), iinstances,
-                                            fpregain, fpostgain, controlvalues);
+  CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
+                                            pregain, postgain, controlvalues);
   m_clients.push_back(jackclient);
+
+  Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
+      name.c_str(), instances, pregain, postgain);
+}
+
+void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, const std::string& source)
+{
+  CJackClient* jackclient = FindClient(name);
+  if (jackclient == NULL)
+  {
+    LogError("%sdoesn't exist", source.c_str());
+    return;
+  }
+  else
+  {
+    LogDebug("Marking client \"%s\" for delete", name.c_str());
+    jackclient->MarkDelete();
+  }
+}
+
+CClientsManager::LOADSTATE CClientsManager::LoadDouble(JSONMap& client, double& value,
+                                                       const std::string& name, const std::string& source)
+{
+  JSONMap::iterator it = client.find(name);
+  if (it == client.end())
+  {
+    return NOTFOUND;
+  }
+  else if (!it->second->IsNumber())
+  {
+    LogError("%sinvalid value for %s: %s", source.c_str(), name.c_str(), ToJSON(it->second).c_str());
+    return INVALID;
+  }
+  else
+  {
+    value = it->second->ToDouble();
+    return SUCCESS;
+  }
+}
+
+CClientsManager::LOADSTATE CClientsManager::LoadInt64(JSONMap& client, int64_t& value,
+                                                      const std::string& name, const std::string& source)
+{
+  JSONMap::iterator it = client.find(name);
+  if (it == client.end())
+  {
+    return NOTFOUND;
+  }
+  else if (!it->second->IsNumber())
+  {
+    LogError("%sinvalid value for %s: %s", source.c_str(), name.c_str(), ToJSON(it->second).c_str());
+    return INVALID;
+  }
+  else
+  {
+    value = it->second->ToInt64();
+    return SUCCESS;
+  }
 }
 
 CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& client)
@@ -378,6 +433,20 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
   return allcontrolsok;
 }
 
+CJackClient* CClientsManager::FindClient(const std::string& name)
+{
+  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  {
+    if ((*it)->NeedsDelete())
+      continue; //don't consider clients that have been marked for delete
+
+    if ((*it)->Name() == name)
+      return *it;
+  }
+
+  return NULL;
+}
+
 CJSONGenerator* CClientsManager::ClientsToJSON()
 {
   CJSONGenerator* generator = new CJSONGenerator(true);
@@ -390,6 +459,9 @@ CJSONGenerator* CClientsManager::ClientsToJSON()
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
+    if ((*it)->NeedsDelete())
+      continue; //don't add clients that have been marked for delete
+
     generator->MapOpen();
 
     generator->AddString("name");
@@ -447,6 +519,16 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
+    //if this client has been marked for removal, delete it and remove it from the vector
+    if ((*it)->NeedsDelete())
+    {
+      Log("Deleting client \"%s\"", (*it)->Name().c_str());
+      delete *it;
+      it = m_clients.erase(it);
+      if (it == m_clients.end())
+        break;
+    }
+
     //check if the jack thread has failed
     if ((*it)->ExitStatus())
     {

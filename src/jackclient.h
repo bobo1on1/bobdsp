@@ -37,6 +37,8 @@ class CJackClient
     bool Connect();
     void Disconnect();
     bool IsConnected() { return m_connected;   }
+    void MarkDelete()  { m_delete = true;      }
+    bool NeedsDelete() { return m_delete;      }
     int  MsgPipe()     { return m_pipe[0];     }
     ClientMessage GetMessage();
 
@@ -54,6 +56,7 @@ class CJackClient
   private:
     bool           m_connected;
     bool           m_wasconnected;
+    bool           m_delete;
     jack_client_t* m_client;
     CLadspaPlugin* m_plugin;
     std::string    m_name;
