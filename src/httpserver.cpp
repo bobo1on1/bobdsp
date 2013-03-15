@@ -38,27 +38,17 @@ using namespace std;
 #define POSTDATA_SIZELIMIT (100 * 1024 * 1024) //100 mb
 
 CHttpServer::CHttpServer(CBobDSP& bobdsp):
+  CMessagePump("httpserver"),
   m_bobdsp(bobdsp)
 {
   m_daemon = NULL;
   m_port = 8080;
   m_postdatasize = 0;
-
-  if (pipe2(m_pipe, O_NONBLOCK) == -1)
-  {
-    LogError("creating msg pipe for httpserver: %s", GetErrno().c_str());
-    m_pipe[0] = m_pipe[1] = -1;
-  }
 }
 
 CHttpServer::~CHttpServer()
 {
   Stop();
-
-  if (m_pipe[0] != -1)
-    close(m_pipe[0]);
-  if (m_pipe[1] != -1)
-    close(m_pipe[1]);
 }
 
 bool CHttpServer::Start()
@@ -90,52 +80,10 @@ void CHttpServer::Stop()
   }
 }
 
-ClientMessage CHttpServer::GetMessage()
-{
-  if (m_pipe[0] == -1)
-    return MsgNone;
-
-  uint8_t msg;
-  int returnv = read(m_pipe[0], &msg, 1);
-  if (returnv == 1)
-  {
-    return (ClientMessage)msg;
-  }
-  else if (returnv == -1 && errno != EAGAIN)
-  {
-    int tmperrno = errno;
-    LogError("httpserver error reading msg from pipe: \"%s\"", GetErrno().c_str());
-    if (tmperrno != EINTR)
-    {
-      close(m_pipe[0]);
-      m_pipe[0] = -1;
-    }
-  }
-
-  return MsgNone;
-}
-
 void CHttpServer::WriteMessage(uint8_t msg)
 {
   CLock lock(m_mutex);
-
-  if (m_pipe[1] == -1)
-    return; //can't write
-
-  int returnv = write(m_pipe[1], &msg, 1);
-  if (returnv == 1)
-    return; //write successful
-
-  if (returnv == -1)
-  {
-    int tmperrno = errno;
-    LogError("httpserver error writing msg %i to pipe: \"%s\"", msg, GetErrno().c_str());
-    if (tmperrno != EINTR && tmperrno != EAGAIN)
-    {
-      close(m_pipe[1]); //pipe broken, close it
-      m_pipe[1] = -1;
-    }
-  }
+  CMessagePump::WriteMessage(msg);
 }
 
 int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,

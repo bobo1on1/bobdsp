@@ -33,29 +33,26 @@ enum ClientMessage
   MsgClientAdded,
 };
 
-inline const char* MsgToString(ClientMessage msg)
-{
-  static const char* msgstrings[] = 
-  {
-    "MsgNone",
-    "MsgExited",
-    "MsgPortRegistered",
-    "MsgPortDeregistered",
-    "MsgPortConnected",
-    "MsgPortDisconnected",
-    "MsgConnectionsUpdated",
-    "MsgClientAdded",
-  };
-
-  if (msg >= 0 && (size_t)msg < (sizeof(msgstrings) / sizeof(msgstrings[0])))
-    return msgstrings[msg];
-  else
-    return "ERROR: INVALID MESSAGE";
-}
+const char* MsgToString(ClientMessage msg);
 
 inline const char* MsgToString(uint8_t msg)
 {
   return MsgToString((ClientMessage)msg);
 }
+
+class CMessagePump
+{
+  public:
+    CMessagePump(const char* name);
+    ~CMessagePump();
+
+    int           MsgPipe() { return m_pipe[0]; }
+    ClientMessage GetMessage();
+    bool          WriteMessage(uint8_t msg);
+
+  private:
+    const char* m_name;
+    int         m_pipe[2];
+};
 
 #endif //CLIENTMESSAGE_H

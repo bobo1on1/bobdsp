@@ -16,12 +16,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _GNU_SOURCE
-  #define _GNU_SOURCE //for pipe2
-#endif //_GNU_SOURCE
-#include <unistd.h>
-#include <fcntl.h>
-
 #include "util/inclstdint.h"
 #include "util/misc.h"
 #include "util/timeutils.h"
@@ -38,7 +32,8 @@
 using namespace std;
 
 CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                         float pregain, float postgain, std::vector<controlvalue> controlinputs)
+                         float pregain, float postgain, std::vector<controlvalue> controlinputs):
+  CMessagePump("jack client")
 {
   m_plugin          = plugin;
   m_name            = name;
@@ -57,22 +52,11 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   //load all symbols, so it doesn't have to be done from the jack thread
   //this is better for realtime performance
   m_plugin->LoadAllSymbols();
-
-  if (pipe2(m_pipe, O_NONBLOCK) == -1)
-  {
-    LogError("creating msg pipe for client \"%s\": %s", m_name.c_str(), GetErrno().c_str());
-    m_pipe[0] = m_pipe[1] = -1;
-  }
 }
 
 CJackClient::~CJackClient()
 {
   Disconnect();
-
-  if (m_pipe[0] != -1)
-    close(m_pipe[0]);
-  if (m_pipe[1] != -1)
-    close(m_pipe[1]);
 }
 
 bool CJackClient::Connect()
@@ -233,57 +217,6 @@ void CJackClient::CheckMessages()
     if ((m_portevents & PORTEVENT_DISCONNECTED) && WriteMessage(MsgPortDisconnected))
       m_portevents &= ~PORTEVENT_DISCONNECTED;
   }
-}
-
-//returns true when the message has been sent or pipe is broken
-//returns false when the message write needs to be retried
-bool CJackClient::WriteMessage(uint8_t msg)
-{
-  if (m_pipe[1] == -1)
-    return true; //can't write
-
-  int returnv = write(m_pipe[1], &msg, 1);
-  if (returnv == 1)
-    return true; //write successful
-
-  if (returnv == -1 && errno != EAGAIN)
-  {
-    int tmperrno = errno;
-    LogError("Client \"%s\" error writing msg %s to pipe: \"%s\"", m_name.c_str(), MsgToString(msg), GetErrno().c_str());
-    if (tmperrno != EINTR)
-    {
-      close(m_pipe[1]);
-      m_pipe[1] = -1;
-      return true; //pipe broken
-    }
-  }
-
-  return false; //need to try again
-}
-
-ClientMessage CJackClient::GetMessage()
-{
-  if (m_pipe[0] == -1)
-    return MsgNone;
-
-  uint8_t msg;
-  int returnv = read(m_pipe[0], &msg, 1);
-  if (returnv == 1)
-  {
-    return (ClientMessage)msg;
-  }
-  else if (returnv == -1 && errno != EAGAIN)
-  {
-    int tmperrno = errno;
-    LogError("Client \"%s\" error reading msg from pipe: \"%s\"", m_name.c_str(), GetErrno().c_str());
-    if (tmperrno != EINTR)
-    {
-      close(m_pipe[0]);
-      m_pipe[0] = -1;
-    }
-  }
-
-  return MsgNone;
 }
 
 int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)

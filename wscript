@@ -79,6 +79,7 @@ def configure(conf):
 def build(bld):
   bld.program(source='src/main.cpp\
                       src/bobdsp.cpp\
+                      src/clientmessage.cpp\
                       src/clientsmanager.cpp\
                       src/httpserver.cpp\
                       src/jackclient.cpp\

@@ -27,7 +27,7 @@
 #include "ladspainstance.h"
 #include "clientmessage.h"
 
-class CJackClient
+class CJackClient : public CMessagePump
 {
   public:
     CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
@@ -39,8 +39,6 @@ class CJackClient
     bool IsConnected() { return m_connected;   }
     void MarkDelete()  { m_delete = true;      }
     bool NeedsDelete() { return m_delete;      }
-    int  MsgPipe()     { return m_pipe[0];     }
-    ClientMessage GetMessage();
 
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
@@ -68,7 +66,6 @@ class CJackClient
     std::string    m_exitreason;
     int            m_portevents;
     bool           m_nameset;
-    int            m_pipe[2];
 
     std::vector<CLadspaInstance*> m_instances;
     std::vector<controlvalue>     m_controlinputs;
@@ -77,7 +74,6 @@ class CJackClient
     bool        ConnectJackPorts();
     void        InitLadspa();
     void        CheckMessages();
-    bool        WriteMessage(uint8_t message);
 
     static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
     void        PJackProcessCallback(jack_nframes_t nframes);

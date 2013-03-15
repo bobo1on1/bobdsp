@@ -22,6 +22,7 @@
 #include "util/inclstdint.h"
 #include "util/mutex.h"
 #include "util/JSON.h"
+#include "clientmessage.h"
 #include <string>
 #include <cstdarg>
 #include <cstdio>
@@ -56,7 +57,7 @@ class CPostData
     bool error;
 };
 
-class CHttpServer
+class CHttpServer : public CMessagePump
 {
   public:
     CHttpServer(CBobDSP& bobdsp);
@@ -68,23 +69,19 @@ class CHttpServer
     bool IsStarted() { return m_daemon != NULL; }
     void Stop();
 
-    int  MsgPipe() { return m_pipe[0]; }
-    ClientMessage GetMessage();
-
   private:
     struct MHD_Daemon* m_daemon;
     int                m_port;
     CBobDSP&           m_bobdsp;
-    int                m_pipe[2];
     CMutex             m_mutex;
     int64_t            m_postdatasize;
 
-    void WriteMessage(uint8_t message);
+    void             WriteMessage(uint8_t msg);
 
-    static int AnswerToConnection (void *cls, struct MHD_Connection *connection,
-                                   const char *url, const char *method,
-                                   const char *version, const char *upload_data,
-                                   size_t *upload_data_size, void **con_cls);
+    static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
+                                         const char *url, const char *method,
+                                         const char *version, const char *upload_data,
+                                         size_t *upload_data_size, void **con_cls);
 
     static int       CreateErrorResponse(struct MHD_Connection *connection, int errorcode);
     static int       CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename,
