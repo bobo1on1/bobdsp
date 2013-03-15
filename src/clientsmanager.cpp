@@ -216,12 +216,10 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
     LogError("%sdoesn't exist", source.c_str());
     return;
   }
-  else
-  {
-    LogDebug("Marking client \"%s\" for delete", name.c_str());
-    jackclient->MarkDelete();
-    m_clientdeleted = true;
-  }
+
+  LogDebug("Marking client \"%s\" for delete", name.c_str());
+  jackclient->MarkDelete();
+  m_clientdeleted = true;
 }
 
 void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
