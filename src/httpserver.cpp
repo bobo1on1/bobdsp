@@ -168,7 +168,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else if (strurl == "/clients")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON());
+      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(true));
     }
     else if (strurl == "/visualizer")
     {

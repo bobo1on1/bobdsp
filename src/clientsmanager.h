@@ -41,9 +41,9 @@ class CClientsManager : public CMessagePump
 
     void            Stop();
 
-    void            LoadSettingsFromFile(const std::string& filename);
+    void            LoadSettingsFromFile(bool reload);
     CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
-    CJSONGenerator* ClientsToJSON();
+    CJSONGenerator* ClientsToJSON(bool portdescription);
 
     bool            Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
 
@@ -66,7 +66,8 @@ class CClientsManager : public CMessagePump
       SUCCESS
     };
 
-    void            LoadSettings(CJSONElement* json, const std::string& source);
+    void            SaveSettingsToFile();
+    void            LoadSettings(CJSONElement* json, bool allowreload, const std::string& source);
     void            LoadClientSettings(CJSONElement* jsonclient, std::string source);
     void            AddClient(JSONMap& client, const std::string& name, const std::string& source);
     void            DeleteClient(JSONMap& client, const std::string& name, const std::string& source);

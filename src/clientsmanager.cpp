@@ -25,8 +25,11 @@
 #include "bobdsp.h"
 
 #include <memory>
+#include <fstream>
 
 using namespace std;
+
+#define SETTINGSFILE ".bobdsp/clients.json"
 
 CClientsManager::CClientsManager(CBobDSP& bobdsp):
   CMessagePump("clientsmanager"),
@@ -48,9 +51,20 @@ void CClientsManager::Stop()
     delete *it;
 }
 
-void CClientsManager::LoadSettingsFromFile(const std::string& filename)
+void CClientsManager::LoadSettingsFromFile(bool reload)
 {
+  string homepath;
+  if (!GetHomePath(homepath))
+  {
+    LogError("Unable to get home path");
+    return;
+  }
+
+  string filename = homepath + SETTINGSFILE;
+
   Log("Loading client settings from %s", filename.c_str());
+
+  CLock lock(m_mutex);
 
   string* error;
   CJSONElement* json = ParseJSONFile(filename, error);
@@ -63,9 +77,23 @@ void CClientsManager::LoadSettingsFromFile(const std::string& filename)
     return;
   }
 
-  CLock lock(m_mutex);
-  LoadSettings(json, filename);
-  ResetFlags();
+  if (reload)
+  {
+    //reload requested, mark all clients for delete, reload the file
+    //and set the flag that clients are deleted
+    Log("Reload requested, marking all existing clients for deletion");
+    m_clientdeleted = true;
+    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+      (*it)->MarkDelete();
+
+    LoadSettings(json, false, filename);
+  }
+  else
+  {
+    //load new settings, reset the flags since the main thread will check all the clients anyway
+    LoadSettings(json, false, filename);
+    ResetFlags();
+  }
 }
 
 CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjson, const std::string& source,
@@ -84,18 +112,48 @@ CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjs
   }
   else
   {
-    LoadSettings(json, source);
+    LoadSettings(json, true, source);
   }
 
   CheckFlags();
 
   if (returnsettings)
-    return ClientsToJSON();
+    return ClientsToJSON(true);
   else
     return NULL;
 }
 
-void CClientsManager::LoadSettings(CJSONElement* json, const std::string& source)
+void CClientsManager::SaveSettingsToFile()
+{
+  string homepath;
+  if (!GetHomePath(homepath))
+  {
+    LogError("Unable to get home path");
+    return;
+  }
+
+  string filename = homepath + SETTINGSFILE;
+
+  CLock lock(m_mutex);
+
+  ofstream settingsfile(filename.c_str());
+  if (!settingsfile.is_open())
+  {
+    LogError("Unable to open %s: %s", filename.c_str(), GetErrno().c_str());
+    return;
+  }
+
+  Log("Saving settings to %s", filename.c_str());
+  CJSONGenerator* generator = ClientsToJSON(false);
+  settingsfile.write((const char*)generator->GetGenBuf(), generator->GetGenBufSize());
+
+  if (settingsfile.fail())
+    LogError("Error writing %s: %s", filename.c_str(), GetErrno().c_str());
+
+  delete generator;
+}
+
+void CClientsManager::LoadSettings(CJSONElement* json, bool allowreload, const std::string& source)
 {
   if (!json->IsMap())
   {
@@ -103,20 +161,34 @@ void CClientsManager::LoadSettings(CJSONElement* json, const std::string& source
     return;
   }
 
+  //check the clients array and action string first, then parse them if they're valid
   JSONMap::iterator clients = json->AsMap().find("clients");
-  if (clients == json->AsMap().end())
+  if (clients != json->AsMap().end() && !clients->second->IsArray())
   {
-    LogError("%s: \"clients\" array missing", source.c_str());
-    return;
-  }
-  else if (!clients->second->IsArray())
-  {
-    LogError("%s: invalid value for \"clients\": %s", source.c_str(), ToJSON(clients->second).c_str());
+    LogError("%s: invalid value for clients: %s", source.c_str(), ToJSON(clients->second).c_str());
     return;
   }
 
-  for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
-    LoadClientSettings(*it, source + ": ");
+  JSONMap::iterator action = json->AsMap().find("action");
+  if (action != json->AsMap().end() && !action->second->IsString())
+  {
+    LogError("%s: invalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
+    return;
+  }
+
+  if (clients != json->AsMap().end())
+  {
+    for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
+      LoadClientSettings(*it, source + ": ");
+  }
+
+  if (action != json->AsMap().end())
+  {
+    if (action->second->AsString() == "save")
+      SaveSettingsToFile();
+    else if (action->second->AsString() == "reload" && allowreload)
+      LoadSettingsFromFile(true);
+  }
 }
 
 void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string source)
@@ -502,7 +574,7 @@ CJackClient* CClientsManager::FindClient(const std::string& name)
   return NULL;
 }
 
-CJSONGenerator* CClientsManager::ClientsToJSON()
+CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
 {
   CJSONGenerator* generator = new CJSONGenerator(true);
 
@@ -545,9 +617,12 @@ CJSONGenerator* CClientsManager::ClientsToJSON()
       generator->AddDouble(control->second);
 
       //add the port description of this port
-      CLadspaPlugin* plugin = (*it)->Plugin();
-      long port = plugin->PortByName(control->first);
-      m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
+      if (portdescription)
+      {
+        CLadspaPlugin* plugin = (*it)->Plugin();
+        long port = plugin->PortByName(control->first);
+        m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
+      }
 
       generator->MapClose();
     }
@@ -576,7 +651,8 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
 
   bool connected = false;
 
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  vector<CJackClient*>::iterator it = m_clients.begin();
+  while (it != m_clients.end())
   {
     //if this client has been marked for removal, delete it and remove it from the vector
     if ((*it)->NeedsDelete())
@@ -584,8 +660,7 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
       Log("Deleting client \"%s\"", (*it)->Name().c_str());
       delete *it;
       it = m_clients.erase(it);
-      if (it == m_clients.end())
-        break;
+      continue;
     }
 
     //disconnect the client if it needs a restart, it'll get reconnected below
@@ -621,6 +696,8 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
         }
       }
     }
+
+    it++;
   }
 
   return connected;
