@@ -31,6 +31,8 @@ enum ClientMessage
   MsgPortDisconnected,
   MsgConnectionsUpdated,
   MsgClientAdded,
+  MsgClientDeleted,
+  MsgClientUpdated,
 };
 
 const char* MsgToString(ClientMessage msg);
@@ -49,6 +51,7 @@ class CMessagePump
     int           MsgPipe() { return m_pipe[0]; }
     ClientMessage GetMessage();
     bool          WriteMessage(uint8_t msg);
+    const char*   Name() { return m_name; }
 
   private:
     const char* m_name;

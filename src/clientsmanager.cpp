@@ -29,8 +29,10 @@
 using namespace std;
 
 CClientsManager::CClientsManager(CBobDSP& bobdsp):
+  CMessagePump("clientsmanager"),
   m_bobdsp(bobdsp)
 {
+  ResetFlags();
 }
 
 CClientsManager::~CClientsManager()
@@ -63,6 +65,7 @@ void CClientsManager::LoadSettingsFromFile(const std::string& filename)
 
   CLock lock(m_mutex);
   LoadSettings(json, filename);
+  ResetFlags();
 }
 
 CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjson, const std::string& source,
@@ -83,6 +86,8 @@ CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjs
   {
     LoadSettings(json, source);
   }
+
+  CheckFlags();
 
   if (returnsettings)
     return ClientsToJSON();
@@ -207,6 +212,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
                                             pregain, postgain, controlvalues);
   m_clients.push_back(jackclient);
+  m_clientadded = true;
 
   Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
       name.c_str(), instances, pregain, postgain);
@@ -224,6 +230,7 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
   {
     LogDebug("Marking client \"%s\" for delete", name.c_str());
     jackclient->MarkDelete();
+    m_clientdeleted = true;
   }
 }
 
@@ -619,5 +626,24 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
     else
       break;
   }
+}
+
+void CClientsManager::ResetFlags()
+{
+  m_clientadded   = false;
+  m_clientdeleted = false;
+  m_clientupdated = false;
+}
+
+void CClientsManager::CheckFlags()
+{
+  if (m_clientadded)
+    m_clientadded = !WriteMessage(MsgClientAdded);
+    
+  if (m_clientdeleted)
+    m_clientdeleted = !WriteMessage(MsgClientDeleted);
+
+  if (m_clientupdated)
+    m_clientupdated = !WriteMessage(MsgClientUpdated);
 }
 

@@ -39,6 +39,8 @@ const char* MsgToString(ClientMessage msg)
     "MsgPortDisconnected",
     "MsgConnectionsUpdated",
     "MsgClientAdded",
+    "MsgClientDeleted",
+    "MsgClientUpdated",
   };
 
   if (msg >= 0 && (size_t)msg < (sizeof(msgstrings) / sizeof(msgstrings[0])))

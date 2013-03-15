@@ -27,12 +27,13 @@
 
 #include "jackclient.h"
 #include "ladspaplugin.h"
+#include "clientmessage.h"
 #include "util/mutex.h"
 #include "util/JSON.h"
 
 class CBobDSP;
 
-class CClientsManager
+class CClientsManager : public CMessagePump
 {
   public:
     CClientsManager(CBobDSP& bobdsp);
@@ -54,6 +55,9 @@ class CClientsManager
     CBobDSP&                  m_bobdsp;
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
+    bool                      m_clientadded;
+    bool                      m_clientdeleted;
+    bool                      m_clientupdated;
 
     enum LOADSTATE
     {
@@ -72,6 +76,9 @@ class CClientsManager
     bool            LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues);
     bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin, std::vector<controlvalue>& controlvalues);
     CJackClient*    FindClient(const std::string& name);
+
+    void            ResetFlags();
+    void            CheckFlags();
 };
 
 #endif //CLIENTSMANAGER_H

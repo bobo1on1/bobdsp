@@ -246,7 +246,6 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       {
         LogDebug("%s %s", host.c_str(), postdata.c_str());
         CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadSettingsFromString(postdata, host, true);
-        httpserver->WriteMessage(MsgClientAdded); //tell the main loop to check the clients
         delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, generator);
       }

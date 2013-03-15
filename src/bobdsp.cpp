@@ -391,11 +391,11 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 void CBobDSP::ProcessMessages(int64_t timeout)
 {
   pollfd* fds;
-  int nrclientpipes = m_clientsmanager.ClientPipes(fds, 4);
+  int nrclientpipes = m_clientsmanager.ClientPipes(fds, 5);
   unsigned int nrfds = nrclientpipes;
 
-  int pipes[4] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe() };
-  int pipenrs[4] = { -1, -1, -1, -1 };
+  int pipes[5] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe(), m_clientsmanager.MsgPipe() };
+  int pipenrs[5] = { -1, -1, -1, -1, -1 };
 
   for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
   {
@@ -447,7 +447,11 @@ void CBobDSP::ProcessMessages(int64_t timeout)
 
     //check for message from the http server
     if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
-      ProcessHttpServerMessages();
+      ProcessManagerMessages(m_httpserver);
+
+    //check for message from the clients manager
+    if (pipenrs[4] != -1 && (fds[pipenrs[4]].revents & POLLIN))
+      ProcessManagerMessages(m_clientsmanager);
   }
 
   delete[] fds;
@@ -520,12 +524,12 @@ void CBobDSP::ProcessStdFd(const char* name, int& fd)
   }
 }
 
-void CBobDSP::ProcessHttpServerMessages()
+void CBobDSP::ProcessManagerMessages(CMessagePump& manager)
 {
   uint8_t msg;
-  while ((msg = m_httpserver.GetMessage()) != MsgNone)
+  while ((msg = manager.GetMessage()) != MsgNone)
   {
-    LogDebug("got message %s from httpserver", MsgToString(msg));
+    LogDebug("got message %s from %s", MsgToString(msg), manager.Name());
     if (msg == MsgConnectionsUpdated)
       m_checkconnect = m_checkdisconnect = true;
   }

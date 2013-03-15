@@ -76,7 +76,7 @@ class CBobDSP
     void ProcessClientMessages(pollfd* fds, int nrclientpipes);
     void ProcessSignalfd();
     void ProcessStdFd(const char* name, int& fd);
-    void ProcessHttpServerMessages();
+    void ProcessManagerMessages(CMessagePump& manager);
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     void LoadSettings();
