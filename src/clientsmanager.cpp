@@ -148,6 +148,8 @@ void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string s
   source += name->second->AsString();
   source += "\" ";
 
+  //the action decides what will be done with this JSON client object
+  //if no action is given, then the default is to add a new client
   JSONMap::iterator action = client.find("action");
   if (action != client.end() && !action->second->IsString())
     LogError("%sinvalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
@@ -231,6 +233,8 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
     return;
   }
 
+  //load instances, gain and control values first, and apply them only after they've
+  //all been checked and are all valid
   bool    instancesupdated = false;
   int64_t instances;
   LOADSTATE state = LoadInt64(client, instances, "instances", source);
@@ -455,6 +459,7 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
                                     std::vector<controlvalue>& controlvalues, bool checkmissing)
 {
   bool allcontrolsok = true;
+  //check if all controls exist in the ladspa plugin
   for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
   {
     bool found = false;
@@ -474,7 +479,7 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
     }
   }
 
-  //check if all control input ports are mapped
+  //check if all control input ports of the ladspa plugin are mapped
   if (checkmissing)
   {
     for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
