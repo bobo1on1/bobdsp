@@ -59,6 +59,8 @@ void CPluginManager::LoadPlugins(std::vector<std::string>& paths)
       LogDebug("ID:%lu Label:\"%s\" Name:\"%s\" Ports:%lu", d->UniqueID, d->Label, d->Name, d->PortCount);
     }
   }
+
+  CheckPlugins();
 }
 
 void CPluginManager::LoadPluginsPath(std::string& path)
@@ -132,6 +134,27 @@ void CPluginManager::LoadPluginsPath(std::string& path)
   }
 
   closedir(ladspadir);
+}
+
+void CPluginManager::CheckPlugins()
+{
+  //check if the ports on all plugins are correct, if not then remove the offending plugin
+  for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
+  {
+    bool valid = true;
+    for (unsigned long port = 0; port < (*it)->PortCount(); port++)
+    {
+      if (!(*it)->PortDescriptorSanityCheck(port))
+        valid = false;
+    }
+
+    if (!valid)
+    {
+      Log("Removing plugin %s", (*it)->Label());
+      delete *it;
+      it = m_plugins.erase(it);
+    }
+  }
 }
 
 CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const char* label)

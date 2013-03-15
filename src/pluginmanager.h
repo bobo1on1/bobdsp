@@ -41,6 +41,7 @@ class CPluginManager
 
   private:
     void LoadPluginsPath(std::string& path);
+    void CheckPlugins();
 
     int                       m_samplerate;
     std::list<CLadspaPlugin*> m_plugins;
