@@ -115,6 +115,7 @@ CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjs
     LoadSettings(json, true, source);
   }
 
+  //checks if a message need to be sent to the main thread
   CheckFlags();
 
   if (returnsettings)
@@ -240,7 +241,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   if (FindClient(name) != NULL)
   {
     LogError("%salready exists", source.c_str());
-    return;
+    return; //the client name is used as identifier, it needs to be unique
   }
 
   int64_t instances = 1;
@@ -254,23 +255,24 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   }
 
   double gain[2] = {1.0, 1.0};
-  if (LoadDouble(client, gain[0], "pregain", source) == INVALID)
-    return;
-
-  if (LoadDouble(client, gain[1], "postgain", source) == INVALID)
-    return;
+  for (int i = 0; i < 2; i++)
+  {
+    if (LoadDouble(client, gain[i], i == 0 ? "pregain" : "postgain", source) == INVALID)
+      return; //gain invalid
+  }
 
   CLadspaPlugin* ladspaplugin = LoadPlugin(source, client);
   if (ladspaplugin == NULL)
-    return;
+    return; //plugin not set, not found or invalid
 
   controlmap controlvalues;
   if (!LoadControls(source, client, controlvalues))
-    return;
+    return; //control values invalid
 
   if (!CheckControls(source, ladspaplugin, controlvalues, true))
-    return;
+    return; //control values don't match the plugin
 
+  //everything ok, allocate a new client
   CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
                                             gain, controlvalues);
   m_clients.push_back(jackclient);
@@ -290,7 +292,9 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
   }
 
   LogDebug("Marking client \"%s\" for delete", name.c_str());
-  jackclient->MarkDelete();
+  //mark the client for deletion
+  //clients are deleted from the main thread, since it's waiting on its messagepipe
+  jackclient->MarkDelete(); 
   m_clientdeleted = true;
 }
 
@@ -336,19 +340,21 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
 
   controlmap controlvalues;
   if (!LoadControls(source, client, controlvalues))
-    return;
+    return; //invalid control values
 
   if (!CheckControls(source, jackclient->Plugin(), controlvalues, false))
-    return;
+    return; //one or more control values don't exist in the plugin
 
   if (instancesupdated && instances != jackclient->NrInstances())
   {
+    //apply new instances, then tell the main thread to restart this client
     Log("%ssetting instances to %"PRIi64, source.c_str(), instances);
     jackclient->SetNrInstances(instances);
     jackclient->MarkRestart();
     m_clientupdated = true;
   }
 
+  //update gain values
   for (int i = 0; i < 2; i++)
   {
     if (gainupdated[i])
@@ -358,6 +364,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
     }
   }
 
+  //update control values
   if (!controlvalues.empty())
     jackclient->UpdateControls(controlvalues);
 }
