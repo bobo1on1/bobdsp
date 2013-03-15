@@ -32,6 +32,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <memory>
 
 using namespace std;
 
@@ -215,11 +216,10 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else 
     {
+      auto_ptr<CPostData> datadelete((CPostData*)*con_cls);
+
       if (((CPostData*)*con_cls)->error)
-      {
-        delete ((CPostData*)*con_cls);
         return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
-      }
 
       std::string& postdata = ((CPostData*)*con_cls)->data;
 
@@ -227,38 +227,26 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       httpserver->m_postdatasize -= postdata.length();
       lock.Leave();
 
+      LogDebug("%s %s", host.c_str(), postdata.c_str());
+
       if (strurl == "/connections")
       {
-        LogDebug("%s %s", host.c_str(), postdata.c_str());
         httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(postdata);
         httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
-        delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
       }
       else if (strurl == "/ports")
       {
-        LogDebug("%s %s", host.c_str(), postdata.c_str());
-        int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
-        delete ((CPostData*)*con_cls);
-        return returnv;
+        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
       }
       else if (strurl == "/clients")
       {
-        LogDebug("%s %s", host.c_str(), postdata.c_str());
         CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadSettingsFromString(postdata, host, true);
-        delete ((CPostData*)*con_cls);
         return CreateJSONDownloadResponse(connection, generator);
       }
       else if (strurl == "/visualizer")
       {
-        LogDebug("%s %s", host.c_str(), postdata.c_str());
-        int returnv = CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
-        delete ((CPostData*)*con_cls);
-        return returnv;
-      }
-      else
-      {
-        delete ((CPostData*)*con_cls);
+        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
       }
     }
   }
