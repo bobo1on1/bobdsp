@@ -21,6 +21,7 @@
 #include "util/timeutils.h"
 #include "util/log.h"
 #include "util/thread.h"
+#include "util/lock.h"
 
 #include "jackclient.h"
 
@@ -32,14 +33,12 @@
 using namespace std;
 
 CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                         float pregain, float postgain, std::vector<controlvalue> controlinputs):
+                         double* gain, std::vector<controlvalue> controlinputs):
   CMessagePump("jack client")
 {
   m_plugin          = plugin;
   m_name            = name;
   m_nrinstances     = nrinstances;
-  m_pregain         = pregain;
-  m_postgain        = postgain;
   m_controlinputs   = controlinputs;
   m_client          = NULL;
   m_connected       = false;
@@ -48,6 +47,12 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_exitstatus      = (jack_status_t)0;
   m_samplerate      = 0;
   m_portevents      = 0;
+
+  for (int i = 0; i < 2; i++)
+  {
+    m_gain[i] = gain[i];
+    m_runninggain[i] = gain[i];
+  }
 
   //load all symbols, so it doesn't have to be done from the jack thread
   //this is better for realtime performance
@@ -80,6 +85,9 @@ bool CJackClient::ConnectInternal()
   //this is set in PJackInfoShutdownCallback(), init to 0 here so we know when the jack thread has exited
   m_exitstatus = (jack_status_t)0; 
   m_exitreason.clear();
+
+  //if this client was marked for restart, reset the flag
+  m_restart = false;
 
   //try to connect to jackd
   m_client = jack_client_open(m_name.substr(0, jack_client_name_size() - 1).c_str(), JackNoStartServer, NULL);
@@ -201,6 +209,29 @@ void CJackClient::InitLadspa()
   }
 }
 
+void CJackClient::UpdateGain(float gain, int index)
+{
+  CLock lock(m_mutex);
+  m_gain[index] = gain;
+}
+
+void CJackClient::GetControlInputs(std::vector<controlvalue>& controlinputs)
+{
+  CLock lock(m_mutex);
+  //copy the control inputs, then apply any pending updates to it
+  //don't clear the updates, the jack client needs them
+  controlinputs = m_controlinputs;
+  TransferNewControlInputs(controlinputs);
+}
+
+void CJackClient::UpdateControls(std::vector<controlvalue>& controlinputs)
+{
+  //store the new control values, these will be read from the jack thread
+  CLock lock(m_mutex);
+  for (vector<controlvalue>::iterator it = controlinputs.begin(); it != controlinputs.end(); it++)
+    m_newcontrolinputs.push_back(*it);
+}
+
 void CJackClient::CheckMessages()
 {
   if (m_portevents)
@@ -219,6 +250,23 @@ void CJackClient::CheckMessages()
   }
 }
 
+void CJackClient::TransferNewControlInputs(std::vector<controlvalue>& controlinputs)
+{
+  for (vector<controlvalue>::iterator it = m_newcontrolinputs.begin();
+      it != m_newcontrolinputs.end(); it++)
+  {
+    for (vector<controlvalue>::iterator control = controlinputs.begin();
+         control != controlinputs.end(); control++)
+    {
+      if (it->first == control->first)
+      {
+        control->second = it->second;
+        break;
+      }
+    }
+  }
+}
+
 int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)
 {
   ((CJackClient*)arg)->PJackProcessCallback(nframes);
@@ -227,9 +275,24 @@ int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)
 
 void CJackClient::PJackProcessCallback(jack_nframes_t nframes)
 {
+  //check if gain was updated, use a trylock to prevent blocking the realtime jack thread
+  CLock lock(m_mutex, true);
+  if (lock.HasLock())
+  {
+    //update the gain
+    for (int i = 0; i < 2; i++)
+      m_runninggain[i] = m_gain[i];
+
+    //apply updates to control values if there are any
+    TransferNewControlInputs(m_controlinputs);
+    m_newcontrolinputs.clear();
+
+    lock.Leave();
+  }
+
   //process audio
   for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
-    (*it)->Run(nframes, m_pregain, m_postgain);
+    (*it)->Run(nframes, m_runninggain[0], m_runninggain[1]);
 
   //check if we need to send a message to the main loop
   CheckMessages();

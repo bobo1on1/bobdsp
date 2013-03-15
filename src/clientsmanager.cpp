@@ -150,26 +150,15 @@ void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string s
 
   JSONMap::iterator action = client.find("action");
   if (action != client.end() && !action->second->IsString())
-  {
     LogError("%sinvalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
-    return;
-  }
   else if (action == client.end() || action->second->AsString() == "add")
-  {
     AddClient(client, name->second->AsString(), source);
-  }
   else if (action->second->AsString() == "delete")
-  {
     DeleteClient(client, name->second->AsString(), source);
-  }
   else if (action->second->AsString() == "update")
-  {
-  }
+    UpdateClient(client, name->second->AsString(), source);
   else
-  {
     LogError("%sinvalid action: \"%s\"", source.c_str(), action->second->AsString().c_str());
-    return;
-  }
 }
 
 void CClientsManager::AddClient(JSONMap& client, const std::string& name, const std::string& source)
@@ -190,12 +179,11 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
     return;
   }
 
-  double pregain = 1.0;
-  if (LoadDouble(client, pregain, "pregain", source) == INVALID)
+  double gain[2] = {1.0, 1.0};
+  if (LoadDouble(client, gain[0], "pregain", source) == INVALID)
     return;
 
-  double postgain = 1.0;
-  if (LoadDouble(client, postgain, "postgain", source) == INVALID)
+  if (LoadDouble(client, gain[1], "postgain", source) == INVALID)
     return;
 
   CLadspaPlugin* ladspaplugin = LoadPlugin(source, client);
@@ -206,16 +194,16 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   if (!LoadControls(source, client, controlvalues))
     return;
 
-  if (!CheckControls(source, ladspaplugin, controlvalues))
+  if (!CheckControls(source, ladspaplugin, controlvalues, true))
     return;
 
   CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
-                                            pregain, postgain, controlvalues);
+                                            gain, controlvalues);
   m_clients.push_back(jackclient);
   m_clientadded = true;
 
   Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
-      name.c_str(), instances, pregain, postgain);
+      name.c_str(), instances, gain[0], gain[1]);
 }
 
 void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, const std::string& source)
@@ -232,6 +220,72 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
     jackclient->MarkDelete();
     m_clientdeleted = true;
   }
+}
+
+void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
+{
+  CJackClient* jackclient = FindClient(name);
+  if (jackclient == NULL)
+  {
+    LogError("%sdoesn't exist", source.c_str());
+    return;
+  }
+
+  bool    instancesupdated = false;
+  int64_t instances;
+  LOADSTATE state = LoadInt64(client, instances, "instances", source);
+  if (state == SUCCESS)
+  {
+    if (instances < 1)
+    {
+      LogError("%sinvalid value for instances: %"PRIi64, source.c_str(), instances);
+      return;
+    }
+    instancesupdated = true;
+  }
+  else if (state == INVALID)
+  {
+    return;
+  }
+
+  bool   gainupdated[2] = { false, false };
+  double gain[2];
+
+  for (int i = 0; i < 2; i++)
+  {
+    state = LoadDouble(client, gain[i], i == 0 ? "pregain" : "postgain", source);
+    if (state == SUCCESS)
+      gainupdated[i] = true;
+    else if (state == INVALID)
+      return;
+  }
+
+  std::vector<controlvalue> controlvalues;
+  if (!LoadControls(source, client, controlvalues))
+    return;
+
+  if (!CheckControls(source, jackclient->Plugin(), controlvalues, false))
+    return;
+
+  if (instancesupdated && instances != jackclient->NrInstances())
+  {
+    Log("%ssetting instances to %"PRIi64, source.c_str(), instances);
+    jackclient->SetNrInstances(instances);
+    jackclient->MarkRestart();
+    m_clientupdated = true;
+  }
+
+  for (int i = 0; i < 2; i++)
+  {
+    if (gainupdated[i])
+    {
+      LogDebug("%ssetting %s to %f", source.c_str(), i == 0 ? "pregain" : "postgain", gain[i]);
+      jackclient->UpdateGain(gain[i], i);
+    }
+  }
+
+  if (!controlvalues.empty())
+    jackclient->UpdateControls(controlvalues);
 }
 
 CClientsManager::LOADSTATE CClientsManager::LoadDouble(JSONMap& client, double& value,
@@ -337,6 +391,10 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, s
     LogError("%sinvalid value for controls %s", source.c_str(), ToJSON(controls->second).c_str());
     return false;
   }
+  else if (controls == client.end())
+  {
+    return true;
+  }
 
   //check if every control is valid
   for (JSONArray::iterator control = controls->second->AsArray().begin();
@@ -383,6 +441,9 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, s
       }
     }
 
+    LogDebug("%sloaded control \"%s\" with value %f", source.c_str(),
+             name->second->AsString().c_str(), value->second->ToDouble());
+
     //control is valid, store
     controlvalues.push_back(make_pair(name->second->AsString(), value->second->ToDouble()));
   }
@@ -390,7 +451,8 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, s
   return true;
 }
 
-bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin, std::vector<controlvalue>& controlvalues)
+bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
+                                    std::vector<controlvalue>& controlvalues, bool checkmissing)
 {
   bool allcontrolsok = true;
   for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
@@ -413,28 +475,28 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
   }
 
   //check if all control input ports are mapped
-  for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
+  if (checkmissing)
   {
-    if (ladspaplugin->IsControlInput(port))
+    for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
     {
-      bool found = false;
-      for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
+      if (ladspaplugin->IsControlInput(port))
       {
-        if (it->first == ladspaplugin->PortName(port))
+        bool found = false;
+        for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
         {
-          found = true;
-          break;
+          if (it->first == ladspaplugin->PortName(port))
+          {
+            found = true;
+            break;
+          }
+        }
+        if (!found)
+        {
+          LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
+          allcontrolsok = false;
         }
       }
-      if (!found)
-      {
-        LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
-        allcontrolsok = false;
-      }
     }
-
-    if (!ladspaplugin->PortDescriptorSanityCheck(port))
-      allcontrolsok = false;
   }
 
   return allcontrolsok;
@@ -475,14 +537,18 @@ CJSONGenerator* CClientsManager::ClientsToJSON()
     generator->AddString((*it)->Name());
     generator->AddString("instances");
     generator->AddInt((*it)->NrInstances());
+
     generator->AddString("pregain");
-    generator->AddDouble((*it)->PreGain());
+    generator->AddDouble((*it)->GetGain()[0]);
     generator->AddString("postgain");
-    generator->AddDouble((*it)->PostGain());
+    generator->AddDouble((*it)->GetGain()[1]);
 
     generator->AddString("controls");
     generator->ArrayOpen();
-    const vector<controlvalue>& controls = (*it)->ControlInputs();
+
+    vector<controlvalue> controls;
+    (*it)->GetControlInputs(controls);
+
     for (vector<controlvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
     {
       generator->MapOpen();
@@ -534,6 +600,13 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
       it = m_clients.erase(it);
       if (it == m_clients.end())
         break;
+    }
+
+    //disconnect the client if it needs a restart, it'll get reconnected below
+    if((*it)->NeedsRestart())
+    {
+      Log("Disconnecting client \"%s\" because of restart", (*it)->Name().c_str());
+      (*it)->Disconnect();
     }
 
     //check if the jack thread has failed

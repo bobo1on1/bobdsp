@@ -26,54 +26,65 @@
 #include "ladspaplugin.h"
 #include "ladspainstance.h"
 #include "clientmessage.h"
+#include "util/mutex.h"
 
 class CJackClient : public CMessagePump
 {
   public:
     CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                float pregain, float postgain, std::vector<controlvalue> controlinputs);
+                double* gain, std::vector<controlvalue> controlinputs);
     ~CJackClient();
 
     bool Connect();
     void Disconnect();
-    bool IsConnected() { return m_connected;   }
-    void MarkDelete()  { m_delete = true;      }
-    bool NeedsDelete() { return m_delete;      }
+    bool IsConnected()  { return m_connected;}
+    void MarkDelete()   { m_delete = true;   }
+    bool NeedsDelete()  { return m_delete;   }
+    void MarkRestart()  { m_restart = true;  }
+    bool NeedsRestart() { return m_restart;  }
+
+    int  NrInstances()                   { return m_nrinstances;        }
+    void SetNrInstances(int nrinstances) { m_nrinstances = nrinstances; }
 
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
 
     CLadspaPlugin*                Plugin()           { return m_plugin;        }
     const std::string&            Name()             { return m_name;          }
-    int                           NrInstances()      { return m_nrinstances;   }
-    float                         PreGain()          { return m_pregain;       }
-    float                         PostGain()         { return m_postgain;      }
+    float*                        GetGain()          { return m_gain;          }
+    void                          UpdateGain(float gain, int index);
     int                           Samplerate()       { return m_samplerate;    }
-    const std::vector<controlvalue>& ControlInputs() { return m_controlinputs; }
+    void                          GetControlInputs(std::vector<controlvalue>& controlinputs);
+    void                          UpdateControls(std::vector<controlvalue>& controlinputs);
 
   private:
     bool           m_connected;
     bool           m_wasconnected;
     bool           m_delete;
+    bool           m_restart;
     jack_client_t* m_client;
     CLadspaPlugin* m_plugin;
     std::string    m_name;
     int            m_nrinstances;
-    float          m_pregain;
-    float          m_postgain;
     int            m_samplerate;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
     int            m_portevents;
     bool           m_nameset;
 
+    CMutex                    m_mutex;
+    float                     m_gain[2]; //pregain, postgain
+    float                     m_runninggain[2]; //copied from m_gain in the jack thread
+    std::vector<controlvalue> m_controlinputs;
+    std::vector<controlvalue> m_newcontrolinputs;
+
     std::vector<CLadspaInstance*> m_instances;
-    std::vector<controlvalue>     m_controlinputs;
 
     bool        ConnectInternal();
     bool        ConnectJackPorts();
     void        InitLadspa();
     void        CheckMessages();
+    void        TransferNewControlInputs(std::vector<controlvalue>& controlinputs);
 
     static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
     void        PJackProcessCallback(jack_nframes_t nframes);
