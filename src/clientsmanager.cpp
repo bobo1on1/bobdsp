@@ -192,7 +192,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   if (ladspaplugin == NULL)
     return;
 
-  std::vector<controlvalue> controlvalues;
+  controlmap controlvalues;
   if (!LoadControls(source, client, controlvalues))
     return;
 
@@ -264,7 +264,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
       return;
   }
 
-  std::vector<controlvalue> controlvalues;
+  controlmap controlvalues;
   if (!LoadControls(source, client, controlvalues))
     return;
 
@@ -387,7 +387,7 @@ CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& c
   }
 }
 
-bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues)
+bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues)
 {
   JSONMap::iterator controls = client.find("controls");
   if (controls != client.end() && !controls->second->IsArray())
@@ -436,31 +436,28 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, s
     }
 
     //search back in the controls map, to check if this control has a duplicate
-    for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
+    if (controlvalues.find(name->second->AsString()) != controlvalues.end())
     {
-      if (it->first == name->second->AsString())
-      {
-        LogError("%scontrol \"%s\" has duplicate", source.c_str(), name->second->AsString().c_str());
-        return false;
-      }
+      LogError("%scontrol \"%s\" has duplicate", source.c_str(), name->second->AsString().c_str());
+      return false;
     }
 
     LogDebug("%sloaded control \"%s\" with value %f", source.c_str(),
              name->second->AsString().c_str(), value->second->ToDouble());
 
     //control is valid, store
-    controlvalues.push_back(make_pair(name->second->AsString(), value->second->ToDouble()));
+    controlvalues[name->second->AsString()] = value->second->ToDouble();
   }
 
   return true;
 }
 
 bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
-                                    std::vector<controlvalue>& controlvalues, bool checkmissing)
+                                    controlmap& controlvalues, bool checkmissing)
 {
   bool allcontrolsok = true;
   //check if all controls exist in the ladspa plugin
-  for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
+  for (controlmap::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
   {
     bool found = false;
     for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
@@ -486,16 +483,7 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
     {
       if (ladspaplugin->IsControlInput(port))
       {
-        bool found = false;
-        for (vector<controlvalue>::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
-        {
-          if (it->first == ladspaplugin->PortName(port))
-          {
-            found = true;
-            break;
-          }
-        }
-        if (!found)
+        if (controlvalues.find(ladspaplugin->PortName(port)) == controlvalues.end())
         {
           LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
           allcontrolsok = false;
@@ -551,10 +539,10 @@ CJSONGenerator* CClientsManager::ClientsToJSON()
     generator->AddString("controls");
     generator->ArrayOpen();
 
-    vector<controlvalue> controls;
+    controlmap controls;
     (*it)->GetControlInputs(controls);
 
-    for (vector<controlvalue>::const_iterator control = controls.begin(); control != controls.end(); control++)
+    for (controlmap::iterator control = controls.begin(); control != controls.end(); control++)
     {
       generator->MapOpen();
 

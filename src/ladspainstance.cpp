@@ -63,7 +63,7 @@ void CPort::CheckBufferSize(jack_nframes_t nframes, float gain)
 }
 
 CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances, 
-    CLadspaPlugin* plugin, std::vector<controlvalue>& controlinputs, int samplerate) :
+    CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate) :
   m_controlinputs(controlinputs)
 {
   m_client         = client;
@@ -99,31 +99,42 @@ bool CLadspaInstance::Connect()
       if (m_plugin->IsOutput(port))
       {
         //only allocate a value for the output port
-        //since any call to push_back might do a realloc, and invalidate the pointer
-        m_controloutputs.push_back(make_pair(m_plugin->PortName(port), 0.0f));
+        //since any next call might do a realloc, and invalidate the pointer
+        m_controloutputs[m_plugin->PortName(port)] = 0.0f;
       }
       else
       {
-        for (vector<controlvalue>::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
+        controlmap::iterator it = m_controlinputs.find(m_plugin->PortName(port));
+        if (it != m_controlinputs.end())
         {
-          if (it->first == m_plugin->PortName(port))
-          {
-            m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
-            break;
-          }
+          m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
+        }
+        else
+        {
+          LogError("Client \"%s\" unable to find control input \"%s\" (THIS IS A BUG)",
+                   m_name.c_str(), m_plugin->PortName(port));
+          return false;
         }
       }
     }
   }
 
-  //connect output control ports here, since the vector size won't change
-  vector<controlvalue>::iterator it = m_controloutputs.begin();
+  //connect output control ports here, when all values have been allocated
   for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
   {
     if (m_plugin->IsControlOutput(port))
     {
-      m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
-      it++;
+      controlmap::iterator it = m_controloutputs.find(m_plugin->PortName(port));
+      if (it != m_controloutputs.end())
+      {
+        m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
+      }
+      else
+      {
+        LogError("Client \"%s\" unable to find control output \"%s\" (THIS IS A BUG)",
+                 m_name.c_str(), m_plugin->PortName(port));
+        return false;
+      }
     }
   }
 

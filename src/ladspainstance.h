@@ -21,12 +21,13 @@
 
 #include <utility>
 #include <string>
+#include <map>
 #include <vector>
 #include <jack/jack.h>
 
 #include "ladspaplugin.h"
 
-typedef std::pair<std::string, float> controlvalue;
+typedef std::map<std::string, float> controlmap;
 
 class CPort
 {
@@ -47,7 +48,7 @@ class CLadspaInstance
 {
   public:
     CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances,
-        CLadspaPlugin* plugin, std::vector<controlvalue>& controlinputs, int samplerate);
+        CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate);
     ~CLadspaInstance();
 
     bool Connect();
@@ -57,17 +58,17 @@ class CLadspaInstance
     void Run(jack_nframes_t nframes, float pregain, float postgain);
 
   private:
-    std::string                m_name;
-    std::vector<controlvalue>& m_controlinputs;
-    std::vector<controlvalue>  m_controloutputs;
-    jack_client_t*             m_client;
-    int                        m_instance;
-    int                        m_totalinstances;
-    CLadspaPlugin*             m_plugin;
-    int                        m_samplerate;
-    LADSPA_Handle              m_handle;
-    std::vector<CPort>         m_ports;
-    bool                       m_activated;
+    std::string        m_name;
+    controlmap&        m_controlinputs;
+    controlmap         m_controloutputs;
+    jack_client_t*     m_client;
+    int                m_instance;
+    int                m_totalinstances;
+    CLadspaPlugin*     m_plugin;
+    int                m_samplerate;
+    LADSPA_Handle      m_handle;
+    std::vector<CPort> m_ports;
+    bool               m_activated;
 };
 
 #endif //LADSPAINSTANCE_H

@@ -33,7 +33,7 @@
 using namespace std;
 
 CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                         double* gain, std::vector<controlvalue> controlinputs):
+                         double* gain, controlmap controlinputs):
   CMessagePump("jack client")
 {
   m_plugin          = plugin;
@@ -216,7 +216,7 @@ void CJackClient::UpdateGain(float gain, int index)
   m_gain[index] = gain;
 }
 
-void CJackClient::GetControlInputs(std::vector<controlvalue>& controlinputs)
+void CJackClient::GetControlInputs(controlmap& controlinputs)
 {
   CLock lock(m_mutex);
   //copy the control inputs, then apply any pending updates to it
@@ -225,12 +225,12 @@ void CJackClient::GetControlInputs(std::vector<controlvalue>& controlinputs)
   TransferNewControlInputs(controlinputs);
 }
 
-void CJackClient::UpdateControls(std::vector<controlvalue>& controlinputs)
+void CJackClient::UpdateControls(controlmap& controlinputs)
 {
   //store the new control values, these will be read from the jack thread
   CLock lock(m_mutex);
-  for (vector<controlvalue>::iterator it = controlinputs.begin(); it != controlinputs.end(); it++)
-    m_newcontrolinputs.push_back(*it);
+  for (controlmap::iterator it = controlinputs.begin(); it != controlinputs.end(); it++)
+    m_newcontrolinputs[it->first] = it->second;
 }
 
 void CJackClient::CheckMessages()
@@ -251,20 +251,14 @@ void CJackClient::CheckMessages()
   }
 }
 
-void CJackClient::TransferNewControlInputs(std::vector<controlvalue>& controlinputs)
+void CJackClient::TransferNewControlInputs(controlmap& controlinputs)
 {
-  for (vector<controlvalue>::iterator it = m_newcontrolinputs.begin();
+  for (controlmap::iterator it = m_newcontrolinputs.begin();
       it != m_newcontrolinputs.end(); it++)
   {
-    for (vector<controlvalue>::iterator control = controlinputs.begin();
-         control != controlinputs.end(); control++)
-    {
-      if (it->first == control->first)
-      {
-        control->second = it->second;
-        break;
-      }
-    }
+    controlmap::iterator control = controlinputs.find(it->first);
+    if (control != controlinputs.end())
+      control->second = it->second;
   }
 }
 

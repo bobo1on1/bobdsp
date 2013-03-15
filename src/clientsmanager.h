@@ -21,8 +21,8 @@
 
 #include "util/inclstdint.h"
 
-#include <vector>
 #include <string>
+#include <vector>
 #include <poll.h>
 
 #include "jackclient.h"
@@ -74,9 +74,9 @@ class CClientsManager : public CMessagePump
     LOADSTATE       LoadDouble(JSONMap& client, double& value, const std::string& name, const std::string& source);
     LOADSTATE       LoadInt64(JSONMap& client, int64_t& value, const std::string& name, const std::string& source);
     CLadspaPlugin*  LoadPlugin(const std::string& source, JSONMap& client);
-    bool            LoadControls(const std::string& source, JSONMap& client, std::vector<controlvalue>& controlvalues);
+    bool            LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues);
     bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
-                                  std::vector<controlvalue>& controlvalues, bool checkmissing);
+                                  controlmap& controlvalues, bool checkmissing);
     CJackClient*    FindClient(const std::string& name);
 
     void            ResetFlags();

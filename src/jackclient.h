@@ -32,7 +32,7 @@ class CJackClient : public CMessagePump
 {
   public:
     CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                double* gain, std::vector<controlvalue> controlinputs);
+                double* gain, controlmap controlinputs);
     ~CJackClient();
 
     bool Connect();
@@ -54,8 +54,8 @@ class CJackClient : public CMessagePump
     float*                        GetGain()          { return m_gain;          }
     void                          UpdateGain(float gain, int index);
     int                           Samplerate()       { return m_samplerate;    }
-    void                          GetControlInputs(std::vector<controlvalue>& controlinputs);
-    void                          UpdateControls(std::vector<controlvalue>& controlinputs);
+    void                          GetControlInputs(controlmap& controlinputs);
+    void                          UpdateControls(controlmap& controlinputs);
 
   private:
     bool           m_connected;
@@ -72,11 +72,11 @@ class CJackClient : public CMessagePump
     int            m_portevents;
     bool           m_nameset;
 
-    CMutex                    m_mutex;
-    float                     m_gain[2]; //pregain, postgain
-    float                     m_runninggain[2]; //copied from m_gain in the jack thread
-    std::vector<controlvalue> m_controlinputs;
-    std::vector<controlvalue> m_newcontrolinputs;
+    CMutex         m_mutex;
+    float          m_gain[2]; //pregain, postgain
+    float          m_runninggain[2]; //copied from m_gain in the jack thread
+    controlmap     m_controlinputs;
+    controlmap     m_newcontrolinputs;
 
     std::vector<CLadspaInstance*> m_instances;
 
@@ -84,7 +84,7 @@ class CJackClient : public CMessagePump
     bool        ConnectJackPorts();
     void        InitLadspa();
     void        CheckMessages();
-    void        TransferNewControlInputs(std::vector<controlvalue>& controlinputs);
+    void        TransferNewControlInputs(controlmap& controlinputs);
 
     static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
     void        PJackProcessCallback(jack_nframes_t nframes);
