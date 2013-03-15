@@ -371,18 +371,13 @@ CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& c
   CLadspaPlugin* ladspaplugin = m_bobdsp.PluginManager().GetPlugin(uniqueid->second->ToInt64(),
                                                                    label->second->AsString().c_str());
   if (ladspaplugin == NULL)
-  {
     LogError("%sdid not find plugin with uniqueid %"PRIi64" and label \"%s\"",
              source.c_str(), uniqueid->second->ToInt64(), label->second->AsString().c_str());
-    return NULL;
-  }
   else
-  {
     LogDebug("Found matching plugin for \"%s\" %"PRIi64" in %s", label->second->AsString().c_str(),
              uniqueid->second->ToInt64(), ladspaplugin->FileName().c_str());
 
-    return ladspaplugin;
-  }
+  return ladspaplugin;
 }
 
 bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues)
