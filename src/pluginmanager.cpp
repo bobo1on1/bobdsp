@@ -139,7 +139,8 @@ void CPluginManager::LoadPluginsPath(std::string& path)
 void CPluginManager::CheckPlugins()
 {
   //check if the ports on all plugins are correct, if not then remove the offending plugin
-  for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
+  list<CLadspaPlugin*>::iterator it = m_plugins.begin();
+  while (it != m_plugins.end())
   {
     bool valid = true;
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
@@ -153,6 +154,10 @@ void CPluginManager::CheckPlugins()
       Log("Removing plugin %s", (*it)->Label());
       delete *it;
       it = m_plugins.erase(it);
+    }
+    else
+    {
+      it++;
     }
   }
 }
