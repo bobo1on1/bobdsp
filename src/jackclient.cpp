@@ -87,9 +87,6 @@ bool CJackClient::ConnectInternal()
   m_exitstatus = (jack_status_t)0; 
   m_exitreason.clear();
 
-  //if this client was marked for restart, reset the flag
-  m_restart = false;
-
   //try to connect to jackd
   m_client = jack_client_open(m_name.substr(0, jack_client_name_size() - 1).c_str(), JackNoStartServer, NULL);
   if (m_client == NULL)
@@ -185,6 +182,9 @@ void CJackClient::Disconnect()
   m_portevents = 0;
   m_exitstatus = (jack_status_t)0;
   m_samplerate = 0;
+
+  //if this client was marked for restart, reset the flag
+  m_restart = false;
 }
 
 bool CJackClient::ConnectJackPorts()
