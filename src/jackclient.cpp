@@ -54,10 +54,6 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
     m_gain[i] = gain[i];
     m_runninggain[i] = gain[i];
   }
-
-  //load all symbols, so it doesn't have to be done from the jack thread
-  //this is better for realtime performance
-  m_plugin->LoadAllSymbols();
 }
 
 CJackClient::~CJackClient()
@@ -86,6 +82,10 @@ bool CJackClient::ConnectInternal()
   //this is set in PJackInfoShutdownCallback(), init to 0 here so we know when the jack thread has exited
   m_exitstatus = (jack_status_t)0; 
   m_exitreason.clear();
+
+  //load all symbols, so it doesn't have to be done from the jack thread
+  //this is better for realtime performance
+  m_plugin->LoadAllSymbols();
 
   //try to connect to jackd
   m_client = jack_client_open(m_name.substr(0, jack_client_name_size() - 1).c_str(), JackNoStartServer, NULL);
