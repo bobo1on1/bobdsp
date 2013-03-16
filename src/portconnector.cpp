@@ -179,37 +179,37 @@ bool CPortConnector::ConnectionsFromJSON(const std::string& json)
   return success;
 }
 
-std::string CPortConnector::ConnectionsToJSON()
+CJSONGenerator* CPortConnector::ConnectionsToJSON()
 {
-  CJSONGenerator generator;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  generator.MapOpen();
-  generator.AddString("connections");
-  generator.MapOpen();
-  generator.AddString("connection");
-  generator.ArrayOpen();
+  generator->MapOpen();
+  generator->AddString("connections");
+  generator->MapOpen();
+  generator->AddString("connection");
+  generator->ArrayOpen();
 
   CLock lock(m_condition);
   for (vector<CPortConnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
   {
-    generator.MapOpen();
+    generator->MapOpen();
 
-    generator.AddString("out");
-    generator.AddString(it->Out());
-    generator.AddString("in");
-    generator.AddString(it->In());
-    generator.AddString("disconnect");
-    generator.AddString(it->DisconnectStr());
+    generator->AddString("out");
+    generator->AddString(it->Out());
+    generator->AddString("in");
+    generator->AddString(it->In());
+    generator->AddString("disconnect");
+    generator->AddString(it->DisconnectStr());
 
-    generator.MapClose();
+    generator->MapClose();
   }
   lock.Leave();
 
-  generator.ArrayClose();
-  generator.MapClose();
-  generator.MapClose();
+  generator->ArrayClose();
+  generator->MapClose();
+  generator->MapClose();
 
-  return generator.ToString();
+  return generator;
 }
 
 TiXmlElement* CPortConnector::ConnectionsToXML()

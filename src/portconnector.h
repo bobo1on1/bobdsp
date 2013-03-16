@@ -132,14 +132,14 @@ class CPortConnector
 
     void Stop();
 
-    void          LoadSettingsFromFile(const std::string& filename);
-    bool          ConnectionsFromXML(TiXmlElement* root, bool strict);
-    bool          ConnectionsFromJSON(const std::string& json);
-    std::string   ConnectionsToJSON();
-    TiXmlElement* ConnectionsToXML();
-    std::string   PortIndexToJSON();
-    std::string   PortsToJSON();
-    std::string   PortsToJSON(const std::string& postjson);
+    void            LoadSettingsFromFile(const std::string& filename);
+    bool            ConnectionsFromXML(TiXmlElement* root, bool strict);
+    bool            ConnectionsFromJSON(const std::string& json);
+    CJSONGenerator* ConnectionsToJSON();
+    TiXmlElement*   ConnectionsToXML();
+    std::string     PortIndexToJSON();
+    std::string     PortsToJSON();
+    std::string     PortsToJSON(const std::string& postjson);
 
   private:
     std::vector<CPortConnection> m_connections;
