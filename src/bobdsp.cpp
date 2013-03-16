@@ -254,6 +254,7 @@ void CBobDSP::Cleanup()
   m_httpserver.Stop();
   m_clientsmanager.Stop();
   m_visualizer.StopThread();
+  m_pluginmanager.UnloadPlugins();
 
   if (m_signalfd != -1)
     close(m_signalfd);

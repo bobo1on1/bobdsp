@@ -162,6 +162,16 @@ void CPluginManager::CheckPlugins()
   }
 }
 
+void CPluginManager::UnloadPlugins()
+{
+  CLock lock(m_mutex);
+  while (!m_plugins.empty())
+  {
+    delete m_plugins.back();
+    m_plugins.pop_back();
+  }
+}
+
 CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const char* label)
 {
   CLock lock(m_mutex);

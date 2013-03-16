@@ -34,6 +34,7 @@ class CPluginManager
     ~CPluginManager();
 
     void            LoadPlugins(std::vector<std::string>& paths);
+    void            UnloadPlugins();
     CLadspaPlugin*  GetPlugin(int64_t uniqueid, const char* label);
     CJSONGenerator* PluginsToJSON();
     void            PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port);
