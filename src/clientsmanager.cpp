@@ -35,7 +35,7 @@ CClientsManager::CClientsManager(CBobDSP& bobdsp):
   CMessagePump("clientsmanager"),
   m_bobdsp(bobdsp)
 {
-  ResetFlags();
+  m_checkclients = false;
 }
 
 CClientsManager::~CClientsManager()
@@ -81,18 +81,21 @@ void CClientsManager::LoadSettingsFromFile(bool reload)
   {
     //reload requested, mark all clients for delete, reload the file
     //and set the flag that clients are deleted
-    Log("Reload requested, marking all existing clients for deletion");
-    m_clientdeleted = true;
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-      (*it)->MarkDelete();
+    if (!m_clients.empty())
+    {
+      Log("Reload requested, marking all existing clients for deletion");
+      m_checkclients = true;
+      for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+        (*it)->MarkDelete();
+    }
 
     LoadSettings(json, false, filename);
   }
   else
   {
-    //load new settings, reset the flags since the main thread will check all the clients anyway
+    //load new settings, reset m_checkclients since the main thread will check all the clients anyway
     LoadSettings(json, false, filename);
-    ResetFlags();
+    m_checkclients = false;
   }
 }
 
@@ -116,7 +119,8 @@ CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjs
   }
 
   //checks if a message need to be sent to the main thread
-  CheckFlags();
+  if (m_checkclients)
+    m_checkclients = !WriteMessage(MsgCheckClients);
 
   if (returnsettings)
     return ClientsToJSON(true);
@@ -276,7 +280,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
                                             gain, controlvalues);
   m_clients.push_back(jackclient);
-  m_clientadded = true;
+  m_checkclients = true;
 
   Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
       name.c_str(), instances, gain[0], gain[1]);
@@ -295,7 +299,7 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
   //mark the client for deletion
   //clients are deleted from the main thread, since it's waiting on its messagepipe
   jackclient->MarkDelete(); 
-  m_clientdeleted = true;
+  m_checkclients = true;
 }
 
 void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
@@ -351,7 +355,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
     Log("%ssetting instances to %"PRIi64, source.c_str(), instances);
     jackclient->SetNrInstances(instances);
     jackclient->MarkRestart();
-    m_clientupdated = true;
+    m_checkclients = true;
   }
 
   //update gain values
@@ -769,24 +773,5 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
     else
       break;
   }
-}
-
-void CClientsManager::ResetFlags()
-{
-  m_clientadded   = false;
-  m_clientdeleted = false;
-  m_clientupdated = false;
-}
-
-void CClientsManager::CheckFlags()
-{
-  if (m_clientadded)
-    m_clientadded = !WriteMessage(MsgClientAdded);
-    
-  if (m_clientdeleted)
-    m_clientdeleted = !WriteMessage(MsgClientDeleted);
-
-  if (m_clientupdated)
-    m_clientupdated = !WriteMessage(MsgClientUpdated);
 }
 

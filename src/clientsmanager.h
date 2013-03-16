@@ -55,9 +55,7 @@ class CClientsManager : public CMessagePump
     CBobDSP&                  m_bobdsp;
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
-    bool                      m_clientadded;
-    bool                      m_clientdeleted;
-    bool                      m_clientupdated;
+    bool                      m_checkclients;
 
     enum LOADSTATE
     {
@@ -79,9 +77,6 @@ class CClientsManager : public CMessagePump
     bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
                                   controlmap& controlvalues, bool checkmissing);
     CJackClient*    FindClient(const std::string& name);
-
-    void            ResetFlags();
-    void            CheckFlags();
 };
 
 #endif //CLIENTSMANAGER_H

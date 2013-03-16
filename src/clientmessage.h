@@ -30,9 +30,7 @@ enum ClientMessage
   MsgPortConnected,
   MsgPortDisconnected,
   MsgConnectionsUpdated,
-  MsgClientAdded,
-  MsgClientDeleted,
-  MsgClientUpdated,
+  MsgCheckClients,
 };
 
 const char* MsgToString(ClientMessage msg);
