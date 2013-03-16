@@ -439,6 +439,18 @@ CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& c
     return NULL;
   }
 
+  JSONMap::iterator filename = plugin->second->AsMap().find("filename");
+  if (filename == plugin->second->AsMap().end())
+  {
+    LogError("%splugin object has no filename", source.c_str());
+    return NULL;
+  }
+  else if (!filename->second->IsString())
+  {
+    LogError("%sinvalid value for plugin filename %s", source.c_str(), ToJSON(filename->second).c_str());
+    return NULL;
+  }
+
   JSONMap::iterator uniqueid = plugin->second->AsMap().find("uniqueid");
   if (uniqueid == plugin->second->AsMap().end())
   {
@@ -452,13 +464,19 @@ CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& c
   }
 
   CLadspaPlugin* ladspaplugin = m_bobdsp.PluginManager().GetPlugin(uniqueid->second->ToInt64(),
-                                                                   label->second->AsString().c_str());
+                                                                   label->second->AsString(),
+                                                                   filename->second->AsString());
   if (ladspaplugin == NULL)
-    LogError("%sdid not find plugin with uniqueid %"PRIi64" and label \"%s\"",
-             source.c_str(), uniqueid->second->ToInt64(), label->second->AsString().c_str());
+  {
+    LogError("%sdid not find plugin %s %"PRIi64" in %s", source.c_str(),
+             label->second->AsString().c_str(), uniqueid->second->ToInt64(),
+             filename->second->AsString().c_str());
+  }
   else
-    LogDebug("Found matching plugin for \"%s\" %"PRIi64" in %s", label->second->AsString().c_str(),
+  {
+    LogDebug("Found plugin %s %"PRIi64" in %s", label->second->AsString().c_str(),
              uniqueid->second->ToInt64(), ladspaplugin->FileName().c_str());
+  }
 
   return ladspaplugin;
 }
@@ -645,6 +663,8 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
     generator->AddString((*it)->Plugin()->Label());
     generator->AddString("uniqueid");
     generator->AddInt((*it)->Plugin()->UniqueID());
+    generator->AddString("filename");
+    generator->AddString((*it)->Plugin()->FileName());
     generator->MapClose();
 
     generator->MapClose();

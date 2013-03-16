@@ -172,13 +172,13 @@ void CPluginManager::UnloadPlugins()
   }
 }
 
-CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const char* label)
+CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const std::string& label, const std::string& filename)
 {
   CLock lock(m_mutex);
   CLadspaPlugin* ladspaplugin = NULL;
   for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
   {
-    if (uniqueid == (int64_t)(*it)->UniqueID() && strcmp((*it)->Label(), label) == 0)
+    if (uniqueid == (int64_t)(*it)->UniqueID() && label == (*it)->Label() && filename == (*it)->FileName())
     {
       ladspaplugin = (*it);
       break;
