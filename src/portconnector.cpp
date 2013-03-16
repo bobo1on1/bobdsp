@@ -592,7 +592,6 @@ void CPortConnector::UpdatePorts()
   jack_free((void*)ports);
 
   //check if the list really changed, it might not if the main loop got a delayed event from a jack client
-  CLock lock(m_condition);
   bool changed = jackports.size() != m_jackports.size();
   if (!changed)
   {
@@ -614,6 +613,7 @@ void CPortConnector::UpdatePorts()
   //if the list of connections really changed, update and signal threads waiting on m_condition
   if (changed)
   {
+    CLock lock(m_condition);
     m_jackports.swap(jackports); //swap is faster here since it doesn't copy
     m_portindex++;
     m_condition.Broadcast();
