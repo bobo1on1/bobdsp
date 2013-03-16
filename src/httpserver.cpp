@@ -324,7 +324,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   }
 
   int* hfd = new int(fd);
-  struct MHD_Response* response = MHD_create_response_from_callback(-1, Clamp(statinfo.st_size, 1024, 10 * 1024 * 1024),
+  struct MHD_Response* response = MHD_create_response_from_callback(statinfo.st_size, Clamp(statinfo.st_size, 1, 10 * 1024 * 1024),
                                                                     FileReadCallback, (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
   returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
@@ -378,7 +378,7 @@ int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, c
 int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, CJSONGenerator* generator)
 {
   uint64_t size = generator->GetGenBufSize();
-  struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1024, (uint64_t)10 * 1024 * 1024),
+  struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),
                                                                     JSONReadCallback, generator, JSONReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", "application/json");
   int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
