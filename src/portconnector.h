@@ -137,9 +137,9 @@ class CPortConnector
     bool            ConnectionsFromJSON(const std::string& json);
     CJSONGenerator* ConnectionsToJSON();
     TiXmlElement*   ConnectionsToXML();
-    std::string     PortIndexToJSON();
-    std::string     PortsToJSON();
-    std::string     PortsToJSON(const std::string& postjson);
+    CJSONGenerator* PortIndexToJSON();
+    CJSONGenerator* PortsToJSON();
+    CJSONGenerator* PortsToJSON(const std::string& postjson);
 
   private:
     std::vector<CPortConnection> m_connections;

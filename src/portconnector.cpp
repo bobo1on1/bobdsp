@@ -239,60 +239,60 @@ TiXmlElement* CPortConnector::ConnectionsToXML()
   return root;
 }
 
-std::string CPortConnector::PortIndexToJSON()
+CJSONGenerator* CPortConnector::PortIndexToJSON()
 {
-  CJSONGenerator generator;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  generator.MapOpen();
-  generator.AddString("ports");
-  generator.MapOpen();
-  generator.AddString("portindex");
+  generator->MapOpen();
+  generator->AddString("ports");
+  generator->MapOpen();
+  generator->AddString("portindex");
   CLock lock(m_condition);
-  generator.AddInt(m_portindex);
+  generator->AddInt(m_portindex);
   lock.Leave();
-  generator.MapClose();
-  generator.MapClose();
+  generator->MapClose();
+  generator->MapClose();
 
-  return generator.ToString();
+  return generator;
 }
 
-std::string CPortConnector::PortsToJSON()
+CJSONGenerator* CPortConnector::PortsToJSON()
 {
   CLock lock(m_condition);
 
-  CJSONGenerator generator;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  generator.MapOpen();
+  generator->MapOpen();
 
-  generator.AddString("ports");
-  generator.MapOpen();
-  generator.AddString("portindex");
-  generator.AddInt(m_portindex);
-  generator.AddString("port");
-  generator.ArrayOpen();
+  generator->AddString("ports");
+  generator->MapOpen();
+  generator->AddString("portindex");
+  generator->AddInt(m_portindex);
+  generator->AddString("port");
+  generator->ArrayOpen();
 
   for (list<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
   {
-    generator.MapOpen();
+    generator->MapOpen();
 
-    generator.AddString("name");
-    generator.AddString(it->Name());
-    generator.AddString("type");
-    generator.AddString(it->TypeStr());
+    generator->AddString("name");
+    generator->AddString(it->Name());
+    generator->AddString("type");
+    generator->AddString(it->TypeStr());
 
-    generator.MapClose();
+    generator->MapClose();
   }
 
-  generator.ArrayClose();
-  generator.MapClose();
-  generator.MapClose();
+  generator->ArrayClose();
+  generator->MapClose();
+  generator->MapClose();
 
-  return generator.ToString();
+  return generator;
 }
 
 #define MAXWAITINGTHREADS 100
 
-std::string CPortConnector::PortsToJSON(const std::string& postjson)
+CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson)
 {
   TiXmlElement* root = JSON::JSONToXML(postjson);
 
