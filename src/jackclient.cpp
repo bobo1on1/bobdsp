@@ -22,6 +22,7 @@
 #include "util/log.h"
 #include "util/thread.h"
 #include "util/lock.h"
+#include <assert.h>
 
 #include "jackclient.h"
 
@@ -258,8 +259,8 @@ void CJackClient::TransferNewControlInputs(controlmap& controlinputs)
       it != m_newcontrolinputs.end(); it++)
   {
     controlmap::iterator control = controlinputs.find(it->first);
-    if (control != controlinputs.end())
-      control->second = it->second;
+    assert(control != controlinputs.end());
+    control->second = it->second;
   }
 }
 

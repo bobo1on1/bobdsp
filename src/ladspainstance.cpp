@@ -22,6 +22,7 @@
 #include "ladspainstance.h"
 
 #include <cstring>
+#include <assert.h>
 
 using namespace std;
 
@@ -105,16 +106,8 @@ bool CLadspaInstance::Connect()
       else
       {
         controlmap::iterator it = m_controlinputs.find(m_plugin->PortName(port));
-        if (it != m_controlinputs.end())
-        {
-          m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
-        }
-        else
-        {
-          LogError("Client \"%s\" unable to find control input \"%s\" (THIS IS A BUG)",
-                   m_name.c_str(), m_plugin->PortName(port));
-          return false;
-        }
+        assert(it != m_controlinputs.end());
+        m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
       }
     }
   }
@@ -125,16 +118,8 @@ bool CLadspaInstance::Connect()
     if (m_plugin->IsControlOutput(port))
     {
       controlmap::iterator it = m_controloutputs.find(m_plugin->PortName(port));
-      if (it != m_controloutputs.end())
-      {
-        m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
-      }
-      else
-      {
-        LogError("Client \"%s\" unable to find control output \"%s\" (THIS IS A BUG)",
-                 m_name.c_str(), m_plugin->PortName(port));
-        return false;
-      }
+      assert(it != m_controloutputs.end());
+      m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
     }
   }
 
