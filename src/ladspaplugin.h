@@ -33,7 +33,7 @@ class CLadspaPlugin
     void LoadAllSymbols();
 
     const LADSPA_Descriptor* Descriptor() { return m_descriptor; }
-    std::string&             FileName()   { return m_filename;   }
+    const std::string&       FileName()   { return m_filename;   }
 
     unsigned long UniqueID()              { return m_descriptor->UniqueID;  }
     const char*   Label()                 { return m_descriptor->Label;     }
