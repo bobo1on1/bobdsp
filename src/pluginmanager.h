@@ -33,11 +33,11 @@ class CPluginManager
     CPluginManager();
     ~CPluginManager();
 
-    void           LoadPlugins(std::vector<std::string>& paths);
-    CLadspaPlugin* GetPlugin(int64_t uniqueid, const char* label);
-    std::string    PluginsToJSON();
-    void           PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port);
-    void           SetSamplerate(int samplerate);
+    void            LoadPlugins(std::vector<std::string>& paths);
+    CLadspaPlugin*  GetPlugin(int64_t uniqueid, const char* label);
+    CJSONGenerator* PluginsToJSON();
+    void            PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port);
+    void            SetSamplerate(int samplerate);
 
   private:
     void LoadPluginsPath(std::string& path);

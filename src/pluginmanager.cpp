@@ -173,70 +173,70 @@ CLadspaPlugin* CPluginManager::GetPlugin(int64_t uniqueid, const char* label)
   return ladspaplugin;
 }
 
-std::string CPluginManager::PluginsToJSON()
+CJSONGenerator* CPluginManager::PluginsToJSON()
 {
-  CJSONGenerator generator;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  generator.MapOpen();
-  generator.AddString("plugins");
-  generator.ArrayOpen();
+  generator->MapOpen();
+  generator->AddString("plugins");
+  generator->ArrayOpen();
 
   CLock lock(m_mutex);
   for (list<CLadspaPlugin*>::iterator it = m_plugins.begin(); it != m_plugins.end(); it++)
   {
-    generator.MapOpen();
+    generator->MapOpen();
 
-    generator.AddString("name");
-    generator.AddString((*it)->Name());
-    generator.AddString("label");
-    generator.AddString((*it)->Label());
-    generator.AddString("maker");
-    generator.AddString((*it)->Maker());
-    generator.AddString("copyright");
-    generator.AddString((*it)->Copyright());
-    generator.AddString("uniqueid");
-    generator.AddInt((*it)->UniqueID());
-    generator.AddString("filename");
-    generator.AddString((*it)->FileName());
+    generator->AddString("name");
+    generator->AddString((*it)->Name());
+    generator->AddString("label");
+    generator->AddString((*it)->Label());
+    generator->AddString("maker");
+    generator->AddString((*it)->Maker());
+    generator->AddString("copyright");
+    generator->AddString((*it)->Copyright());
+    generator->AddString("uniqueid");
+    generator->AddInt((*it)->UniqueID());
+    generator->AddString("filename");
+    generator->AddString((*it)->FileName());
 
-    generator.AddString("ports");
-    generator.ArrayOpen();
+    generator->AddString("ports");
+    generator->ArrayOpen();
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
     {
-      generator.MapOpen();
-      generator.AddString("name");
-      generator.AddString((*it)->PortName(port));
-      generator.AddString("direction");
-      generator.AddString((*it)->DirectionStr(port));
-      generator.AddString("type");
-      generator.AddString((*it)->TypeStr(port));
-      generator.MapClose();
+      generator->MapOpen();
+      generator->AddString("name");
+      generator->AddString((*it)->PortName(port));
+      generator->AddString("direction");
+      generator->AddString((*it)->DirectionStr(port));
+      generator->AddString("type");
+      generator->AddString((*it)->TypeStr(port));
+      generator->MapClose();
     }
-    generator.ArrayClose();
+    generator->ArrayClose();
 
-    generator.AddString("controls");
-    generator.ArrayOpen();
+    generator->AddString("controls");
+    generator->ArrayOpen();
     for (unsigned long port = 0; port < (*it)->PortCount(); port++)
     {
       if ((*it)->IsControlInput(port))
       {
-        generator.MapOpen();
-        generator.AddString("name");
-        generator.AddString((*it)->PortName(port));
-        PortRangeDescriptionToJSON(generator, *it, port);
-        generator.MapClose();
+        generator->MapOpen();
+        generator->AddString("name");
+        generator->AddString((*it)->PortName(port));
+        PortRangeDescriptionToJSON(*generator, *it, port);
+        generator->MapClose();
       }
     }
-    generator.ArrayClose();
+    generator->ArrayClose();
 
-    generator.MapClose();
+    generator->MapClose();
   }
   lock.Leave();
 
-  generator.ArrayClose();
-  generator.MapClose();
+  generator->ArrayClose();
+  generator->MapClose();
 
-  return generator.ToString();
+  return generator;
 }
 
 void CPluginManager::PortRangeDescriptionToJSON(CJSONGenerator& generator, CLadspaPlugin* plugin, unsigned long port)
