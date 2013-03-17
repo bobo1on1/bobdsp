@@ -315,19 +315,8 @@ void CJackClient::PJackInfoShutdownCallback(jack_status_t code, const char *reas
   m_exitreason = reason;
   m_exitstatus = code;
 
-  //send message to the main loop
-  //try for one second to make sure it gets there
-  int64_t start = GetTimeUs();
-  do
-  {
-    if (WriteMessage(MsgExited))
-      return;
-
-    USleep(100); //don't busy spin
-  }
-  while (GetTimeUs() - start < 1000000);
-
-  LogError("Client \"%s\" unable to write exit msg to pipe", m_name.c_str());
+  //tell the main loop this client has exited
+  WriteMessage(MsgExited);
 }
 
 void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg)

@@ -94,7 +94,10 @@ ClientMessage CMessagePump::GetMessage()
 bool CMessagePump::WriteMessage(uint8_t msg)
 {
   if (m_pipe[1] == -1)
+  {
+    LogError("%s message pipe closed", m_name);
     return true; //can't write
+  }
 
   int returnv = write(m_pipe[1], &msg, 1);
   if (returnv == 1)
@@ -103,7 +106,7 @@ bool CMessagePump::WriteMessage(uint8_t msg)
   if (returnv == -1)
   {
     int tmperrno = errno;
-    LogError("%s error writing msg %i to pipe: \"%s\"", m_name, msg, GetErrno().c_str());
+    LogError("%s error writing msg %s to pipe: \"%s\"", m_name, MsgToString(msg), GetErrno().c_str());
     if (tmperrno != EINTR && tmperrno != EAGAIN)
     {
       close(m_pipe[1]); //pipe broken, close it
