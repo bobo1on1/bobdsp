@@ -154,9 +154,6 @@ void CBobDSP::Setup()
 
   LoadSettings();
 
-  //load the port connections
-  LoadConnectionsFromFile();
-
   //load the visualizers
   LoadVisualizersFromFile();
 
@@ -395,7 +392,7 @@ void CBobDSP::ProcessMessages(int64_t timeout)
   int nrclientpipes = m_clientsmanager.ClientPipes(fds, 5);
   unsigned int nrfds = nrclientpipes;
 
-  int pipes[5] = { m_stdout[0], m_stderr[0], m_signalfd, m_httpserver.MsgPipe(), m_clientsmanager.MsgPipe() };
+  int pipes[5] = { m_stdout[0], m_stderr[0], m_signalfd, m_portconnector.MsgPipe(), m_clientsmanager.MsgPipe() };
   int pipenrs[5] = { -1, -1, -1, -1, -1 };
 
   for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
@@ -448,7 +445,7 @@ void CBobDSP::ProcessMessages(int64_t timeout)
 
     //check for message from the http server
     if (pipenrs[3] != -1 && (fds[pipenrs[3]].revents & POLLIN))
-      ProcessManagerMessages(m_httpserver);
+      ProcessManagerMessages(m_portconnector);
 
     //check for message from the clients manager
     if (pipenrs[4] != -1 && (fds[pipenrs[4]].revents & POLLIN))
@@ -620,67 +617,8 @@ void CBobDSP::LoadSettings()
   }
 
   m_clientsmanager.LoadSettingsFromFile(false);
-  m_portconnector.LoadSettingsFromFile(homepath + ".bobdsp/connections.json");
+  m_portconnector.LoadSettingsFromFile();
   m_visualizer.LoadSettingsFromFile(homepath + ".bobdsp/visualizers.json");
-}
-
-#define CONNECTIONSFILE "connections.xml"
-
-bool CBobDSP::LoadConnectionsFromFile()
-{
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return false;
-  }
-
-  string filename = homepath + ".bobdsp/" + CONNECTIONSFILE;
-  Log("Loading connection settings from %s", filename.c_str());
-
-  TiXmlDocument connectionsfile;
-  connectionsfile.LoadFile(filename.c_str());
-
-  if (connectionsfile.Error())
-  {
-    LogError("Unable to load %s: %s %s %s", filename.c_str(), connectionsfile.ErrorDesc(),
-        connectionsfile.ErrorRow() ? (string("Row: ") + ToString(connectionsfile.ErrorRow())).c_str() : "",
-        connectionsfile.ErrorCol() ? (string("Col: ") + ToString(connectionsfile.ErrorCol())).c_str() : "");
-    return false;
-  }
-
-  TiXmlElement* root = connectionsfile.RootElement();
-  if (!root)
-  {
-    LogError("Unable to get <connections> root node from %s", filename.c_str());
-    return false;
-  }
-
-  return m_portconnector.ConnectionsFromXML(root, false);
-}
-
-bool CBobDSP::SaveConnectionsToFile(TiXmlElement* connections)
-{
-  TiXmlDocument doc;
-  doc.LinkEndChild(connections);
-
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return false;
-  }
-
-  string filename = homepath + ".bobdsp/" + CONNECTIONSFILE;
-  Log("Saving connection settings to %s", filename.c_str());
-
-  if (!doc.SaveFile(filename))
-  {
-    LogError("Error saving connections: \"%s\"", doc.ErrorDesc());
-    return false;
-  }
-
-  return true;
 }
 
 bool CBobDSP::LoadVisualizersFromFile()

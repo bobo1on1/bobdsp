@@ -25,8 +25,8 @@
 #include <list>
 #include <pcrecpp.h>
 #include "util/JSON.h"
-#include "util/incltinyxml.h"
 #include "util/condition.h"
+#include "clientmessage.h"
 
 class CBobDSP;
 
@@ -119,7 +119,7 @@ class CJackPort
     int         m_flags;
 };
 
-class CPortConnector
+class CPortConnector : public CMessagePump
 {
   public:
     CPortConnector(CBobDSP& bobdsp);
@@ -132,14 +132,13 @@ class CPortConnector
 
     void Stop();
 
-    void            LoadSettingsFromFile(const std::string& filename);
-    bool            ConnectionsFromXML(TiXmlElement* root, bool strict);
-    bool            ConnectionsFromJSON(const std::string& json);
+    void            LoadSettingsFromFile();
+    CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
+
     CJSONGenerator* ConnectionsToJSON();
-    TiXmlElement*   ConnectionsToXML();
     CJSONGenerator* PortIndexToJSON();
     CJSONGenerator* PortsToJSON();
-    CJSONGenerator* PortsToJSON(const std::string& postjson);
+    CJSONGenerator* PortsToJSON(const std::string& postjson, const std::string& source);
 
   private:
     std::vector<CPortConnection> m_connections;
@@ -149,11 +148,16 @@ class CPortConnector
     unsigned int                 m_portindex;
     CCondition                   m_condition;
     int                          m_waitingthreads;
+    bool                         m_connectionsupdated;
 
     CBobDSP&       m_bobdsp;
     jack_client_t* m_client;
     bool           m_connected;
     bool           m_wasconnected;
+
+    void SaveSettingsToFile();
+    void LoadSettings(CJSONElement* json, bool allowreload, const std::string& source);
+    bool LoadConnectionSettings(JSONArray& jsonconnections, const std::string& source);
 
     bool ConnectInternal();
     void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);

@@ -52,9 +52,6 @@ class CBobDSP
     CClientsManager& ClientsManager()  { return m_clientsmanager; }
     CVisualizer&     Visualizer()      { return m_visualizer;     }
 
-    bool SaveConnectionsToFile(TiXmlElement* connections);
-    bool LoadConnectionsFromFile();
-
   private:
     bool            m_stop;
     CPortConnector  m_portconnector;

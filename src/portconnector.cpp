@@ -19,6 +19,8 @@
 #include "util/misc.h"
 #include <utility>
 #include <errno.h>
+#include <memory>
+#include <fstream>
 
 #include "bobdsp.h"
 #include "portconnector.h"
@@ -27,7 +29,10 @@
 
 using namespace std;
 
+#define SETTINGSFILE ".bobdsp/connections.json"
+
 CPortConnector::CPortConnector(CBobDSP& bobdsp) :
+  CMessagePump("portconnector"),
   m_bobdsp(bobdsp)
 {
   m_client = NULL;
@@ -36,6 +41,7 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   m_stop = false;
   m_portindex = 0;
   m_waitingthreads = 0;
+  m_connectionsupdated = false;
 }
 
 CPortConnector::~CPortConnector()
@@ -71,112 +77,217 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
-void CPortConnector::LoadSettingsFromFile(const std::string& filename)
+void CPortConnector::LoadSettingsFromFile()
 {
-}
-
-bool CPortConnector::ConnectionsFromXML(TiXmlElement* root, bool strict)
-{
-  std::vector<CPortConnection> connections;
-
-  bool valid = true;
-
-  for (TiXmlElement* xmlconnection = root->FirstChildElement("connection"); xmlconnection != NULL;
-       xmlconnection = xmlconnection->NextSiblingElement("connection"))
+  string homepath;
+  if (!GetHomePath(homepath))
   {
-    LogDebug("Read <connection> element");
-
-    bool loadfailed = false;
-
-    LOADSTRELEMENT(xmlconnection, in, MANDATORY);
-    LOADSTRELEMENT(xmlconnection, out, MANDATORY);
-    LOADSTRELEMENT(xmlconnection, disconnect, OPTIONAL);
-
-    if (loadfailed)
-    {
-      valid = false;
-      continue;
-    }
-
-    LogDebug("in:\"%s\" out:\"%s\"", in->GetText(), out->GetText());
-
-    bool outdisconnect = false;
-    bool indisconnect = false;
-
-    if (!disconnect_loadfailed)
-    {
-      LogDebug("disconnect: \"%s\"", disconnect->GetText());
-      string strdisconnect = disconnect->GetText();
-      if (strdisconnect == "in")
-        indisconnect = true;
-      else if (strdisconnect == "out")
-        outdisconnect = true;
-      else if (strdisconnect == "both")
-        indisconnect = outdisconnect = true;
-      else if (strdisconnect != "none")
-      {
-        LogError("Invalid value \"%s\" for element <disconnect>", strdisconnect.c_str());
-        valid = false;
-      }
-    }
-
-    connections.push_back(CPortConnection(out->GetText(), in->GetText(), outdisconnect, indisconnect));
+    LogError("Unable to get home path");
+    return;
   }
 
-  if (!strict || valid)
-  {
-    //save any connections that were removed, so we can disconnect those ports
-    CLock lock(m_condition);
-    for (vector<CPortConnection>::iterator oldit = m_connections.begin(); oldit != m_connections.end(); oldit++)
-    {
-      bool found = false;
-      for (vector<CPortConnection>::iterator newit = connections.begin(); newit != connections.end(); newit++)
-      {
-        if (*oldit == *newit)
-        {
-          found = true;
-          break;
-        }
-      }
-      if (!found)
-      {
-        m_removed.push_back(*oldit);
-        LogDebug("removed connection out:\"%s\" in:\"%s\" disconnect:\"%s\"",
-            oldit->Out().c_str(), oldit->In().c_str(), oldit->DisconnectStr());
-      }
-    }
-    
-    //store the new connections
-    m_connections.swap(connections);
-  }
+  string filename = homepath + SETTINGSFILE;
 
-  return valid;
-}
-
-bool CPortConnector::ConnectionsFromJSON(const std::string& json)
-{
-  TiXmlElement* root = JSON::JSONToXML(json);
-
-  bool success = true;
+  Log("Loading connection settings from %s", filename.c_str());
 
   CLock lock(m_condition);
 
-  TiXmlNode* connections = root->FirstChildElement("connections");
-  if (connections && connections->Type() == TiXmlNode::TINYXML_ELEMENT)
-    success = ConnectionsFromXML(connections->ToElement(), true);
+  string* error;
+  CJSONElement* json = ParseJSONFile(filename, error);
+  auto_ptr<CJSONElement> jsonauto(json);
 
-  bool loadfailed = false;
+  if (error)
+  {
+    LogError("%s: %s", filename.c_str(), error->c_str());
+    delete error;
+    return;
+  }
 
-  LOADBOOLELEMENT(root, save, OPTIONAL, false, POSTCHECK_NONE);
-  if (success && save_p)
-    m_bobdsp.SaveConnectionsToFile(ConnectionsToXML());
+  LoadSettings(json, false, filename);
 
-  LOADBOOLELEMENT(root, reload, OPTIONAL, false, POSTCHECK_NONE);
-  if (reload_p)
-    m_bobdsp.LoadConnectionsFromFile();
+  //if this is called from the main thread, no need to send a message
+  m_connectionsupdated = false;
+}
 
-  delete root;
-  return success;
+CJSONGenerator* CPortConnector::LoadSettingsFromString(const std::string& strjson, const std::string& source,
+                                                       bool returnsettings /*= false*/)
+{
+  string* error;
+  CJSONElement* json = ParseJSON(strjson, error);
+  auto_ptr<CJSONElement> jsonauto(json);
+
+  if (error)
+  {
+    LogError("%s: %s", source.c_str(), error->c_str());
+    delete error;
+  }
+
+  CLock lock(m_condition);
+
+  LoadSettings(json, true, source);
+
+  //if the connections are updated, signal the main thread
+  if (m_connectionsupdated)
+    m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
+
+  if (returnsettings)
+    return ConnectionsToJSON();
+  else
+    return NULL;
+}
+
+void CPortConnector::SaveSettingsToFile()
+{
+  string homepath;
+  if (!GetHomePath(homepath))
+  {
+    LogError("Unable to get home path");
+    return;
+  }
+
+  string filename = homepath + SETTINGSFILE;
+
+  CLock lock(m_condition);
+
+  ofstream settingsfile(filename.c_str());
+  if (!settingsfile.is_open())
+  {
+    LogError("Unable to open %s: %s", filename.c_str(), GetErrno().c_str());
+    return;
+  }
+
+  Log("Saving settings to %s", filename.c_str());
+  CJSONGenerator* generator = ConnectionsToJSON();
+  settingsfile.write((const char*)generator->GetGenBuf(), generator->GetGenBufSize());
+
+  if (settingsfile.fail())
+    LogError("Error writing %s: %s", filename.c_str(), GetErrno().c_str());
+
+  delete generator;
+}
+
+void CPortConnector::LoadSettings(CJSONElement* json, bool allowreload, const std::string& source)
+{
+  if (!json->IsMap())
+  {
+    LogError("%s: invalid value for root node: %s", source.c_str(), ToJSON(json).c_str());
+    return;
+  }
+
+  //check the connections array and action string first, then parse them if they're valid
+  JSONMap::iterator connections = json->AsMap().find("connections");
+  if (connections != json->AsMap().end() && !connections->second->IsArray())
+  {
+    LogError("%s: invalid value for connections: %s", source.c_str(), ToJSON(connections->second).c_str());
+    return;
+  }
+
+  JSONMap::iterator action = json->AsMap().find("action");
+  if (action != json->AsMap().end() && !action->second->IsString())
+  {
+    LogError("%s: invalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
+    return;
+  }
+
+  if (connections != json->AsMap().end())
+  {
+    if (LoadConnectionSettings(connections->second->AsArray(), source))
+      m_connectionsupdated = true;
+    else
+      return;
+  }
+
+  if (action != json->AsMap().end())
+  {
+    if (action->second->AsString() == "save")
+    {
+      SaveSettingsToFile();
+    }
+    else if (action->second->AsString() == "reload" && allowreload)
+    {
+      LoadSettingsFromFile();
+      m_connectionsupdated = true;
+    }
+  }
+}
+
+bool CPortConnector::LoadConnectionSettings(JSONArray& jsonconnections, const std::string& source)
+{
+  std::vector<CPortConnection> connections;
+
+  //iterate over the connections, make sure they're valid, then store them in conarray
+  for (JSONArray::iterator it = jsonconnections.begin(); it != jsonconnections.end(); it++)
+  {
+    if (!(*it)->IsMap())
+    {
+      LogError("%s: invalid value for connection %s", source.c_str(), ToJSON(*it).c_str());
+      return false;
+    }
+
+    JSONMap::iterator regex[2];
+    JSONMap::iterator disconnect[2];
+    for (int i = 0; i < 2; i++)
+    {
+      string search(i == 0 ? "out" : "in");
+
+      regex[i] = (*it)->AsMap().find(search);
+      if (regex[i] == (*it)->AsMap().end())
+      {
+        LogError("%s: %s value missing", source.c_str(), search.c_str());
+        return false;
+      }
+      else if (!regex[i]->second->IsString())
+      {
+        LogError("%s: invalid value for %s: %s", source.c_str(), search.c_str(), ToJSON(regex[i]->second).c_str());
+        return false;
+      }
+
+      search += "disconnect";
+      disconnect[i] = (*it)->AsMap().find(search);
+      if (disconnect[i] == (*it)->AsMap().end())
+      {
+        LogError("%s: %s value missing", source.c_str(), search.c_str());
+        return false;
+      }
+      else if (!disconnect[i]->second->IsBool())
+      {
+        LogError("%s: invalid value for %s: %s", source.c_str(), search.c_str(), ToJSON(disconnect[i]->second).c_str());
+        return false;
+      }
+    }
+
+    connections.push_back(CPortConnection(regex[0]->second->AsString(), regex[1]->second->AsString(),
+                                       disconnect[0]->second->AsBool(), disconnect[1]->second->AsBool()));
+
+    LogDebug("Loaded connection out:\"%s\" in:\"%s\", outdisconnect:%s, indisconnect:%s",
+             connections.back().Out().c_str(), connections.back().In().c_str(),
+             ToString(connections.back().OutDisconnect()).c_str(), ToString(connections.back().InDisconnect()).c_str());
+  }
+
+  //save any connections that were removed, any connections matching these regexes
+  //and not matching any other regex combination will be disconnected in DisconnectPorts()
+  for (vector<CPortConnection>::iterator oldit = m_connections.begin(); oldit != m_connections.end(); oldit++)
+  {
+    bool found = false;
+    for (vector<CPortConnection>::iterator newit = connections.begin(); newit != connections.end(); newit++)
+    {
+      if (*oldit == *newit)
+      {
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+    {
+      m_removed.push_back(*oldit);
+      LogDebug("removed connection out:\"%s\" in:\"%s\"", oldit->Out().c_str(), oldit->In().c_str());
+    }
+  }
+
+  //store the new connections
+  m_connections.swap(connections);
+
+  return true;
 }
 
 CJSONGenerator* CPortConnector::ConnectionsToJSON()
@@ -185,8 +296,6 @@ CJSONGenerator* CPortConnector::ConnectionsToJSON()
 
   generator->MapOpen();
   generator->AddString("connections");
-  generator->MapOpen();
-  generator->AddString("connection");
   generator->ArrayOpen();
 
   CLock lock(m_condition);
@@ -198,8 +307,10 @@ CJSONGenerator* CPortConnector::ConnectionsToJSON()
     generator->AddString(it->Out());
     generator->AddString("in");
     generator->AddString(it->In());
-    generator->AddString("disconnect");
-    generator->AddString(it->DisconnectStr());
+    generator->AddString("outdisconnect");
+    generator->AddBool(it->OutDisconnect());
+    generator->AddString("indisconnect");
+    generator->AddBool(it->InDisconnect());
 
     generator->MapClose();
   }
@@ -207,36 +318,8 @@ CJSONGenerator* CPortConnector::ConnectionsToJSON()
 
   generator->ArrayClose();
   generator->MapClose();
-  generator->MapClose();
 
   return generator;
-}
-
-TiXmlElement* CPortConnector::ConnectionsToXML()
-{
-  TiXmlElement* root = new TiXmlElement("connections");
-
-  CLock lock(m_condition);
-  for (vector<CPortConnection>::iterator it = m_connections.begin(); it != m_connections.end(); it++)
-  {
-    TiXmlElement out("out");
-    out.InsertEndChild(TiXmlText(it->Out()));
-
-    TiXmlElement in("in");
-    in.InsertEndChild(TiXmlText(it->In()));
-
-    TiXmlElement disconnect("disconnect");
-    disconnect.InsertEndChild(TiXmlText(it->DisconnectStr()));
-
-    TiXmlElement connection("connection");
-    connection.InsertEndChild(out);
-    connection.InsertEndChild(in);
-    connection.InsertEndChild(disconnect);
-
-    root->InsertEndChild(connection);
-  }
-
-  return root;
 }
 
 CJSONGenerator* CPortConnector::PortIndexToJSON()
@@ -244,13 +327,10 @@ CJSONGenerator* CPortConnector::PortIndexToJSON()
   CJSONGenerator* generator = new CJSONGenerator(true);
 
   generator->MapOpen();
-  generator->AddString("ports");
-  generator->MapOpen();
   generator->AddString("portindex");
   CLock lock(m_condition);
   generator->AddInt(m_portindex);
   lock.Leave();
-  generator->MapClose();
   generator->MapClose();
 
   return generator;
@@ -264,11 +344,9 @@ CJSONGenerator* CPortConnector::PortsToJSON()
 
   generator->MapOpen();
 
-  generator->AddString("ports");
-  generator->MapOpen();
   generator->AddString("portindex");
   generator->AddInt(m_portindex);
-  generator->AddString("port");
+  generator->AddString("ports");
   generator->ArrayOpen();
 
   for (list<CJackPort>::iterator it = m_jackports.begin(); it != m_jackports.end(); it++)
@@ -285,23 +363,54 @@ CJSONGenerator* CPortConnector::PortsToJSON()
 
   generator->ArrayClose();
   generator->MapClose();
-  generator->MapClose();
 
   return generator;
 }
 
 #define MAXWAITINGTHREADS 100
 
-CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson)
+CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const std::string& source)
 {
-  TiXmlElement* root = JSON::JSONToXML(postjson);
+  string* error;
+  CJSONElement* json = ParseJSON(postjson, error);
+  auto_ptr<CJSONElement> jsonauto(json);
 
-  bool loadfailed = false;
+  //parse portindex and timeout, they should be JSON numbers
+  //if they're invalid, these defaults will be used instead
+  int64_t portindex = -1;
+  int64_t timeout   = 0;
+  if (error)
+  {
+    LogError("%s: %s", source.c_str(), error->c_str());
+    delete error;
+  }
+  else
+  {
+    if (!json->IsMap())
+    {
+      LogError("%s: invalid value for root node: %s", source.c_str(), ToJSON(json).c_str());
+    }
+    else
+    {
+      JSONMap::iterator jsonportindex = json->AsMap().find("portindex");
+      if (jsonportindex != json->AsMap().end())
+      {
+        if (jsonportindex->second->IsNumber())
+          portindex = jsonportindex->second->ToInt64();
+        else
+          LogError("%s: invalid value for portindex: %s", source.c_str(), ToJSON(jsonportindex->second).c_str());
+      }
 
-  LOADINTELEMENT(root, timeout, OPTIONAL, 0, POSTCHECK_ZEROORHIGHER);
-  LOADINTELEMENT(root, portindex, OPTIONAL, -1, POSTCHECK_NONE);
-
-  delete root;
+      JSONMap::iterator jsontimeout = json->AsMap().find("timeout");
+      if (jsontimeout != json->AsMap().end())
+      {
+        if (jsontimeout->second->IsNumber())
+          timeout = jsontimeout->second->ToInt64();
+        else
+          LogError("%s: invalid value for timeout: %s", source.c_str(), ToJSON(jsontimeout->second).c_str());
+      }
+    }
+  }
 
   CLock lock(m_condition);
 
@@ -315,14 +424,14 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson)
   }
 
   //wait for the port index to change with the client requested timeout
-  //the maximum timeout is one hour
-  if (portindex_p == (int64_t)m_portindex && timeout_p > 0 && !m_stop)
-    m_condition.Wait(Min(timeout_p, 3600 * 1000) * 1000, m_portindex, (unsigned int)portindex_p);
+  //the maximum timeout is one minute
+  if (portindex == (int64_t)m_portindex && timeout > 0 && !m_stop)
+    m_condition.Wait(Min(timeout, 60000) * 1000, m_portindex, (unsigned int)portindex);
 
   m_waitingthreads--;
 
   //if the portindex is the same, only send that, if it changed, send the ports too
-  if (portindex_p == (int64_t)m_portindex)
+  if (portindex == (int64_t)m_portindex)
     return PortIndexToJSON();
   else
     return PortsToJSON();

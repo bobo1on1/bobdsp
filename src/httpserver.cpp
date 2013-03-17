@@ -231,13 +231,12 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
       if (strurl == "/connections")
       {
-        httpserver->m_bobdsp.PortConnector().ConnectionsFromJSON(postdata);
-        httpserver->WriteMessage(MsgConnectionsUpdated); //tell the main loop to check the port connections
-        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
+        CJSONGenerator* generator = httpserver->m_bobdsp.PortConnector().LoadSettingsFromString(postdata, host, true);
+        return CreateJSONDownloadResponse(connection, generator);
       }
       else if (strurl == "/ports")
       {
-        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata));
+        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata, host));
       }
       else if (strurl == "/clients")
       {
