@@ -28,28 +28,24 @@
 #include "jackclient.h"
 #include "ladspaplugin.h"
 #include "clientmessage.h"
+#include "jsonsettings.h"
 #include "util/mutex.h"
 #include "util/JSON.h"
 
 class CBobDSP;
 
-class CClientsManager : public CMessagePump
+class CClientsManager : public CMessagePump, public CJSONSettings
 {
   public:
     CClientsManager(CBobDSP& bobdsp);
     ~CClientsManager();
 
     void            Stop();
-
-    void            LoadSettingsFromFile(bool reload);
-    CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
-    CJSONGenerator* ClientsToJSON(bool portdescription);
-
     bool            Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
-
     int             ClientPipes(pollfd*& fds, int extra);
-
     void            ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
+
+    CJSONGenerator* ClientsToJSON(bool portdescription);
 
   private:
     CBobDSP&                  m_bobdsp;
@@ -64,19 +60,19 @@ class CClientsManager : public CMessagePump
       SUCCESS
     };
 
-    void            SaveSettingsToFile();
-    void            LoadSettings(CJSONElement* json, bool allowreload, const std::string& source);
-    void            LoadClientSettings(CJSONElement* jsonclient, std::string source);
-    void            AddClient(JSONMap& client, const std::string& name, const std::string& source);
-    void            DeleteClient(JSONMap& client, const std::string& name, const std::string& source);
-    void            UpdateClient(JSONMap& client, const std::string& name, const std::string& source);
-    LOADSTATE       LoadDouble(JSONMap& client, double& value, const std::string& name, const std::string& source);
-    LOADSTATE       LoadInt64(JSONMap& client, int64_t& value, const std::string& name, const std::string& source);
-    CLadspaPlugin*  LoadPlugin(const std::string& source, JSONMap& client);
-    bool            LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues);
-    bool            CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
-                                  controlmap& controlvalues, bool checkmissing);
-    CJackClient*    FindClient(const std::string& name);
+    virtual CJSONGenerator* SettingsToJSON(bool tofile);
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
+    void                    LoadClientSettings(CJSONElement* jsonclient, std::string source);
+    void                    AddClient(JSONMap& client, const std::string& name, const std::string& source);
+    void                    DeleteClient(JSONMap& client, const std::string& name, const std::string& source);
+    void                    UpdateClient(JSONMap& client, const std::string& name, const std::string& source);
+    LOADSTATE               LoadDouble(JSONMap& client, double& value, const std::string& name, const std::string& source);
+    LOADSTATE               LoadInt64(JSONMap& client, int64_t& value, const std::string& name, const std::string& source);
+    CLadspaPlugin*          LoadPlugin(const std::string& source, JSONMap& client);
+    bool                    LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues);
+    bool                    CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
+                                          controlmap& controlvalues, bool checkmissing);
+    CJackClient*            FindClient(const std::string& name);
 };
 
 #endif //CLIENTSMANAGER_H

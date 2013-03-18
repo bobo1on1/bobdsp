@@ -83,6 +83,7 @@ def build(bld):
                       src/clientsmanager.cpp\
                       src/httpserver.cpp\
                       src/jackclient.cpp\
+                      src/jsonsettings.cpp\
                       src/ladspainstance.cpp\
                       src/ladspaplugin.cpp\
                       src/pluginmanager.cpp\

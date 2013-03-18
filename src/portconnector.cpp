@@ -33,6 +33,7 @@ using namespace std;
 
 CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   CMessagePump("portconnector"),
+  CJSONSettings(SETTINGSFILE, "connection", m_condition),
   m_bobdsp(bobdsp)
 {
   m_client = NULL;
@@ -77,119 +78,29 @@ void CPortConnector::Disconnect()
   m_connected = false;
 }
 
-void CPortConnector::LoadSettingsFromFile()
+CJSONGenerator* CPortConnector::SettingsToJSON(bool tofile)
 {
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return;
-  }
-
-  string filename = homepath + SETTINGSFILE;
-
-  Log("Loading connection settings from %s", filename.c_str());
-
-  CLock lock(m_condition);
-
-  string* error;
-  CJSONElement* json = ParseJSONFile(filename, error);
-  auto_ptr<CJSONElement> jsonauto(json);
-
-  if (error)
-  {
-    LogError("%s: %s", filename.c_str(), error->c_str());
-    delete error;
-    return;
-  }
-
-  LoadSettings(json, false, filename);
-
-  //if this is called from the main thread, no need to send a message
-  m_connectionsupdated = false;
+  return ConnectionsToJSON();
 }
 
-CJSONGenerator* CPortConnector::LoadSettingsFromString(const std::string& strjson, const std::string& source,
-                                                       bool returnsettings /*= false*/)
+void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
 {
-  string* error;
-  CJSONElement* json = ParseJSON(strjson, error);
-  auto_ptr<CJSONElement> jsonauto(json);
-
-  if (error)
-  {
-    LogError("%s: %s", source.c_str(), error->c_str());
-    delete error;
-  }
-
-  CLock lock(m_condition);
-
-  LoadSettings(json, true, source);
-
-  //if the connections are updated, signal the main thread
-  if (m_connectionsupdated)
-    m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
-
-  if (returnsettings)
-    return ConnectionsToJSON();
-  else
-    return NULL;
-}
-
-void CPortConnector::SaveSettingsToFile()
-{
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return;
-  }
-
-  string filename = homepath + SETTINGSFILE;
-
-  CLock lock(m_condition);
-
-  ofstream settingsfile(filename.c_str());
-  if (!settingsfile.is_open())
-  {
-    LogError("Unable to open %s: %s", filename.c_str(), GetErrno().c_str());
-    return;
-  }
-
-  Log("Saving settings to %s", filename.c_str());
-  CJSONGenerator* generator = ConnectionsToJSON();
-  settingsfile.write((const char*)generator->GetGenBuf(), generator->GetGenBufSize());
-
-  if (settingsfile.fail())
-    LogError("Error writing %s: %s", filename.c_str(), GetErrno().c_str());
-
-  delete generator;
-}
-
-void CPortConnector::LoadSettings(CJSONElement* json, bool allowreload, const std::string& source)
-{
-  if (!json->IsMap())
-  {
-    LogError("%s: invalid value for root node: %s", source.c_str(), ToJSON(json).c_str());
-    return;
-  }
-
   //check the connections array and action string first, then parse them if they're valid
-  JSONMap::iterator connections = json->AsMap().find("connections");
-  if (connections != json->AsMap().end() && !connections->second->IsArray())
+  JSONMap::iterator connections = root.find("connections");
+  if (connections != root.end() && !connections->second->IsArray())
   {
     LogError("%s: invalid value for connections: %s", source.c_str(), ToJSON(connections->second).c_str());
     return;
   }
 
-  JSONMap::iterator action = json->AsMap().find("action");
-  if (action != json->AsMap().end() && !action->second->IsString())
+  JSONMap::iterator action = root.find("action");
+  if (action != root.end() && !action->second->IsString())
   {
     LogError("%s: invalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
     return;
   }
 
-  if (connections != json->AsMap().end())
+  if (connections != root.end())
   {
     if (LoadConnectionSettings(connections->second->AsArray(), source))
       m_connectionsupdated = true;
@@ -197,7 +108,7 @@ void CPortConnector::LoadSettings(CJSONElement* json, bool allowreload, const st
       return;
   }
 
-  if (action != json->AsMap().end())
+  if (action != root.end())
   {
     if (action->second->AsString() == "save")
     {
@@ -205,10 +116,14 @@ void CPortConnector::LoadSettings(CJSONElement* json, bool allowreload, const st
     }
     else if (action->second->AsString() == "reload" && allowreload)
     {
-      LoadSettingsFromFile();
+      LoadSettingsFromFile(true);
       m_connectionsupdated = true;
     }
   }
+
+  //if the connections are updated, signal the main thread
+  if (m_connectionsupdated)
+    m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
 }
 
 bool CPortConnector::LoadConnectionSettings(JSONArray& jsonconnections, const std::string& source)

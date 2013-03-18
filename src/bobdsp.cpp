@@ -617,7 +617,7 @@ void CBobDSP::LoadSettings()
   }
 
   m_clientsmanager.LoadSettingsFromFile(false);
-  m_portconnector.LoadSettingsFromFile();
+  m_portconnector.LoadSettingsFromFile(false);
   m_visualizer.LoadSettingsFromFile(homepath + ".bobdsp/visualizers.json");
 }
 

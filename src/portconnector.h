@@ -27,6 +27,7 @@
 #include "util/JSON.h"
 #include "util/condition.h"
 #include "clientmessage.h"
+#include "jsonsettings.h"
 
 class CBobDSP;
 
@@ -119,7 +120,7 @@ class CJackPort
     int         m_flags;
 };
 
-class CPortConnector : public CMessagePump
+class CPortConnector : public CMessagePump, public CJSONSettings
 {
   public:
     CPortConnector(CBobDSP& bobdsp);
@@ -131,9 +132,6 @@ class CPortConnector : public CMessagePump
     void Process(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
     void Stop();
-
-    void            LoadSettingsFromFile();
-    CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
 
     CJSONGenerator* ConnectionsToJSON();
     CJSONGenerator* PortIndexToJSON();
@@ -155,8 +153,9 @@ class CPortConnector : public CMessagePump
     bool           m_connected;
     bool           m_wasconnected;
 
-    void SaveSettingsToFile();
-    void LoadSettings(CJSONElement* json, bool allowreload, const std::string& source);
+    virtual CJSONGenerator* SettingsToJSON(bool tofile);
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
+
     bool LoadConnectionSettings(JSONArray& jsonconnections, const std::string& source);
 
     bool ConnectInternal();

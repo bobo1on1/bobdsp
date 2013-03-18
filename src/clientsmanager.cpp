@@ -33,6 +33,7 @@ using namespace std;
 
 CClientsManager::CClientsManager(CBobDSP& bobdsp):
   CMessagePump("clientsmanager"),
+  CJSONSettings(SETTINGSFILE, "client", m_mutex),
   m_bobdsp(bobdsp)
 {
   m_checkclients = false;
@@ -51,32 +52,14 @@ void CClientsManager::Stop()
     delete *it;
 }
 
-void CClientsManager::LoadSettingsFromFile(bool reload)
+CJSONGenerator* CClientsManager::SettingsToJSON(bool tofile)
 {
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return;
-  }
+  //when these settings are being written to a file, don't add the portdescription
+  return ClientsToJSON(!tofile);
+}
 
-  string filename = homepath + SETTINGSFILE;
-
-  Log("Loading client settings from %s", filename.c_str());
-
-  CLock lock(m_mutex);
-
-  string* error;
-  CJSONElement* json = ParseJSONFile(filename, error);
-  auto_ptr<CJSONElement> jsonauto(json);
-
-  if (error)
-  {
-    LogError("%s: %s", filename.c_str(), error->c_str());
-    delete error;
-    return;
-  }
-
+void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
+{
   if (reload)
   {
     //reload requested, mark all clients for delete, reload the file
@@ -88,112 +71,40 @@ void CClientsManager::LoadSettingsFromFile(bool reload)
       for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
         (*it)->MarkDelete();
     }
-
-    LoadSettings(json, false, filename);
-  }
-  else
-  {
-    //load new settings, reset m_checkclients since the main thread will check all the clients anyway
-    LoadSettings(json, false, filename);
-    m_checkclients = false;
-  }
-}
-
-CJSONGenerator* CClientsManager::LoadSettingsFromString(const std::string& strjson, const std::string& source,
-                                                        bool returnsettings /*= false*/)
-{
-  string* error;
-  CJSONElement* json = ParseJSON(strjson, error);
-  auto_ptr<CJSONElement> jsonauto(json);
-
-  CLock lock(m_mutex);
-
-  if (error)
-  {
-    LogError("%s: %s", source.c_str(), error->c_str());
-    delete error;
-  }
-  else
-  {
-    LoadSettings(json, true, source);
-  }
-
-  //checks if a message need to be sent to the main thread
-  if (m_checkclients)
-    m_checkclients = !WriteMessage(MsgCheckClients);
-
-  if (returnsettings)
-    return ClientsToJSON(true);
-  else
-    return NULL;
-}
-
-void CClientsManager::SaveSettingsToFile()
-{
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return;
-  }
-
-  string filename = homepath + SETTINGSFILE;
-
-  CLock lock(m_mutex);
-
-  ofstream settingsfile(filename.c_str());
-  if (!settingsfile.is_open())
-  {
-    LogError("Unable to open %s: %s", filename.c_str(), GetErrno().c_str());
-    return;
-  }
-
-  Log("Saving settings to %s", filename.c_str());
-  CJSONGenerator* generator = ClientsToJSON(false);
-  settingsfile.write((const char*)generator->GetGenBuf(), generator->GetGenBufSize());
-
-  if (settingsfile.fail())
-    LogError("Error writing %s: %s", filename.c_str(), GetErrno().c_str());
-
-  delete generator;
-}
-
-void CClientsManager::LoadSettings(CJSONElement* json, bool allowreload, const std::string& source)
-{
-  if (!json->IsMap())
-  {
-    LogError("%s: invalid value for root element: %s", source.c_str(), ToJSON(json).c_str());
-    return;
   }
 
   //check the clients array and action string first, then parse them if they're valid
-  JSONMap::iterator clients = json->AsMap().find("clients");
-  if (clients != json->AsMap().end() && !clients->second->IsArray())
+  JSONMap::iterator clients = root.find("clients");
+  if (clients != root.end() && !clients->second->IsArray())
   {
     LogError("%s: invalid value for clients: %s", source.c_str(), ToJSON(clients->second).c_str());
     return;
   }
 
-  JSONMap::iterator action = json->AsMap().find("action");
-  if (action != json->AsMap().end() && !action->second->IsString())
+  JSONMap::iterator action = root.find("action");
+  if (action != root.end() && !action->second->IsString())
   {
     LogError("%s: invalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
     return;
   }
 
-  if (clients != json->AsMap().end())
+  if (clients != root.end())
   {
     for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
       LoadClientSettings(*it, source + ": ");
   }
 
-  if (action != json->AsMap().end())
+  if (action != root.end())
   {
     if (action->second->AsString() == "save")
       SaveSettingsToFile();
     else if (action->second->AsString() == "reload" && allowreload)
       LoadSettingsFromFile(true);
   }
+
+  //check if a message need to be sent to the main thread
+  if (m_checkclients)
+    m_checkclients = !WriteMessage(MsgCheckClients);
 }
 
 void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string source)
