@@ -487,7 +487,8 @@ static void PostProcess(yajl_handle handle, yajl_status status, string*& error,
 //converts JSON into a tree structure of CJSONElement, using libyajl for parsing
 CJSONElement* ParseJSON(const std::string& json, std::string*& error)
 {
-  //allocate a root element, this will always be set to TYPEMAP
+  //allocate a root element, the type will be set in one of the parser functions
+  //for valid JSON, this will be TYPEMAP
   CJSONElement* root = new CJSONElement();
   CJSONElement* rootptr = root; //pointer for the yajl functions
 
@@ -502,7 +503,8 @@ CJSONElement* ParseJSON(const std::string& json, std::string*& error)
 
 CJSONElement* ParseJSONFile(const std::string& filename, std::string*& error)
 {
-  //allocate a root element, this will always be set to TYPEMAP
+  //allocate a root element, the type will be set in one of the parser functions
+  //for valid JSON, this will be TYPEMAP
   CJSONElement* root = new CJSONElement();
   CJSONElement* rootptr = root; //pointer for the yajl functions
 

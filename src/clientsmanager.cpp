@@ -162,7 +162,7 @@ void CClientsManager::LoadSettings(CJSONElement* json, bool allowreload, const s
 {
   if (!json->IsMap())
   {
-    LogError("%s: invalid value for root node: %s", source.c_str(), ToJSON(json).c_str());
+    LogError("%s: invalid value for root element: %s", source.c_str(), ToJSON(json).c_str());
     return;
   }
 
