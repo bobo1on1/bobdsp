@@ -174,8 +174,6 @@ void PrintLog (const char* fmt, const char* function, LogLevel loglevel, ...)
 
   if (loglevel == LogLevelError)
     logstr += "ERROR: ";
-  else if (loglevel == LogLevelDebug)
-    logstr += "DEBUG: ";
 
   if (g_logbuff)
     logstr += g_logbuff;
