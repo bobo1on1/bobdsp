@@ -116,8 +116,8 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
     }
     else if (action->second->AsString() == "reload" && allowreload)
     {
-      LoadFile(true);
       m_connectionsupdated = true;
+      LoadFile(true);
     }
   }
 
