@@ -638,7 +638,7 @@ void CPortConnector::UpdatePorts()
   if (changed)
   {
     CLock lock(m_condition);
-    m_jackports.swap(jackports); //swap is faster here since it doesn't copy
+    m_jackports.swap(jackports);
     m_portindex++;
     m_condition.Broadcast();
   }
