@@ -22,7 +22,6 @@
 #include "util/inclstdint.h"
 #include "util/mutex.h"
 #include "util/JSON.h"
-#include "clientmessage.h"
 #include <string>
 #include <cstdarg>
 #include <cstdio>
@@ -41,8 +40,6 @@
   #define ARGHTSIZE int
 #endif
 
-#include "clientmessage.h"
-
 class CBobDSP;
 
 class CPostData
@@ -57,7 +54,7 @@ class CPostData
     bool error;
 };
 
-class CHttpServer : public CMessagePump
+class CHttpServer
 {
   public:
     CHttpServer(CBobDSP& bobdsp);
@@ -75,8 +72,6 @@ class CHttpServer : public CMessagePump
     CBobDSP&           m_bobdsp;
     CMutex             m_mutex;
     int64_t            m_postdatasize;
-
-    void             WriteMessage(uint8_t msg);
 
     static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                          const char *url, const char *method,

@@ -39,7 +39,6 @@ using namespace std;
 #define POSTDATA_SIZELIMIT (100 * 1024 * 1024) //100 mb
 
 CHttpServer::CHttpServer(CBobDSP& bobdsp):
-  CMessagePump("httpserver"),
   m_bobdsp(bobdsp)
 {
   m_daemon = NULL;
@@ -79,12 +78,6 @@ void CHttpServer::Stop()
     MHD_stop_daemon(m_daemon);
     m_daemon = NULL;
   }
-}
-
-void CHttpServer::WriteMessage(uint8_t msg)
-{
-  CLock lock(m_mutex);
-  CMessagePump::WriteMessage(msg);
 }
 
 int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,
