@@ -62,7 +62,7 @@ class CClientsManager : public CMessagePump, public CJSONSettings
 
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
     virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
-    void                    LoadClientSettings(CJSONElement* jsonclient, std::string source);
+    void                    LoadClient(CJSONElement* jsonclient, std::string source);
     void                    AddClient(JSONMap& client, const std::string& name, const std::string& source);
     void                    DeleteClient(JSONMap& client, const std::string& name, const std::string& source);
     void                    UpdateClient(JSONMap& client, const std::string& name, const std::string& source);

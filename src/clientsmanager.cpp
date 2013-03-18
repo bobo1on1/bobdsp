@@ -91,15 +91,15 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
   if (clients != root.end())
   {
     for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
-      LoadClientSettings(*it, source + ": ");
+      LoadClient(*it, source + ": ");
   }
 
   if (action != root.end())
   {
     if (action->second->AsString() == "save")
-      SaveSettingsToFile();
+      SaveFile();
     else if (action->second->AsString() == "reload" && allowreload)
-      LoadSettingsFromFile(true);
+      LoadFile(true);
   }
 
   //check if a message need to be sent to the main thread
@@ -107,7 +107,7 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
     m_checkclients = !WriteMessage(MsgCheckClients);
 }
 
-void CClientsManager::LoadClientSettings(CJSONElement* jsonclient, std::string source)
+void CClientsManager::LoadClient(CJSONElement* jsonclient, std::string source)
 {
   if (!jsonclient->IsMap())
   {

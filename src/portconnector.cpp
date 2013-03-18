@@ -102,7 +102,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
 
   if (connections != root.end())
   {
-    if (LoadConnectionSettings(connections->second->AsArray(), source))
+    if (LoadConnections(connections->second->AsArray(), source))
       m_connectionsupdated = true;
     else
       return;
@@ -112,11 +112,11 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
   {
     if (action->second->AsString() == "save")
     {
-      SaveSettingsToFile();
+      SaveFile();
     }
     else if (action->second->AsString() == "reload" && allowreload)
     {
-      LoadSettingsFromFile(true);
+      LoadFile(true);
       m_connectionsupdated = true;
     }
   }
@@ -126,7 +126,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
     m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
 }
 
-bool CPortConnector::LoadConnectionSettings(JSONArray& jsonconnections, const std::string& source)
+bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::string& source)
 {
   std::vector<CPortConnection> connections;
 

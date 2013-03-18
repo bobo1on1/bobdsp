@@ -34,7 +34,7 @@ CJSONSettings::CJSONSettings(const char* filename, const char* type, CMutex& mut
   m_type = type;
 }
 
-void CJSONSettings::LoadSettingsFromFile(bool reload)
+void CJSONSettings::LoadFile(bool reload)
 {
   string homepath;
   if (!GetHomePath(homepath))
@@ -71,8 +71,8 @@ void CJSONSettings::LoadSettingsFromFile(bool reload)
   LoadSettings(json->AsMap(), reload, false, filename);
 }
 
-CJSONGenerator* CJSONSettings::LoadSettingsFromString(const std::string& strjson, const std::string& source,
-                                                      bool returnsettings /*= false*/)
+CJSONGenerator* CJSONSettings::LoadString(const std::string& strjson, const std::string& source,
+                                          bool returnsettings /*= false*/)
 {
   string* error;
   CJSONElement* json = ParseJSON(strjson, error);
@@ -97,7 +97,7 @@ CJSONGenerator* CJSONSettings::LoadSettingsFromString(const std::string& strjson
     return NULL;
 }
 
-void CJSONSettings::SaveSettingsToFile()
+void CJSONSettings::SaveFile()
 {
   string homepath;
   if (!GetHomePath(homepath))

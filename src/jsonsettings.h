@@ -27,11 +27,11 @@ class CJSONSettings
   public:
     CJSONSettings(const char* filename, const char* type, CMutex& mutex);
 
-    void            LoadSettingsFromFile(bool reload);
-    CJSONGenerator* LoadSettingsFromString(const std::string& strjson, const std::string& source, bool returnsettings = false);
+    void            LoadFile(bool reload);
+    CJSONGenerator* LoadString(const std::string& strjson, const std::string& source, bool returnsettings = false);
 
   protected:
-    void            SaveSettingsToFile();
+    void            SaveFile();
 
   private:
 

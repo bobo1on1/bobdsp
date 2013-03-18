@@ -145,31 +145,31 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     if (strurl == "/log")
     {
       if (!g_logfilename.empty())
-        return CreateFileDownloadResponse(connection, g_logfilename, "", "text/plain");
+        return CreateFileDownload(connection, g_logfilename, "", "text/plain");
     }
     else if (strurl == "/connections")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.PortConnector().ConnectionsToJSON());
     }
     else if (strurl == "/ports")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON());
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON());
     }
     else if (strurl == "/plugins")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PluginManager().PluginsToJSON());
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.PluginManager().PluginsToJSON());
     }
     else if (strurl == "/clients")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(true));
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(true));
     }
     else if (strurl == "/visualizer")
     {
-      return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON());
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON());
     }
     else
     {
-      return CreateFileDownloadResponse(connection, strurl, "html");
+      return CreateFileDownload(connection, strurl, "html");
     }
   }
   else if (strcmp(method, "POST") == 0)
@@ -212,7 +212,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       auto_ptr<CPostData> datadelete((CPostData*)*con_cls);
 
       if (((CPostData*)*con_cls)->error)
-        return CreateErrorResponse(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
+        return CreateError(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
 
       std::string& postdata = ((CPostData*)*con_cls)->data;
 
@@ -224,29 +224,29 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
       if (strurl == "/connections")
       {
-        CJSONGenerator* generator = httpserver->m_bobdsp.PortConnector().LoadSettingsFromString(postdata, host, true);
-        return CreateJSONDownloadResponse(connection, generator);
+        CJSONGenerator* generator = httpserver->m_bobdsp.PortConnector().LoadString(postdata, host, true);
+        return CreateJSONDownload(connection, generator);
       }
       else if (strurl == "/ports")
       {
-        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata, host));
+        return CreateJSONDownload(connection, httpserver->m_bobdsp.PortConnector().PortsToJSON(postdata, host));
       }
       else if (strurl == "/clients")
       {
-        CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadSettingsFromString(postdata, host, true);
-        return CreateJSONDownloadResponse(connection, generator);
+        CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadString(postdata, host, true);
+        return CreateJSONDownload(connection, generator);
       }
       else if (strurl == "/visualizer")
       {
-        return CreateJSONDownloadResponse(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
+        return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
       }
     }
   }
 
-  return CreateErrorResponse(connection, MHD_HTTP_NOT_FOUND);
+  return CreateError(connection, MHD_HTTP_NOT_FOUND);
 }
 
-int CHttpServer::CreateErrorResponse(struct MHD_Connection *connection, int errorcode)
+int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
 {
   string errorstr = ToString(errorcode) + "\n";
 
@@ -259,14 +259,14 @@ int CHttpServer::CreateErrorResponse(struct MHD_Connection *connection, int erro
   return returnv;
 }
 
-int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename,
+int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, std::string filename,
                                             const std::string& root /*= ""*/, const char* mime /*= NULL*/)
 {
   //make sure no file outside the root is accessed
   if (!root.empty() && DirLevel(filename) < 0)
   {
     LogError("Not allowing access to \"%s\", it's outside the root", string(root + filename).c_str());
-    return CreateErrorResponse(connection, MHD_HTTP_FORBIDDEN);
+    return CreateError(connection, MHD_HTTP_FORBIDDEN);
   }
 
   filename = root + filename;
@@ -277,7 +277,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   if (returnv == -1)
   {
     LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
-    return CreateErrorResponse(connection, MHD_HTTP_NOT_FOUND);
+    return CreateError(connection, MHD_HTTP_NOT_FOUND);
   }
 
   if (S_ISDIR(statinfo.st_mode))
@@ -287,7 +287,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
     if (returnv == -1)
     {
       LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
-      return CreateErrorResponse(connection, MHD_HTTP_NOT_FOUND);
+      return CreateError(connection, MHD_HTTP_NOT_FOUND);
     }
   }
 
@@ -297,7 +297,7 @@ int CHttpServer::CreateFileDownloadResponse(struct MHD_Connection *connection, s
   if (fd == -1)
   {
     LogError("Unable to open \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
-    return CreateErrorResponse(connection, MHD_HTTP_NOT_FOUND);
+    return CreateError(connection, MHD_HTTP_NOT_FOUND);
   }
 
   if (!mime)
@@ -354,7 +354,7 @@ void CHttpServer::FileReadFreeCallback(void* cls)
   delete fd;
 }
 
-int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, const std::string& json)
+int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std::string& json)
 {
   struct MHD_Response* response = MHD_create_response_from_data(json.length(), (void*)json.c_str(), MHD_NO, MHD_YES);
   MHD_add_response_header(response, "Content-Type", "application/json");
@@ -367,7 +367,7 @@ int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, c
 //accepts a CJSONGenerator which is allocated in one of the managers
 //this way the callback can read directly from the libyajl buffer
 //and delete the CJSONGenerator afterwards
-int CHttpServer::CreateJSONDownloadResponse(struct MHD_Connection* connection, CJSONGenerator* generator)
+int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator)
 {
   uint64_t size = generator->GetGenBufSize();
   struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),

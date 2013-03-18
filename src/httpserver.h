@@ -78,14 +78,14 @@ class CHttpServer
                                          const char *version, const char *upload_data,
                                          size_t *upload_data_size, void **con_cls);
 
-    static int       CreateErrorResponse(struct MHD_Connection *connection, int errorcode);
-    static int       CreateFileDownloadResponse(struct MHD_Connection *connection, std::string filename,
+    static int       CreateError(struct MHD_Connection *connection, int errorcode);
+    static int       CreateFileDownload(struct MHD_Connection *connection, std::string filename,
                                                 const std::string& root = "", const char* mime = NULL);
     static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
     static void      FileReadFreeCallback(void* cls);
 
-    static int       CreateJSONDownloadResponse(struct MHD_Connection* connection, const std::string& json);
-    static int       CreateJSONDownloadResponse(struct MHD_Connection* connection, CJSONGenerator* generator);
+    static int       CreateJSONDownload(struct MHD_Connection* connection, const std::string& json);
+    static int       CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator);
     static RETHTSIZE JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
     static void      JSONReadFreeCallback(void* cls);
 };
