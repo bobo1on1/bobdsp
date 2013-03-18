@@ -263,7 +263,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   if (instancesupdated && instances != jackclient->NrInstances())
   {
     //apply new instances, then tell the main thread to restart this client
-    Log("%ssetting instances to %"PRIi64, source.c_str(), instances);
+    Log("Client \"%s\" setting instances to %"PRIi64, name.c_str(), instances);
     jackclient->SetNrInstances(instances);
     jackclient->MarkRestart();
     m_checkclients = true;
@@ -274,7 +274,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   {
     if (gainupdated[i])
     {
-      LogDebug("%ssetting %s to %f", source.c_str(), i == 0 ? "pregain" : "postgain", gain[i]);
+      LogDebug("Client \"%s\" setting %s to %f", name.c_str(), i == 0 ? "pregain" : "postgain", gain[i]);
       jackclient->UpdateGain(gain[i], i);
     }
   }
@@ -447,7 +447,7 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, c
       return false;
     }
 
-    LogDebug("%sloaded control \"%s\" with value %f", source.c_str(),
+    LogDebug("Loaded control \"%s\" with value %f",
              name->second->AsString().c_str(), value->second->ToDouble());
 
     //control is valid, store
