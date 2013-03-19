@@ -46,8 +46,8 @@ void CPluginManager::LoadPlugins(std::vector<std::string>& paths)
   for (vector<string>::iterator it = paths.begin(); it != paths.end(); it++)
     LoadPluginsPath(*it);
 
-  //sort plugins by name
-  m_plugins.sort(CLadspaPlugin::SortByName);
+  //sort plugins
+  m_plugins.sort(CLadspaPlugin::Sort);
 
   Log("Found %zu plugins", m_plugins.size());
 

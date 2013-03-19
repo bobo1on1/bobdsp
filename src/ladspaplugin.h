@@ -28,7 +28,7 @@ class CLadspaPlugin
     CLadspaPlugin(const std::string& filename, void* handle, const LADSPA_Descriptor* descriptor);
     ~CLadspaPlugin();
 
-    static bool SortByName(CLadspaPlugin* first, CLadspaPlugin* second);
+    static bool Sort(CLadspaPlugin* first, CLadspaPlugin* second);
 
     void LoadAllSymbols();
 

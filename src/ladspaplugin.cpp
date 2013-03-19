@@ -17,6 +17,7 @@
  */
 
 #include <dlfcn.h>
+#include <cstring>
 #include "ladspaplugin.h"
 #include "util/log.h"
 #include "util/misc.h"
@@ -36,9 +37,23 @@ CLadspaPlugin::~CLadspaPlugin()
   dlclose(m_handle);
 }
 
-bool CLadspaPlugin::SortByName(CLadspaPlugin* first, CLadspaPlugin* second)
+bool CLadspaPlugin::Sort(CLadspaPlugin* first, CLadspaPlugin* second)
 {
-  return string(first->Name()) < second->Name();
+  //sort by name, uniqueid, and filename
+  int sort = strcmp(first->Name(), second->Name());
+  if (sort != 0)
+  {
+    return sort < 0;
+  }
+  else
+  {
+    if (first->UniqueID() < second->UniqueID())
+      return true;
+    else if (first->UniqueID() > second->UniqueID())
+      return false;
+    else
+      return first->FileName() < second->FileName();
+  }
 }
 
 void CLadspaPlugin::LoadAllSymbols()
