@@ -357,10 +357,7 @@ void CVisualizer::LoadSettings(JSONMap& root, bool reload, bool allowreload, con
   }
 
   if (visualizers != root.end())
-  {
-    if (!LoadVisualizers(visualizers->second->AsArray(), source))
-      return;
-  }
+    LoadVisualizers(visualizers->second->AsArray(), source);
 
   if (interval != root.end())
     m_interval = interval->second->ToInt64();
@@ -371,7 +368,7 @@ CJSONGenerator* CVisualizer::SettingsToJSON(bool tofile)
   return VisualizersToJSON(false);
 }
 
-bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source)
+void CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source)
 {
   vector<CVisType> visualizers;
 
@@ -380,32 +377,32 @@ bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string&
     if (!(*it)->IsMap())
     {
       LogError("%s: invalid value for visualizer: %s", source.c_str(), ToJSON(*it).c_str());
-      return false;
+      continue;
     }
 
     JSONMap::iterator name = (*it)->AsMap().find("name");
     if (name == (*it)->AsMap().end())
     {
       LogError("%s: visualizer has no name", source.c_str());
-      return false;
+      continue;
     }
     else if (!name->second->IsString())
     {
       LogError("%s: invalid value for name: %s", source.c_str(), ToJSON(name->second).c_str());
-      return false;
+      continue;
     }
 
     JSONMap::iterator type = (*it)->AsMap().find("type");
     if (type == (*it)->AsMap().end())
     {
       LogError("%s: visualizer %s has no type", name->second->AsString().c_str(), source.c_str());
-      return false;
+      continue;
     }
     else if (!type->second->IsString())
     {
       LogError("%s: visualizer %s invalid value for type: %s", source.c_str(),
                name->second->AsString().c_str(), ToJSON(type->second).c_str());
-      return false;
+      continue;
     }
 
     EVISTYPE vistype;
@@ -421,7 +418,7 @@ bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string&
     {
       LogError("%s: invalid visualizer type %s for visualizer %s", source.c_str(),
                type->second->AsString().c_str(), name->second->AsString().c_str());
-      return false;
+      continue;
     }
 
     int64_t nrbands = 0;
@@ -431,13 +428,13 @@ bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string&
       if (bands == (*it)->AsMap().end())
       {
         LogError("%s: visualizer %s has no bands", name->second->AsString().c_str(), source.c_str());
-        return false;
+        continue;
       }
       else if (!bands->second->IsNumber() || bands->second->ToInt64() <= 0)
       {
         LogError("%s: visualizer %s invalid value for bands: %s", source.c_str(),
                  name->second->AsString().c_str(), ToJSON(bands->second).c_str());
-        return false;
+        continue;
       }
 
       nrbands = bands->second->ToInt64();
@@ -454,8 +451,6 @@ bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string&
   }
 
   m_visualizers.swap(visualizers);
-
-  return true;
 }
 
 void CVisualizer::Start()

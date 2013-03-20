@@ -111,7 +111,7 @@ class CVisualizer : public CThread, public CJSONSettings
   private:
     virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
-    bool                    LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source);
+    void                    LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source);
 
     bool                    Connect();
     void                    Disconnect(bool unregisterjack);
