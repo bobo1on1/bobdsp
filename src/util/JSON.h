@@ -21,7 +21,6 @@
 
 #include "config.h"
 #include "util/inclstdint.h"
-#include "util/incltinyxml.h"
 #include <string>
 #include <cstring>
 #include <map>
@@ -38,11 +37,6 @@
 #else
   #define YAJLSTRINGLEN unsigned int
 #endif
-
-namespace JSON
-{
-  TiXmlElement* JSONToXML(const std::string& json);
-}
 
 class CJSONGenerator
 {

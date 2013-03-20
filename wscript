@@ -44,7 +44,6 @@ def configure(conf):
   conf.check(header_name='sys/stat.h')
   conf.check(header_name='sys/time.h')
   conf.check(header_name='time.h')
-  conf.check(header_name='tinyxml.h')
   conf.check(header_name='unistd.h')
   conf.check(header_name='uriparser/Uri.h')
   conf.check(header_name='yajl/yajl_gen.h')
@@ -65,7 +64,6 @@ def configure(conf):
   conf.check(lib='pcrecpp', uselib_store='pcrecpp')
   conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
   conf.check(lib='samplerate', uselib_store='samplerate')
-  conf.check(lib='tinyxml', uselib_store='tinyxml')
   conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='yajl', uselib_store='yajl')
 
@@ -96,7 +94,7 @@ def build(bld):
                       src/util/mutex.cpp\
                       src/util/timeutils.cpp\
                       src/util/thread.cpp',
-              use=['m','pthread','rt','dl','tinyxml','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'yajl'],        
+              use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')

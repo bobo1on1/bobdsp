@@ -20,7 +20,6 @@
 #define BOBDSP_H
 
 #include "util/inclstdint.h"
-#include "util/incltinyxml.h"
 
 #include <vector>
 #include <string>
