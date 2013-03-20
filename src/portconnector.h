@@ -156,7 +156,7 @@ class CPortConnector : public CMessagePump, public CJSONSettings
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
     virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
 
-    bool LoadConnections(JSONArray& jsonconnections, const std::string& source);
+    void LoadConnections(JSONArray& jsonconnections, const std::string& source);
 
     bool ConnectInternal();
     void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);

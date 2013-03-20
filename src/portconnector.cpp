@@ -102,10 +102,8 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
 
   if (connections != root.end())
   {
-    if (LoadConnections(connections->second->AsArray(), source))
-      m_connectionsupdated = true;
-    else
-      return;
+    LoadConnections(connections->second->AsArray(), source);
+    m_connectionsupdated = true;
   }
 
   if (action != root.end())
@@ -126,7 +124,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
     m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
 }
 
-bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::string& source)
+void CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::string& source)
 {
   std::vector<CPortConnection> connections;
 
@@ -136,9 +134,10 @@ bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::stri
     if (!(*it)->IsMap())
     {
       LogError("%s: invalid value for connection %s", source.c_str(), ToJSON(*it).c_str());
-      return false;
+      continue;
     }
 
+    bool valid = false;
     JSONMap::iterator regex[2];
     JSONMap::iterator disconnect[2];
     for (int i = 0; i < 2; i++)
@@ -149,12 +148,12 @@ bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::stri
       if (regex[i] == (*it)->AsMap().end())
       {
         LogError("%s: %s value missing", source.c_str(), search.c_str());
-        return false;
+        break;
       }
       else if (!regex[i]->second->IsString())
       {
         LogError("%s: invalid value for %s: %s", source.c_str(), search.c_str(), ToJSON(regex[i]->second).c_str());
-        return false;
+        break;
       }
 
       search += "disconnect";
@@ -162,21 +161,27 @@ bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::stri
       if (disconnect[i] == (*it)->AsMap().end())
       {
         LogError("%s: %s value missing", source.c_str(), search.c_str());
-        return false;
+        break;
       }
       else if (!disconnect[i]->second->IsBool())
       {
         LogError("%s: invalid value for %s: %s", source.c_str(), search.c_str(), ToJSON(disconnect[i]->second).c_str());
-        return false;
+        break;
       }
+
+      if (i == 1)
+        valid = true;
     }
 
-    connections.push_back(CPortConnection(regex[0]->second->AsString(), regex[1]->second->AsString(),
-                                       disconnect[0]->second->AsBool(), disconnect[1]->second->AsBool()));
+    if (valid)
+    {
+      connections.push_back(CPortConnection(regex[0]->second->AsString(), regex[1]->second->AsString(),
+                                         disconnect[0]->second->AsBool(), disconnect[1]->second->AsBool()));
 
-    LogDebug("Loaded connection out:\"%s\" in:\"%s\", outdisconnect:%s, indisconnect:%s",
-             connections.back().Out().c_str(), connections.back().In().c_str(),
-             ToString(connections.back().OutDisconnect()).c_str(), ToString(connections.back().InDisconnect()).c_str());
+      LogDebug("Loaded connection out:\"%s\" in:\"%s\", outdisconnect:%s, indisconnect:%s",
+               connections.back().Out().c_str(), connections.back().In().c_str(),
+               ToString(connections.back().OutDisconnect()).c_str(), ToString(connections.back().InDisconnect()).c_str());
+    }
   }
 
   //save any connections that were removed, any connections matching these regexes
@@ -201,8 +206,6 @@ bool CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::stri
 
   //store the new connections
   m_connections.swap(connections);
-
-  return true;
 }
 
 CJSONGenerator* CPortConnector::ConnectionsToJSON()
