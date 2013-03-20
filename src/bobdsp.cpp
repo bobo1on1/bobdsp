@@ -152,10 +152,8 @@ void CBobDSP::Setup()
   //load ladspa plugins
   m_pluginmanager.LoadPlugins(ladspapaths);
 
+  //load clients, connections and visualizers settings
   LoadSettings();
-
-  //load the visualizers
-  LoadVisualizersFromFile();
 
   //set up signal handlers
   SetupSignals();
@@ -609,51 +607,9 @@ void CBobDSP::LoadLadspaPaths(std::vector<std::string>& ladspapaths)
 
 void CBobDSP::LoadSettings()
 {
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return;
-  }
-
   m_clientsmanager.LoadFile(false);
   m_portconnector.LoadFile(false);
-  m_visualizer.LoadSettingsFromFile(homepath + ".bobdsp/visualizers.json");
-}
-
-bool CBobDSP::LoadVisualizersFromFile()
-{
-  string homepath;
-  if (!GetHomePath(homepath))
-  {
-    LogError("Unable to get home path");
-    return false;
-  }
-
-  string filename = homepath + ".bobdsp/visualizers.xml";
-  Log("Loading visualizer settings from %s", filename.c_str());
-
-  TiXmlDocument visfile;
-  visfile.LoadFile(filename.c_str());
-
-  if (visfile.Error())
-  {
-    LogError("Unable to load %s: %s %s %s", filename.c_str(), visfile.ErrorDesc(),
-        visfile.ErrorRow() ? (string("Row: ") + ToString(visfile.ErrorRow())).c_str() : "",
-        visfile.ErrorCol() ? (string("Col: ") + ToString(visfile.ErrorCol())).c_str() : "");
-    return false;
-  }
-
-  TiXmlElement* root = visfile.RootElement();
-  if (!root)
-  {
-    LogError("Unable to get <visualizers> root node from %s", filename.c_str());
-    return false;
-  }
-
-  m_visualizer.VisualizersFromXML(root);
-
-  return true;
+  m_visualizer.LoadFile(false);
 }
 
 void CBobDSP::JackError(const char* jackerror)

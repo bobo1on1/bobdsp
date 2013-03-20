@@ -163,7 +163,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       return CreateJSONDownload(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(true));
     }
-    else if (strurl == "/visualizer")
+    else if (strurl == "/visualizers")
     {
       return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON());
     }
@@ -236,9 +236,9 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
         CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadString(postdata, host, true);
         return CreateJSONDownload(connection, generator);
       }
-      else if (strurl == "/visualizer")
+      else if (strurl == "/visualizers")
       {
-        return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata));
+        return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata, host));
       }
     }
   }

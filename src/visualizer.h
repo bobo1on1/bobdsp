@@ -20,11 +20,11 @@
 #define VISUALIZER_H
 
 #include "util/inclstdint.h"
-#include "util/incltinyxml.h"
 #include "util/thread.h"
 #include "util/condition.h"
 #include "util/misc.h"
 #include "util/JSON.h"
+#include "jsonsettings.h"
 
 #include <string>
 #include <vector>
@@ -46,6 +46,9 @@ class CVisType
     CVisType(EVISTYPE type, std::string name, int outsamplerate, int bands);
     ~CVisType();
 
+    const char* TypeStr() { return m_typestr; }
+    std::string Name()    { return m_name;    }
+
     bool Connect(jack_client_t* client, int samplerate, int64_t interval);
     void Disconnect(jack_client_t* client, bool unregister);
     void ProcessJack(bool locked, jack_nframes_t nframes, int64_t time);
@@ -58,7 +61,7 @@ class CVisType
     bool HasVisOutput() { return m_hasvisoutput; }
     void ClearVisOutput();
 
-    void ToJSON(CJSONGenerator& generator);
+    void ToJSON(CJSONGenerator& generator, bool values);
 
   private:
 
@@ -91,43 +94,45 @@ class CVisType
     int          m_visamplitudesamples;
 };
 
-class CVisualizer : public CThread
+class CVisualizer : public CThread, public CJSONSettings
 {
   public:
     CVisualizer();
     ~CVisualizer();
 
-    void               LoadSettingsFromFile(const std::string& filename);
-    void               VisualizersFromXML(TiXmlElement* root);
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
 
     void               Start();
     void               Process();
     std::string        JSON();
-    std::string        JSON(const std::string& postjson);
+    std::string        JSON(const std::string& postjson, const std::string& source);
 
   private:
-    bool                  Connect();
-    void                  Disconnect(bool unregisterjack);
-    void                  VisualizersToJSON();
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
+    virtual CJSONGenerator* SettingsToJSON(bool tofile);
+    bool                    LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source);
 
-    bool                  m_connected;
-    bool                  m_wasconnected;
-    jack_client_t*        m_client;
-    jack_status_t         m_exitstatus;
-    std::string           m_exitreason;
-    bool                  m_nameset;
-    int                   m_samplerate;
-    CCondition            m_jackcond;
-    int64_t               m_interval;
-    int64_t               m_vistime;
+    bool                    Connect();
+    void                    Disconnect(bool unregisterjack);
+    CJSONGenerator*         VisualizersToJSON(bool values);
 
-    std::vector<CVisType> m_visualizers;
+    bool                    m_connected;
+    bool                    m_wasconnected;
+    jack_client_t*          m_client;
+    jack_status_t           m_exitstatus;
+    std::string             m_exitreason;
+    bool                    m_nameset;
+    int                     m_samplerate;
+    CCondition              m_jackcond;
+    int64_t                 m_interval;
+    int64_t                 m_vistime;
 
-    std::string           m_json;
-    unsigned int          m_index;
-    CCondition            m_viscond;
+    std::vector<CVisType>   m_visualizers;
+
+    std::string             m_json;
+    unsigned int            m_index;
+    CCondition              m_viscond;
 
     static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
     void        PJackProcessCallback(jack_nframes_t nframes);

@@ -283,7 +283,7 @@ void CVisType::ClearVisOutput()
   m_visamplitudesamples = 0;
 }
 
-void CVisType::ToJSON(CJSONGenerator& generator)
+void CVisType::ToJSON(CJSONGenerator& generator, bool values)
 {
   generator.MapOpen();
 
@@ -292,7 +292,7 @@ void CVisType::ToJSON(CJSONGenerator& generator)
   generator.AddString("type");
   generator.AddString(m_typestr);
 
-  if (m_type == MEAN || m_type == RMS || m_type == PEAK)
+  if (values && (m_type == MEAN || m_type == RMS || m_type == PEAK))
   {
     generator.AddString("value");
     float value;
@@ -303,10 +303,17 @@ void CVisType::ToJSON(CJSONGenerator& generator)
     generator.AddDouble(value);
   }
 
+  if (m_type == SPECTRUM)
+  {
+    generator.AddString("bands");
+    generator.AddInt(m_bands);
+  }
+
   generator.MapClose();
 }
 
-CVisualizer::CVisualizer()
+CVisualizer::CVisualizer() :
+  CJSONSettings(".bobdsp/visualizers.json", "visualizer", m_viscond)
 {
   m_client       = NULL;
   m_exitstatus   = (jack_status_t)0;
@@ -315,70 +322,126 @@ CVisualizer::CVisualizer()
   m_samplerate   = 0;
   m_vistime      = 0;
   m_index        = 0;
+  m_interval     = 100000;
 
-  VisualizersToJSON();
+  CJSONGenerator* generator = VisualizersToJSON(true);
+  generator->ToString(m_json);
+  delete generator;
 }
 
 CVisualizer::~CVisualizer()
 {
 }
 
-void CVisualizer::LoadSettingsFromFile(const std::string& filename)
+void CVisualizer::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
 {
+  JSONMap::iterator visualizers = root.find("visualizers");
+  if (visualizers != root.end() && !visualizers->second->IsArray())
+  {
+    LogError("%s: invalid value for visualizers: %s", source.c_str(), ToJSON(visualizers->second).c_str());
+    return;
+  }
+
+  JSONMap::iterator interval = root.find("interval");
+  if (interval != root.end() && (!interval->second->IsNumber() || interval->second->ToInt64() <= 0))
+  {
+    LogError("%s: invalid value for interval: %s", source.c_str(), ToJSON(interval->second).c_str());
+    return;
+  }
+
+  JSONMap::iterator action = root.find("action");
+  if (action != root.end() && !action->second->IsString())
+  {
+    LogError("%s: invalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
+    return;
+  }
+
+  if (visualizers != root.end())
+  {
+    if (!LoadVisualizers(visualizers->second->AsArray(), source))
+      return;
+  }
+
+  if (interval != root.end())
+    m_interval = interval->second->ToInt64();
 }
 
-void CVisualizer::VisualizersFromXML(TiXmlElement* root)
+CJSONGenerator* CVisualizer::SettingsToJSON(bool tofile)
 {
-  bool loadfailed = false;
+  return VisualizersToJSON(false);
+}
 
-  LOADINTELEMENT(root, interval, MANDATORY, 1, POSTCHECK_ONEORHIGHER);
-  if (loadfailed)
-    return;
+bool CVisualizer::LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source)
+{
+  vector<CVisType> visualizers;
 
-  m_interval = interval_p;
-
-  for (TiXmlElement* vis = root->FirstChildElement(); vis != NULL; vis = vis->NextSiblingElement())
+  for (JSONArray::iterator it = jsonvisualizers.begin(); it != jsonvisualizers.end(); it++)
   {
-    if (vis->ValueStr() != "visualizer")
-      continue;
+    if (!(*it)->IsMap())
+    {
+      LogError("%s: invalid value for visualizer: %s", source.c_str(), ToJSON(*it).c_str());
+      return false;
+    }
 
-    LogDebug("Read <%s> element", vis->Value());
+    JSONMap::iterator name = (*it)->AsMap().find("name");
+    if (name == (*it)->AsMap().end())
+    {
+      LogError("%s: visualizer has no name", source.c_str());
+      return false;
+    }
+    else if (!name->second->IsString())
+    {
+      LogError("%s: invalid value for name: %s", source.c_str(), ToJSON(name->second).c_str());
+      return false;
+    }
 
-    LOADSTRELEMENT(vis, name, MANDATORY);
-    LOADSTRELEMENT(vis, type, MANDATORY);
-
-    if (loadfailed)
-      continue;
+    JSONMap::iterator type = (*it)->AsMap().find("type");
+    if (type == (*it)->AsMap().end())
+    {
+      LogError("%s: visualizer %s has no type", name->second->AsString().c_str(), source.c_str());
+      return false;
+    }
+    else if (!type->second->IsString())
+    {
+      LogError("%s: visualizer %s invalid value for type: %s", source.c_str(),
+               name->second->AsString().c_str(), ToJSON(type->second).c_str());
+      return false;
+    }
 
     EVISTYPE vistype;
-    if (strcmp(type->GetText(), "spectrum") == 0)
+    if (type->second->AsString() == "spectrum" && false) //spectrum is unsupported right now
       vistype = SPECTRUM;
-    else if (strcmp(type->GetText(), "mean") == 0)
+    else if (type->second->AsString() == "mean")
       vistype = MEAN;
-    else if (strcmp(type->GetText(), "rms") == 0)
+    else if (type->second->AsString() == "rms")
       vistype = RMS;
-    else if (strcmp(type->GetText(), "peak") == 0)
+    else if (type->second->AsString() == "peak")
       vistype = PEAK;
     else
     {
-      LogError("Invalid visualizer type \"%s\" for visualizer \"%s\"", type->GetText(), name->GetText());
-      continue;
+      LogError("%s: invalid visualizer type %s for visualizer %s", source.c_str(),
+               type->second->AsString().c_str(), name->second->AsString().c_str());
+      return false;
     }
 
-    int nrbands = 0;
+    int64_t nrbands = 0;
     if (vistype == SPECTRUM)
     {
-      LOADINTELEMENT(vis, bands, MANDATORY, 1, POSTCHECK_ONEORHIGHER);
-      if (loadfailed)
-        continue;
+      JSONMap::iterator bands = (*it)->AsMap().find("bands");
+      if (bands == (*it)->AsMap().end())
+      {
+        LogError("%s: visualizer %s has no bands", name->second->AsString().c_str(), source.c_str());
+        return false;
+      }
+      else if (!bands->second->IsNumber() || bands->second->ToInt64() <= 0)
+      {
+        LogError("%s: visualizer %s invalid value for bands: %s", source.c_str(),
+                 name->second->AsString().c_str(), ToJSON(bands->second).c_str());
+        return false;
+      }
 
-      nrbands = bands_p;
+      nrbands = bands->second->ToInt64();
     }
-
-    if (vistype == SPECTRUM)
-      LogDebug("Visualizer name:\"%s\" type:\"%s\" bands:%i", name->GetText(), type->GetText(), nrbands);
-    else
-      LogDebug("Visualizer name:\"%s\" type:\"%s\"", name->GetText(), type->GetText());
 
     int outsamplerate;
     if (vistype == SPECTRUM)
@@ -386,8 +449,13 @@ void CVisualizer::VisualizersFromXML(TiXmlElement* root)
     else
       outsamplerate = -1;
 
-    m_visualizers.push_back(CVisType(vistype, name->GetText(), outsamplerate, nrbands));
+    visualizers.push_back(CVisType(vistype, name->second->AsString(), outsamplerate, nrbands));
+    Log("Loaded visualizer %s type %s", visualizers.back().Name().c_str(), visualizers.back().TypeStr());
   }
+
+  m_visualizers.swap(visualizers);
+
+  return true;
 }
 
 void CVisualizer::Start()
@@ -443,10 +511,18 @@ void CVisualizer::Process()
 
     if (allhaveoutput)
     {
+      CJSONGenerator* generator = VisualizersToJSON(true);
+
       m_vistime += m_interval;
       uint64_t now = GetTimeUs();
       USleep(m_vistime - now);
-      VisualizersToJSON();
+
+      CLock lock(m_viscond);
+
+      generator->ToString(m_json);
+      delete generator;
+
+      m_index++;
       m_viscond.Signal();
     }
   }
@@ -460,22 +536,46 @@ std::string CVisualizer::JSON()
   return m_json;
 }
 
-std::string CVisualizer::JSON(const std::string& postjson)
+std::string CVisualizer::JSON(const std::string& postjson, const std::string& source)
 {
-  TiXmlElement* root = JSON::JSONToXML(postjson);
-  bool loadfailed = false;
+  int64_t index = -1;
+  int64_t timeout = 0;
 
-  LOADINTELEMENT(root, timeout, OPTIONAL, 0, POSTCHECK_ZEROORHIGHER);
-  LOADINTELEMENT(root, index, OPTIONAL, -1, POSTCHECK_NONE);
+  string* error;
+  CJSONElement* json = ParseJSON(postjson, error);
 
-  delete root;
+  if (error)
+  {
+    LogError("%s: %s", source.c_str(), error->c_str());
+    delete error;
+  }
+  else if (!json->IsMap())
+  {
+    LogError("%s: invalid value for root element: %s", source.c_str(), ToJSON(json).c_str());
+  }
+  else
+  {
+    JSONMap::iterator jsonindex = json->AsMap().find("index");
+    if (jsonindex != json->AsMap().end() && !jsonindex->second->IsNumber())
+      LogError("%s: invalid value for index: %s", source.c_str(), ToJSON(jsonindex->second).c_str());
+    else
+      index = jsonindex->second->ToInt64();
+
+    JSONMap::iterator jsontimeout = json->AsMap().find("timeout");
+    if (jsontimeout != json->AsMap().end() && !jsontimeout->second->IsNumber())
+      LogError("%s: invalid value for timeout: %s", source.c_str(), ToJSON(jsontimeout->second).c_str());
+    else
+      timeout = jsontimeout->second->ToInt64();
+  }
+
+  delete json;
 
   CLock lock(m_viscond);
 
   //wait for the port index to change with the client requested timeout
   //the maximum timeout is one minute
-  if (index_p == (int64_t)m_index && timeout_p > 0 && !m_stop)
-    m_viscond.Wait(Min(timeout_p, 60000) * 1000, m_index, (unsigned int)index_p);
+  if (index == (int64_t)m_index && timeout > 0 && !m_stop)
+    m_viscond.Wait(Min(timeout, 60000) * 1000, m_index, (unsigned int)index);
 
   return m_json;
 }
@@ -569,28 +669,33 @@ void CVisualizer::Disconnect(bool unregisterjack)
   }
 }
 
-void CVisualizer::VisualizersToJSON()
+CJSONGenerator* CVisualizer::VisualizersToJSON(bool values)
 {
-  CJSONGenerator generator;
+  CJSONGenerator* generator = new CJSONGenerator(true);
 
-  generator.MapOpen();
+  generator->MapOpen();
 
-  generator.AddString("visualizers");
-  generator.ArrayOpen();
+  generator->AddString("interval");
+  generator->AddInt(m_interval);
+
+  generator->AddString("visualizers");
+  generator->ArrayOpen();
   for (vector<CVisType>::iterator it = m_visualizers.begin(); it != m_visualizers.end(); it++)
   {
-    it->ToJSON(generator);
+    it->ToJSON(*generator, values);
     it->ClearVisOutput();
   }
-  generator.ArrayClose();
+  generator->ArrayClose();
 
-  CLock lock(m_viscond);
+  if (values)
+  {
+    generator->AddString("index");
+    generator->AddInt(m_index + 1);
+  }
 
-  generator.AddString("index");
-  generator.AddInt(++m_index);
-  generator.MapClose();
+  generator->MapClose();
 
-  generator.ToString(m_json);
+  return generator;
 }
 
 int CVisualizer::SJackProcessCallback(jack_nframes_t nframes, void *arg)

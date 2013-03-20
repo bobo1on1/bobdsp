@@ -77,7 +77,6 @@ class CBobDSP
 
     void LoadLadspaPaths(std::vector<std::string>& ladspapaths);
     void LoadSettings();
-    bool LoadVisualizersFromFile();
 
     static void JackError(const char* jackerror);
     static void JackInfo(const char* jackinfo);
