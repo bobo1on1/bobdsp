@@ -136,8 +136,8 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   strcpy(tmpurl, url);
   uriUnescapeInPlaceA(tmpurl);
 
-  //make sure any url has no slash and end, and has a slash at the start
-  string strurl = PutSlashAtStart(RemoveSlashAtEnd(tmpurl));
+  //make sure any url has a slash at the start
+  string strurl = PutSlashAtStart(tmpurl);
   delete[] tmpurl;
 
   if (strcmp(method, "GET") == 0)
@@ -259,17 +259,37 @@ int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
   return returnv;
 }
 
-int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, std::string filename,
+int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::string& location)
+{
+  LogDebug("Creating redirect to %s", location.c_str());
+
+  string html = "<html> <head> <title>Moved</title> </head> <body> <h1>Moved</h1> <p>This page has moved to <a href=\"";
+  html += location;
+  html += "\">";
+  html += location;
+  html += "</a>.</p> </body> </html>";
+
+  struct MHD_Response* response = MHD_create_response_from_data(html.length(), (void*)html.c_str(), MHD_NO, MHD_YES);
+  MHD_add_response_header(response, "Content-Type", "text/html");
+  MHD_add_response_header(response, "Location", location.c_str());
+
+  int returnv = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
+  MHD_destroy_response(response);
+
+  return returnv;
+}
+
+int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
                                     const std::string& root /*= ""*/, const char* mime /*= NULL*/)
 {
+  string filename = root + url;
+
   //make sure no file outside the root is accessed
   if (!root.empty() && DirLevel(filename) < 0)
   {
     LogError("Not allowing access to \"%s\", it's outside the root", string(root + filename).c_str());
     return CreateError(connection, MHD_HTTP_FORBIDDEN);
   }
-
-  filename = root + filename;
 
   int returnv;
   struct stat64 statinfo;
@@ -279,16 +299,14 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, std::stri
     LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
     return CreateError(connection, MHD_HTTP_NOT_FOUND);
   }
-
-  if (S_ISDIR(statinfo.st_mode))
+  else if (S_ISDIR(statinfo.st_mode))
   {
-    filename = PutSlashAtEnd(filename) + "index.html";
-    returnv = stat64(filename.c_str(), &statinfo);
-    if (returnv == -1)
-    {
-      LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
-      return CreateError(connection, MHD_HTTP_NOT_FOUND);
-    }
+    //if the url is a directory, and has a slash at the end, return index.html
+    //if it doesn't have a slash at the end, return a redirect to the url with a slash added
+    if (url.size() >= 1 && url[url.size() - 1] == '/')
+      return CreateFileDownload(connection, url + "index.html", root, mime);
+    else
+      return CreateRedirect(connection, PutSlashAtEnd(url));
   }
 
   LogDebug("Opening \"%s\" size:%" PRIi64, filename.c_str(), (int64_t)statinfo.st_size);

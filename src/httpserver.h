@@ -79,8 +79,9 @@ class CHttpServer
                                          size_t *upload_data_size, void **con_cls);
 
     static int       CreateError(struct MHD_Connection *connection, int errorcode);
-    static int       CreateFileDownload(struct MHD_Connection *connection, std::string filename,
-                                                const std::string& root = "", const char* mime = NULL);
+    static int       CreateRedirect(struct MHD_Connection *connection, const std::string& location);
+    static int       CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
+                                        const std::string& root = "", const char* mime = NULL);
     static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
     static void      FileReadFreeCallback(void* cls);
 
