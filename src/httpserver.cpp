@@ -127,7 +127,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
 
   CThread::SetCurrentThreadName((string("http ") + host).c_str());
 
-  LogDebug("%s method: \"%s\" url: \"%s\"", host.c_str(), method, url);
+  LogDebug("%s method: \"%s\" version: \"%s\" url: \"%s\"", host.c_str(), method, version, url);
 
   CHttpServer* httpserver = (CHttpServer*)cls;
 
