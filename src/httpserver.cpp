@@ -260,7 +260,7 @@ int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
 }
 
 int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, std::string filename,
-                                            const std::string& root /*= ""*/, const char* mime /*= NULL*/)
+                                    const std::string& root /*= ""*/, const char* mime /*= NULL*/)
 {
   //make sure no file outside the root is accessed
   if (!root.empty() && DirLevel(filename) < 0)
