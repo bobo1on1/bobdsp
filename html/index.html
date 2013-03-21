@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>BobDSP</title>
+    <link rel="stylesheet" href="jquery-ui-1.10.2.custom/css/dot-luv/jquery-ui-1.10.2.custom.min.css" />
+
+    <style>
+      body
+      {
+        font: 62.5% "Trebuchet MS", sans-serif;
+        margin: 50px;
+      }
+
+      .connectionslist
+      {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+      }
+
+      #feedback {}
+
+      .selectable .ui-selecting
+      {
+        background: #00498f;
+      }
+
+      .selectable .ui-selected
+      {
+        background: #0b3e6f;
+        color: white;
+      }
+
+      .selectable
+      {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+      }
+
+      #portstable
+      {
+        width: 100%;
+      }
+ 
+      .portscell
+      {
+        width: 50%;
+        vertical-align: top;
+      }
+
+    </style>
+
+    <script type="text/javascript" src="jquery-ui-1.10.2.custom/js/jquery-1.9.1.js"></script>
+    <script type="text/javascript" src="jquery-ui-1.10.2.custom/js/jquery-ui-1.10.2.custom.min.js"></script>
+    <script type="text/javascript" src="js/json2.js"></script>
+    <script type="text/javascript" src="js/bobdsp.js"></script>
+
+    <script>
+      $(function()
+      {
+        $("#tabsdiv").tabs();
+        $("#connectionslist").sortable({distance:15});
+        $("#apply").button();
+        $("#applyandsave").button();
+        $("#restore").button();
+        $("#reset").button();
+        $("#addnew").button();
+        $("#outselectable").selectable({stop:portUnSelect});
+        $("#inselectable").selectable({stop:portUnSelect});
+        $("#addport").button();
+        $("#addportregex").button();
+
+        //if multiple elements are selected, deselect them except the first
+        function portUnSelect(event, ui)
+        {
+          $(".ui-selected:first", this).each(function()
+            {
+              $(this).siblings().removeClass("ui-selected");
+            });
+        };
+
+        var connectionelements =
+        {
+          connectionslist    : $("#connectionslist"),
+          resetbutton        : $("#reset"),
+          applybutton        : $("#apply"),
+          applyandsavebutton : $("#applyandsave"),
+          restorebutton      : $("#restore"),
+          addnewbutton       : $("#addnew"),
+          outports           : $("#outselectable"),
+          inports            : $("#inselectable"),
+          addportbutton      : $("#addport"),
+          addportregexbutton : $("#addportregex")
+        };
+
+        BobDSP(connectionelements);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="tabsdiv">
+      <ul>
+        <li><a href="#connectionsdiv">Connections</a></li>
+        <li><a href="#pluginsdiv">Plugins</a></li>
+        <li><a href="#visualizersdiv">Visualizers</a></li>
+        <li><a href="#controlsdiv">Controls</a></li>
+      </ul>
+      <div id="pluginsdiv">
+      </div>
+      <div id="connectionsdiv">
+
+        <br>
+        <button id="apply">Apply</button>
+        <button id="applyandsave">Apply and save</button>
+        <button id="restore">Restore saved settings</button>
+        <button id="reset">Reset form</button>
+        <button id="addnew">Add new connection</button>
+        <br>
+        <br>
+
+        <ul id="connectionslist" class="connectionslist"></ul>
+
+        <br>
+
+        <table id="portstable">
+        <tr>
+          <td class="portscell">
+            <ol id="outselectable" class="selectable"></ol>
+          </td>
+          <td class="portscell">
+            <ol id="inselectable" class="selectable"></ol>
+          </td>
+        </tr>
+        </table>
+
+        <button id="addport">Add from port</button>
+        <button id="addportregex">Add from port as regex</button>
+
+      </div>
+      <div id="visualizersdiv">
+      </div>
+      <div id="controlsdiv">
+      </div>
+    </div>
+
+    <div id="test"></div>
+  </body>
+</html>
+
