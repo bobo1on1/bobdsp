@@ -285,9 +285,9 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
   string filename = root + url;
 
   //make sure no file outside the root is accessed
-  if (!root.empty() && DirLevel(filename) < 0)
+  if (!root.empty() && DirLevel(url) < 0)
   {
-    LogError("Not allowing access to \"%s\", it's outside the root", string(root + filename).c_str());
+    LogError("Not allowing access to \"%s\", it's outside the root", filename.c_str());
     return CreateError(connection, MHD_HTTP_FORBIDDEN);
   }
 
