@@ -144,8 +144,12 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   {
     if (strurl == "/log")
     {
-      if (!g_logfilename.empty())
-        return CreateFileDownload(connection, g_logfilename, "", "text/plain");
+      if (!g_logfilename.empty() && g_logmutex)
+      {
+        CLock lock(*g_logmutex);
+        //set checksize to false since there might be writes to the logfile after the size has been checked
+        return CreateFileDownload(connection, g_logfilename, "", "text/plain", false);
+      }
     }
     else if (strurl == "/connections")
     {
@@ -280,7 +284,8 @@ int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::st
 }
 
 int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
-                                    const std::string& root /*= ""*/, const char* mime /*= NULL*/)
+                                    const std::string& root /*= ""*/, const char* mime /*= NULL*/,
+                                    bool checksize /*= true*/)
 {
   string filename = root + url;
 
@@ -309,7 +314,10 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
       return CreateRedirect(connection, PutSlashAtEnd(url));
   }
 
-  LogDebug("Opening \"%s\" size:%" PRIi64, filename.c_str(), (int64_t)statinfo.st_size);
+  if (checksize)
+    LogDebug("Opening \"%s\" size:%" PRIi64, filename.c_str(), (int64_t)statinfo.st_size);
+  else
+    LogDebug("Opening \"%s\"", filename.c_str());
 
   int fd = open64(filename.c_str(), O_RDONLY);
   if (fd == -1)
@@ -333,9 +341,11 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
       mime = "text/plain";
   }
 
+  int64_t size = checksize ? statinfo.st_size : -1;
+  int64_t block = checksize ? Clamp(statinfo.st_size, 1, 10 * 1024 * 1024) : 10240;
   int* hfd = new int(fd);
-  struct MHD_Response* response = MHD_create_response_from_callback(statinfo.st_size, Clamp(statinfo.st_size, 1, 10 * 1024 * 1024),
-                                                                    FileReadCallback, (void*)hfd, FileReadFreeCallback);
+  struct MHD_Response* response = MHD_create_response_from_callback(size, block, FileReadCallback,
+                                                                    (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
   returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);

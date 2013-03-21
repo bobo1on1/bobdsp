@@ -41,7 +41,7 @@ bool g_printdebuglevel = false;
 string g_logfilename;
 
 //as pointers, so we can allocate these after the locked memory is set up
-static CMutex*   g_logmutex;
+CMutex* g_logmutex;
 static ofstream* g_logfile;
 
 static int             g_logbuffsize; //size of the buffer

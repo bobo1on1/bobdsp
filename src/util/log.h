@@ -20,6 +20,7 @@
 #define LOG
 
 #include <string>
+#include "mutex.h"
 
 enum LogLevel
 {
@@ -40,5 +41,6 @@ extern bool g_logtostderr;
 extern bool g_printlogtofile;
 extern bool g_printdebuglevel;
 extern std::string g_logfilename;
+extern CMutex*     g_logmutex;
 
 #endif //LOG

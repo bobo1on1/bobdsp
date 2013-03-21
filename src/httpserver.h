@@ -81,7 +81,8 @@ class CHttpServer
     static int       CreateError(struct MHD_Connection *connection, int errorcode);
     static int       CreateRedirect(struct MHD_Connection *connection, const std::string& location);
     static int       CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
-                                        const std::string& root = "", const char* mime = NULL);
+                                        const std::string& root = "", const char* mime = NULL,
+                                        bool checksize = true);
     static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
     static void      FileReadFreeCallback(void* cls);
 
