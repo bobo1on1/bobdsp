@@ -55,7 +55,7 @@ void CPort::CheckBufferSize(jack_nframes_t nframes, float gain)
   }
   else
   {
-    if (m_bufsize < nframes)
+    if (m_bufsize != nframes)
     {
       m_buf = (float*)realloc(m_buf, nframes * sizeof(float));
       m_bufsize = nframes;
