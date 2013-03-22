@@ -245,7 +245,7 @@ CJSONGenerator* CPortConnector::PortIndexToJSON()
   CJSONGenerator* generator = new CJSONGenerator(true);
 
   generator->MapOpen();
-  generator->AddString("portindex");
+  generator->AddString("index");
   CLock lock(m_condition);
   generator->AddInt(m_portindex);
   lock.Leave();
@@ -262,7 +262,7 @@ CJSONGenerator* CPortConnector::PortsToJSON()
 
   generator->MapOpen();
 
-  generator->AddString("portindex");
+  generator->AddString("index");
   generator->AddInt(m_portindex);
   generator->AddString("ports");
   generator->ArrayOpen();
@@ -310,7 +310,7 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
     }
     else
     {
-      JSONMap::iterator jsonportindex = json->AsMap().find("portindex");
+      JSONMap::iterator jsonportindex = json->AsMap().find("index");
       if (jsonportindex != json->AsMap().end())
       {
         if (jsonportindex->second->IsNumber())
