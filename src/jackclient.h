@@ -49,13 +49,13 @@ class CJackClient : public CMessagePump
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
 
-    CLadspaPlugin*                Plugin()           { return m_plugin;        }
-    const std::string&            Name()             { return m_name;          }
-    float*                        GetGain()          { return m_gain;          }
-    void                          UpdateGain(float gain, int index);
-    int                           Samplerate()       { return m_samplerate;    }
-    void                          GetControlInputs(controlmap& controlinputs);
-    void                          UpdateControls(controlmap& controlinputs);
+    CLadspaPlugin*     Plugin()           { return m_plugin;        }
+    const std::string& Name()             { return m_name;          }
+    float*             GetGain()          { return m_gain;          }
+    void               UpdateGain(float gain, int index);
+    int                Samplerate()       { return m_samplerate;    }
+    void               GetControlInputs(controlmap& controlinputs);
+    void               UpdateControls(controlmap& controlinputs);
 
   private:
     bool           m_connected;
