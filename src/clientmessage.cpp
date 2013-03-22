@@ -37,6 +37,7 @@ const char* MsgToString(ClientMessage msg)
     "MsgPortDeregistered",
     "MsgPortConnected",
     "MsgPortDisconnected",
+    "MsgSamplerateChanged",
     "MsgConnectionsUpdated",
     "MsgCheckClients",
   };

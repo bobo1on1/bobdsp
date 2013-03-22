@@ -30,6 +30,7 @@
 #define PORTEVENT_DEREGISTERED 0x02
 #define PORTEVENT_CONNECTED    0x04
 #define PORTEVENT_DISCONNECTED 0x08
+#define SAMPLERATE_CHANGED     0x10
 
 using namespace std;
 
@@ -37,18 +38,18 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
                          double* gain, controlmap controlinputs):
   CMessagePump("jack client")
 {
-  m_plugin          = plugin;
-  m_name            = name;
-  m_nrinstances     = nrinstances;
-  m_controlinputs   = controlinputs;
-  m_client          = NULL;
-  m_connected       = false;
-  m_wasconnected    = true;
-  m_delete          = false;
-  m_restart         = false;
-  m_exitstatus      = (jack_status_t)0;
-  m_samplerate      = 0;
-  m_portevents      = 0;
+  m_plugin        = plugin;
+  m_name          = name;
+  m_nrinstances   = nrinstances;
+  m_controlinputs = controlinputs;
+  m_client        = NULL;
+  m_connected     = false;
+  m_wasconnected  = true;
+  m_delete        = false;
+  m_restart       = false;
+  m_exitstatus    = (jack_status_t)0;
+  m_samplerate    = 0;
+  m_events        = 0;
 
   for (int i = 0; i < 2; i++)
   {
@@ -109,6 +110,13 @@ bool CJackClient::ConnectInternal()
       m_name.c_str(), jack_get_client_name(m_client), m_samplerate);
 
   int returnv;
+
+  //enable the samplerate callback, if the samplerate changes the client is restarted
+  //to update the ladspa plugin with the new samplerate
+  returnv = jack_set_sample_rate_callback(m_client, SJackSamplerateCallback, this);
+  if (returnv != 0)
+    LogError("Client \"%s\" error %i setting samplerate callback: \"%s\"",
+             m_name.c_str(), returnv, GetErrno().c_str());
 
   //enable port registration callback, so we know when to connect new ports
   returnv = jack_set_port_registration_callback(m_client, SJackPortRegistrationCallback, this);
@@ -180,7 +188,7 @@ void CJackClient::Disconnect()
   }
 
   m_connected  = false;
-  m_portevents = 0;
+  m_events     = 0;
   m_exitstatus = (jack_status_t)0;
   m_samplerate = 0;
 
@@ -237,19 +245,22 @@ void CJackClient::UpdateControls(controlmap& controlinputs)
 
 void CJackClient::CheckMessages()
 {
-  if (m_portevents)
+  if (m_events)
   {
-    if ((m_portevents & PORTEVENT_REGISTERED) && WriteMessage(MsgPortRegistered))
-      m_portevents &= ~PORTEVENT_REGISTERED;
+    if ((m_events & PORTEVENT_REGISTERED) && WriteMessage(MsgPortRegistered))
+      m_events &= ~PORTEVENT_REGISTERED;
 
-    if ((m_portevents & PORTEVENT_DEREGISTERED) && WriteMessage(MsgPortDeregistered))
-      m_portevents &= ~PORTEVENT_DEREGISTERED;
+    if ((m_events & PORTEVENT_DEREGISTERED) && WriteMessage(MsgPortDeregistered))
+      m_events &= ~PORTEVENT_DEREGISTERED;
 
-    if ((m_portevents & PORTEVENT_CONNECTED) && WriteMessage(MsgPortConnected))
-      m_portevents &= ~PORTEVENT_CONNECTED;
+    if ((m_events & PORTEVENT_CONNECTED) && WriteMessage(MsgPortConnected))
+      m_events &= ~PORTEVENT_CONNECTED;
 
-    if ((m_portevents & PORTEVENT_DISCONNECTED) && WriteMessage(MsgPortDisconnected))
-      m_portevents &= ~PORTEVENT_DISCONNECTED;
+    if ((m_events & PORTEVENT_DISCONNECTED) && WriteMessage(MsgPortDisconnected))
+      m_events &= ~PORTEVENT_DISCONNECTED;
+
+    if ((m_events & SAMPLERATE_CHANGED) && WriteMessage(MsgSamplerateChanged))
+      m_events &= ~SAMPLERATE_CHANGED;
   }
 }
 
@@ -327,9 +338,9 @@ void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, vo
 void CJackClient::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
 {
   if (reg)
-    m_portevents |= PORTEVENT_REGISTERED;
+    m_events |= PORTEVENT_REGISTERED;
   else
-    m_portevents |= PORTEVENT_DEREGISTERED;
+    m_events |= PORTEVENT_DEREGISTERED;
 
   CheckMessages();
 }
@@ -342,10 +353,30 @@ void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, i
 void CJackClient::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
   if (connect)
-    m_portevents |= PORTEVENT_CONNECTED;
+    m_events |= PORTEVENT_CONNECTED;
   else
-    m_portevents |= PORTEVENT_DISCONNECTED;
+    m_events |= PORTEVENT_DISCONNECTED;
 
   CheckMessages();
+}
+
+int CJackClient::SJackSamplerateCallback(jack_nframes_t nframes, void *arg)
+{
+  return ((CJackClient*)arg)->PJackSamplerateCallback(nframes);
+}
+
+int CJackClient::PJackSamplerateCallback(jack_nframes_t nframes)
+{
+  if ((int)nframes != m_samplerate)
+  {
+    //if the jack samplerate changes, restart the client
+    MarkRestart();
+
+    //send a message to the main thread that the samplerate changed
+    m_events |= SAMPLERATE_CHANGED;
+    CheckMessages();
+  }
+
+  return 0;
 }
 

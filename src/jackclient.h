@@ -69,7 +69,7 @@ class CJackClient : public CMessagePump
     int            m_samplerate;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
-    int            m_portevents;
+    int            m_events;
     bool           m_nameset;
 
     CMutex         m_mutex;
@@ -97,6 +97,9 @@ class CJackClient : public CMessagePump
 
     static void SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg);
     void        PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
+
+    static int  SJackSamplerateCallback(jack_nframes_t nframes, void *arg);
+    int         PJackSamplerateCallback(jack_nframes_t nframes);
 };
 
 #endif //JACKCLIENT_H

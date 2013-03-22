@@ -29,6 +29,7 @@ enum ClientMessage
   MsgPortDeregistered,
   MsgPortConnected,
   MsgPortDisconnected,
+  MsgSamplerateChanged,
   MsgConnectionsUpdated,
   MsgCheckClients,
 };
