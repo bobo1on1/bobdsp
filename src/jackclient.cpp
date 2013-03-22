@@ -111,6 +111,12 @@ bool CJackClient::ConnectInternal()
 
   int returnv;
 
+  //set the thread init callback, the thread name will be set there
+  returnv = jack_set_thread_init_callback(m_client, SJackThreadInitCallback, this);
+  if (returnv != 0)
+    LogError("Client \"%s\" error %i setting thread init callback: \"%s\"",
+             m_name.c_str(), returnv, GetErrno().c_str());
+
   //enable the samplerate callback, if the samplerate changes the client is restarted
   //to update the ladspa plugin with the new samplerate
   returnv = jack_set_sample_rate_callback(m_client, SJackSamplerateCallback, this);
@@ -152,9 +158,6 @@ bool CJackClient::ConnectInternal()
              m_name.c_str(), returnv, GetErrno().c_str());
     return false;
   }
-
-  //make sure the threadname is set in the jack callback
-  m_nameset = false;
 
   return true;
 }
@@ -275,6 +278,17 @@ void CJackClient::TransferNewControlInputs(controlmap& controlinputs)
   }
 }
 
+void CJackClient::SJackThreadInitCallback(void *arg)
+{
+  ((CJackClient*)arg)->PJackThreadInitCallback();
+}
+
+void CJackClient::PJackThreadInitCallback()
+{
+  //set the name of the jack thread
+  CThread::SetCurrentThreadName(m_name.c_str());
+}
+
 int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)
 {
   ((CJackClient*)arg)->PJackProcessCallback(nframes);
@@ -304,13 +318,6 @@ void CJackClient::PJackProcessCallback(jack_nframes_t nframes)
 
   //check if we need to send a message to the main loop
   CheckMessages();
-
-  //set the name of this thread if needed
-  if (!m_nameset)
-  {
-    CThread::SetCurrentThreadName(m_name.c_str());
-    m_nameset = true;
-  }
 }
 
 void CJackClient::SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg)

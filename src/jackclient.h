@@ -70,7 +70,6 @@ class CJackClient : public CMessagePump
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
     int            m_events;
-    bool           m_nameset;
 
     CMutex         m_mutex;
     float          m_gain[2]; //pregain, postgain
@@ -85,6 +84,9 @@ class CJackClient : public CMessagePump
     void        InitLadspa();
     void        CheckMessages();
     void        TransferNewControlInputs(controlmap& controlinputs);
+
+    static void SJackThreadInitCallback(void *arg);
+    void        PJackThreadInitCallback();
 
     static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
     void        PJackProcessCallback(jack_nframes_t nframes);
