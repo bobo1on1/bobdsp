@@ -359,7 +359,11 @@ CJSONElement* ParseJSONFile(const std::string& filename, std::string*& error)
 
     status = yajl_parse(handle, (const unsigned char*)line.c_str(), line.length());
 
-    if (status != yajl_status_ok && status != yajl_status_insufficient_data)
+    if (status != yajl_status_ok
+#if YAJL_MAJOR < 2
+        && status != yajl_status_insufficient_data
+#endif
+      )
       break;
   }
 
