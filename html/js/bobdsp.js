@@ -158,17 +158,21 @@ function BobDSP(connectionelements)
     });
   }
 
+  var portindex = -1;
+
   function portsErrorHandler()
   {
     //clear the ports list
     outports.empty();
     inports.empty();
 
+    //reset index
+    portindex = -1;
+
     //try to get the ports again
     setTimeout(loadPorts, 1000);
   }
 
-  var portindex = -1;
   function parsePorts(data)
   {
     //bobdsp will only send the ports if the index changed
