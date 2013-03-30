@@ -39,6 +39,7 @@ def configure(conf):
   conf.check(header_name='stdio.h')
   conf.check(header_name='stdlib.h')
   conf.check(header_name='string.h')
+  conf.check(header_name='strings.h')
   conf.check(header_name='sys/mman.h')
   conf.check(header_name='sys/signalfd.h')
   conf.check(header_name='sys/stat.h')

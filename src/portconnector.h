@@ -20,6 +20,7 @@
 #define PORTCONNECTOR_H
 
 #include <string>
+#include <strings.h>
 #include <vector>
 #include <jack/jack.h>
 #include <list>
@@ -99,7 +100,7 @@ class CJackPort
 
     bool operator<(CJackPort& rhs)
     {
-      return (m_name < rhs.m_name);
+      return strcasecmp(m_name.c_str(), rhs.m_name.c_str()) < 0;
     }
 
     bool operator==(CJackPort& rhs)
