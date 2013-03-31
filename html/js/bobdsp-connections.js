@@ -1,4 +1,4 @@
-function BobDSP(connectionelements)
+function BobDSPConnections(connectionelements)
 {
   var connectionslist    = connectionelements.connectionslist;
   var resetbutton        = connectionelements.resetbutton;
@@ -33,7 +33,7 @@ function BobDSP(connectionelements)
   function addItem(connection, index)
   {
     var li = document.createElement("li");
-    li.setAttribute("class", "ui-state-default");
+    li.setAttribute("class", "ui-widget-content");
 
     var tr = document.createElement("tr");
     li.appendChild(tr);
@@ -92,6 +92,7 @@ function BobDSP(connectionelements)
       textinputs[j].setAttribute("id", textid);
       textinputs[j].value = j == 0 ? connection.out : connection.in;
       tds[j * 2 + 1].appendChild(textinputs[j]);
+      textinputs[j].setAttribute("class", "ui-widget-content ui-corner-all");
     }
 
     connectionslist.get(0).appendChild(li);

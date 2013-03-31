@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>BobDSP</title>
-    <link rel="stylesheet" href="jquery-ui-1.10.2.custom/css/dot-luv/jquery-ui-1.10.2.custom.min.css" />
+    <link rel="stylesheet" href="jquery-ui-1.10.2.custom/css/dot-luv/jquery-ui-1.10.2.custom.css" />
 
     <style>
       body
@@ -57,7 +57,8 @@
     <script type="text/javascript" src="jquery-ui-1.10.2.custom/js/jquery-1.9.1.js"></script>
     <script type="text/javascript" src="jquery-ui-1.10.2.custom/js/jquery-ui-1.10.2.custom.min.js"></script>
     <script type="text/javascript" src="js/json2.js"></script>
-    <script type="text/javascript" src="js/bobdsp.js"></script>
+    <script type="text/javascript" src="js/bobdsp-connections.js"></script>
+    <script type="text/javascript" src="js/bobdsp-plugins.js"></script>
 
     <script>
       $(function()
@@ -73,6 +74,8 @@
         $("#inselectable").selectable({stop:portUnSelect});
         $("#addport").button();
         $("#addportregex").button();
+        $("#spinner").spinner({ incremental: false, min: 1});
+        $("#spinner").spinner("value", 1);
 
         //if multiple elements are selected, deselect them except the first
         function portUnSelect(event, ui)
@@ -97,19 +100,28 @@
           addportregexbutton : $("#addportregex")
         };
 
-        BobDSP(connectionelements);
+        BobDSPConnections(connectionelements);
+
+        var pluginElements =
+        {
+          clientsdiv : $("#clientsdiv")
+        };
+
+        BobDSPPlugins(pluginElements);
       });
     </script>
   </head>
   <body>
     <div id="tabsdiv">
       <ul>
-        <li><a href="#connectionsdiv">Connections</a></li>
         <li><a href="#pluginsdiv">Plugins</a></li>
+        <li><a href="#connectionsdiv">Connections</a></li>
         <li><a href="#visualizersdiv">Visualizers</a></li>
         <li><a href="#controlsdiv">Controls</a></li>
       </ul>
       <div id="pluginsdiv">
+        <div id="clientsdiv">
+        </div>
       </div>
       <div id="connectionsdiv">
 
