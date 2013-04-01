@@ -23,8 +23,6 @@ using namespace std;
 
 int main (int argc, char *argv[])
 {
-  CThread::SetCurrentThreadName("main");
-
   CBobDSP bobdsp(argc, argv);
 
   bobdsp.Setup();
