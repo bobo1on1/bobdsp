@@ -70,16 +70,16 @@ bool CThread::IsRunning()
   return m_running;
 }
 
-void CThread::SetThreadName(const char* name)
+void CThread::SetThreadName(const std::string& name)
 {
 #ifdef HAVE_PTHREAD_SETNAME_NP
-  pthread_setname_np(m_thread, name);
+  pthread_setname_np(m_thread, name.substr(0, 15).c_str());
 #endif
 }
 
-void CThread::SetCurrentThreadName(const char* name)
+void CThread::SetCurrentThreadName(const std::string& name)
 {
 #ifdef HAVE_PTHREAD_SETNAME_NP
-  pthread_setname_np(pthread_self(), name);
+  pthread_setname_np(pthread_self(), name.substr(0, 15).c_str());
 #endif
 }

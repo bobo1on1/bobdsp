@@ -23,6 +23,7 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <string>
 
 class CThread
 {
@@ -34,8 +35,8 @@ class CThread
     void AsyncStopThread();
     void JoinThread();
     bool IsRunning();
-    void SetThreadName(const char* name);
-    static void SetCurrentThreadName(const char* name);
+    void SetThreadName(const std::string& name);
+    static void SetCurrentThreadName(const std::string& name);
 
   protected:
     pthread_t     m_thread;

@@ -125,7 +125,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   if (host.empty())
     host = "unknown";
 
-  CThread::SetCurrentThreadName((string("http ") + host).c_str());
+  CThread::SetCurrentThreadName(string("http ") + host);
 
   LogDebug("%s method: \"%s\" version: \"%s\" url: \"%s\"", host.c_str(), method, version, url);
 

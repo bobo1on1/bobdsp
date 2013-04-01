@@ -286,7 +286,7 @@ void CJackClient::SJackThreadInitCallback(void *arg)
 void CJackClient::PJackThreadInitCallback()
 {
   //set the name of the jack thread
-  CThread::SetCurrentThreadName(m_name.c_str());
+  CThread::SetCurrentThreadName(m_name);
 }
 
 int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)
