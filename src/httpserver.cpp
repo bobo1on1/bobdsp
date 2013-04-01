@@ -60,9 +60,17 @@ bool CHttpServer::Start()
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 
+  //libmicrohttpd starts a thread of its own, it inherits the threadname it was started from
+  //use a trick to set the thread name of libmicrohttpd's thread
+  string threadname = CThread::GetCurrentThreadName();
+  CThread::SetCurrentThreadName("httpserver");
+
   unsigned int timeout = 60 * 60; //one hour timeout
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
                               &AnswerToConnection, this, MHD_OPTION_CONNECTION_TIMEOUT, timeout, MHD_OPTION_END);
+
+  CThread::SetCurrentThreadName(threadname);
+
   if (m_daemon)
     Log("Started webserver on port %i", m_port);
   else

@@ -37,6 +37,7 @@ class CThread
     bool IsRunning();
     void SetThreadName(const std::string& name);
     static void SetCurrentThreadName(const std::string& name);
+    static std::string GetCurrentThreadName();
 
   protected:
     pthread_t     m_thread;

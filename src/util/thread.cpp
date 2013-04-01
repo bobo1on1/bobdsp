@@ -83,3 +83,14 @@ void CThread::SetCurrentThreadName(const std::string& name)
   pthread_setname_np(pthread_self(), name.substr(0, 15).c_str());
 #endif
 }
+
+std::string CThread::GetCurrentThreadName()
+{
+  std::string name;
+#ifdef HAVE_PTHREAD_SETNAME_NP
+  char buf[16];
+  if (pthread_getname_np(pthread_self(), buf, sizeof(buf)) == 0)
+    name = buf;
+#endif
+  return name;
+}
