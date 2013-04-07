@@ -65,10 +65,10 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       {},
       {},
       {
-        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_SAMPLE_RATE |
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
         LADSPA_HINT_LOGARITHMIC | LADSPA_HINT_DEFAULT_100,
         0.0f,
-        0.4f
+        200.0f
       },
       {
         LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1 |
@@ -77,10 +77,10 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
         5.0f
       },
       {
-        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_SAMPLE_RATE |
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
         LADSPA_HINT_LOGARITHMIC | LADSPA_HINT_DEFAULT_100,
         0.0f,
-        0.4f
+        200.0f
       },
       {
         LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1 |
