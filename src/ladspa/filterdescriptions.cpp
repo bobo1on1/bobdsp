@@ -71,7 +71,8 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
         0.4f
       },
       {
-        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1,
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1 |
+        LADSPA_HINT_LOGARITHMIC,
         0.01f,
         5.0f
       },
@@ -82,7 +83,8 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
         0.4f
       },
       {
-        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1,
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1 |
+        LADSPA_HINT_LOGARITHMIC,
         0.01f,
         5.0f
       }
