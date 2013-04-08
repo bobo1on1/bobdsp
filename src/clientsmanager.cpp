@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <fstream>
+#include <assert.h>
 
 using namespace std;
 
@@ -547,25 +548,33 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
     controlmap controls;
     (*it)->GetControlInputs(controls);
 
-    for (controlmap::iterator control = controls.begin(); control != controls.end(); control++)
+    //iterate over the ladspa plugin's control inputs,
+    //then find the corresponding control in the jack client's controls
+    //this way, the order of the controls in the JSON output
+    //is the same as the controls order of the ladspa plugin
+    CLadspaPlugin* plugin = (*it)->Plugin();
+    for (unsigned long port = 0; port < plugin->PortCount(); port++)
     {
-      generator->MapOpen();
-
-      generator->AddString("name");
-      generator->AddString(control->first);
-      generator->AddString("value");
-      generator->AddDouble(control->second);
-
-      //add the port description of this port
-      if (portdescription)
+      if (plugin->IsControlInput(port))
       {
-        CLadspaPlugin* plugin = (*it)->Plugin();
-        long port = plugin->PortByName(control->first);
-        m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
-      }
+        controlmap::iterator control = controls.find(plugin->PortName(port));
+        assert(control != controls.end());
 
-      generator->MapClose();
+        generator->MapOpen();
+
+        generator->AddString("name");
+        generator->AddString(control->first);
+        generator->AddString("value");
+        generator->AddDouble(control->second);
+
+        //add the port description of this port
+        if (portdescription)
+          m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
+
+        generator->MapClose();
+      }
     }
+
     generator->ArrayClose();
 
     generator->AddString("plugin");
