@@ -51,8 +51,8 @@ class CJackClient : public CMessagePump
 
     CLadspaPlugin*     Plugin()           { return m_plugin;        }
     const std::string& Name()             { return m_name;          }
-    float*             GetGain()          { return m_gain;          }
-    void               UpdateGain(float gain, int index);
+    double             GetGain(int index) { return m_gain[index];   }
+    void               UpdateGain(double gain, int index);
     int                Samplerate()       { return m_samplerate;    }
     void               GetControlInputs(controlmap& controlinputs);
     void               UpdateControls(controlmap& controlinputs);
@@ -72,8 +72,8 @@ class CJackClient : public CMessagePump
     int            m_events;
 
     CMutex         m_mutex;
-    float          m_gain[2]; //pregain, postgain
-    float          m_runninggain[2]; //copied from m_gain in the jack thread
+    controlvalue   m_gain[2]; //pregain, postgain
+    controlvalue   m_runninggain[2]; //copied from m_gain in the jack thread
     controlmap     m_controlinputs;
     controlmap     m_newcontrolinputs;
 

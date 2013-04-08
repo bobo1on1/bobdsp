@@ -222,7 +222,7 @@ void CJackClient::InitLadspa()
   }
 }
 
-void CJackClient::UpdateGain(float gain, int index)
+void CJackClient::UpdateGain(double gain, int index)
 {
   //update the gain, this will be read from the jack thread
   CLock lock(m_mutex);

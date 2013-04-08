@@ -27,7 +27,61 @@
 
 #include "ladspaplugin.h"
 
-typedef std::map<std::string, float> controlmap;
+class controlvalue
+{
+  public:
+    controlvalue()
+    {
+      m_doubleval = 0.0;
+      m_floatval  = 0.0f;
+      m_floatorig = 0.0f;
+    }
+
+
+    controlvalue& operator= (double value)
+    {
+      m_doubleval = value;
+      m_floatval  = value;
+      m_floatorig = value;
+
+      return *this;
+    }
+
+    operator double()
+    {
+      //m_floatval can be changed via a float*,
+      //the original value is stored in m_floatorig
+      //if it changed, assign the same value to m_doubleval
+      if (m_floatval != m_floatorig)
+      {
+        m_floatorig = m_floatval;
+        m_doubleval = m_floatval;
+      }
+
+      return m_doubleval;
+    }
+
+    operator float*()
+    {
+      return &m_floatval;
+    }
+
+  private:
+    //control values are stored here as double for generating JSON
+    //and as float for passing into the LADSPA plugins
+    double m_doubleval;
+    float  m_floatval;
+    float  m_floatorig;
+
+    //don't allow assigning floats
+    controlvalue& operator= (float value)
+    {
+      return *this;
+    }
+
+};
+
+typedef std::map<std::string, controlvalue> controlmap;
 
 class CPort
 {

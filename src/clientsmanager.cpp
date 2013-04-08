@@ -538,9 +538,9 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
     generator->AddInt((*it)->NrInstances());
 
     generator->AddString("pregain");
-    generator->AddDouble((*it)->GetGain()[0]);
+    generator->AddDouble((*it)->GetGain(0));
     generator->AddString("postgain");
-    generator->AddDouble((*it)->GetGain()[1]);
+    generator->AddDouble((*it)->GetGain(1));
 
     generator->AddString("controls");
     generator->ArrayOpen();

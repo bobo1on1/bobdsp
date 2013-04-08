@@ -101,13 +101,13 @@ bool CLadspaInstance::Connect()
       {
         //only allocate a value for the output port
         //since any next call might do a realloc, and invalidate the pointer
-        m_controloutputs[m_plugin->PortName(port)] = 0.0f;
+        m_controloutputs[m_plugin->PortName(port)] = 0.0;
       }
       else
       {
         controlmap::iterator it = m_controlinputs.find(m_plugin->PortName(port));
         assert(it != m_controlinputs.end());
-        m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
+        m_plugin->Descriptor()->connect_port(m_handle, port, it->second);
       }
     }
   }
@@ -119,7 +119,7 @@ bool CLadspaInstance::Connect()
     {
       controlmap::iterator it = m_controloutputs.find(m_plugin->PortName(port));
       assert(it != m_controloutputs.end());
-      m_plugin->Descriptor()->connect_port(m_handle, port, &(it->second));
+      m_plugin->Descriptor()->connect_port(m_handle, port, it->second);
     }
   }
 
