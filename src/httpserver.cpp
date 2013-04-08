@@ -173,7 +173,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else if (strurl == "/clients")
     {
-      return CreateJSONDownload(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(true));
+      return CreateJSONDownload(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(false));
     }
     else if (strurl == "/visualizers")
     {

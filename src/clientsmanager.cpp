@@ -38,6 +38,7 @@ CClientsManager::CClientsManager(CBobDSP& bobdsp):
   m_bobdsp(bobdsp)
 {
   m_checkclients = false;
+  m_clientindex = 0;
 }
 
 CClientsManager::~CClientsManager()
@@ -56,7 +57,7 @@ void CClientsManager::Stop()
 CJSONGenerator* CClientsManager::SettingsToJSON(bool tofile)
 {
   //when these settings are being written to a file, don't add the portdescription
-  return ClientsToJSON(!tofile);
+  return ClientsToJSON(tofile);
 }
 
 void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
@@ -193,6 +194,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
                                             gain, controlvalues);
   m_clients.push_back(jackclient);
   m_checkclients = true;
+  m_clientindex++;
 
   Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
       name.c_str(), instances, gain[0], gain[1]);
@@ -212,6 +214,7 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
   //clients are deleted from the main thread, since it's waiting on its messagepipe
   jackclient->MarkDelete(); 
   m_checkclients = true;
+  m_clientindex++;
 }
 
 void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
@@ -515,15 +518,22 @@ CJackClient* CClientsManager::FindClient(const std::string& name)
   return NULL;
 }
 
-CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
+CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
 {
   CJSONGenerator* generator = new CJSONGenerator(true);
 
   generator->MapOpen();
-  generator->AddString("clients");
-  generator->ArrayOpen();
 
   CLock lock(m_mutex);
+
+  if (!tofile)
+  {
+    generator->AddString("index");
+    generator->AddInt(m_clientindex);
+  }
+
+  generator->AddString("clients");
+  generator->ArrayOpen();
 
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
@@ -568,7 +578,7 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool portdescription)
         generator->AddDouble(control->second);
 
         //add the port description of this port
-        if (portdescription)
+        if (!tofile)
           m_bobdsp.PluginManager().PortRangeDescriptionToJSON(*generator, plugin, port);
 
         generator->MapClose();

@@ -45,13 +45,14 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     int             ClientPipes(pollfd*& fds, int extra);
     void            ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
 
-    CJSONGenerator* ClientsToJSON(bool portdescription);
+    CJSONGenerator* ClientsToJSON(bool tofile);
 
   private:
     CBobDSP&                  m_bobdsp;
     std::vector<CJackClient*> m_clients;
     CMutex                    m_mutex;
     bool                      m_checkclients;
+    unsigned int              m_clientindex; //changed whenever a client is added or deleted
 
     enum LOADSTATE
     {
