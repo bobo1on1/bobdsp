@@ -44,6 +44,7 @@ namespace UTILNAMESPACE
   std::string PutSlashAtStart(const std::string& path);
   std::string FileNameExtension(const std::string& path);
   std::string ToLower(const std::string& in);
+  std::string ToLower(const std::string& in, std::string& out);
   bool StrToBool(const std::string& data, bool& value);
   int  DirLevel(const std::string& url);
 

@@ -20,13 +20,14 @@
 #define PORTCONNECTOR_H
 
 #include <string>
-#include <strings.h>
 #include <vector>
 #include <jack/jack.h>
 #include <list>
 #include <pcrecpp.h>
 #include "util/JSON.h"
 #include "util/condition.h"
+#include "util/alphanum.h"
+#include "util/misc.h"
 #include "clientmessage.h"
 #include "jsonsettings.h"
 
@@ -88,6 +89,9 @@ class CJackPort
     {
       m_name = name;
       m_flags = flags;
+
+      //store the port name as lower case too, to do a case insensitive sort
+      ToLower(m_name, m_lname);
     }
 
     const char* TypeStr()
@@ -100,7 +104,7 @@ class CJackPort
 
     bool operator<(CJackPort& rhs)
     {
-      return strcasecmp(m_name.c_str(), rhs.m_name.c_str()) < 0;
+      return alphanum_comp(m_lname.c_str(), rhs.m_lname.c_str()) < 0;
     }
 
     bool operator==(CJackPort& rhs)
@@ -118,6 +122,7 @@ class CJackPort
 
   private:
     std::string m_name;
+    std::string m_lname;
     int         m_flags;
 };
 

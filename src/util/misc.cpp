@@ -145,6 +145,17 @@ namespace UTILNAMESPACE
     return out;
   }
 
+  std::string ToLower(const std::string& in, std::string& out)
+  {
+    out.clear();
+    out.reserve(in.size());
+
+    for (string::const_iterator it = in.begin(); it != in.end(); it++)
+      out += (char)tolower(*it);
+
+    return out;
+  }
+
   bool StrToBool(const std::string& data, bool& value)
   {
     std::string data2 = data;
