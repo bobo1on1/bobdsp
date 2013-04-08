@@ -29,7 +29,7 @@
 #include "ladspaplugin.h"
 #include "clientmessage.h"
 #include "jsonsettings.h"
-#include "util/mutex.h"
+#include "util/condition.h"
 #include "util/JSON.h"
 
 class CBobDSP;
@@ -50,9 +50,11 @@ class CClientsManager : public CMessagePump, public CJSONSettings
   private:
     CBobDSP&                  m_bobdsp;
     std::vector<CJackClient*> m_clients;
-    CMutex                    m_mutex;
+    CCondition                m_condition;
     bool                      m_checkclients;
+    bool                      m_stop;
     unsigned int              m_clientindex; //changed whenever a client is added or deleted
+    unsigned int              m_controlindex; //changed whenever a control is changed
 
     enum LOADSTATE
     {
@@ -74,6 +76,8 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     bool                    CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
                                           controlmap& controlvalues, bool checkmissing);
     CJackClient*            FindClient(const std::string& name);
+    void                    WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
+                                          JSONMap::iterator& clientindex, JSONMap::iterator& controlindex);
 };
 
 #endif //CLIENTSMANAGER_H

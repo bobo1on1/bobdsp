@@ -34,11 +34,13 @@ using namespace std;
 
 CClientsManager::CClientsManager(CBobDSP& bobdsp):
   CMessagePump("clientsmanager"),
-  CJSONSettings(SETTINGSFILE, "client", m_mutex),
+  CJSONSettings(SETTINGSFILE, "client", m_condition),
   m_bobdsp(bobdsp)
 {
+  m_stop = false;
   m_checkclients = false;
   m_clientindex = 0;
+  m_controlindex = 0;
 }
 
 CClientsManager::~CClientsManager()
@@ -47,11 +49,14 @@ CClientsManager::~CClientsManager()
 
 void CClientsManager::Stop()
 {
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
 
   Log("Stopping %zu jack client(s)", m_clients.size());
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     delete *it;
+
+  m_stop = true;
+  m_condition.Broadcast();
 }
 
 CJSONGenerator* CClientsManager::SettingsToJSON(bool tofile)
@@ -75,7 +80,7 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
     }
   }
 
-  //check the clients array and action string first, then parse them if they're valid
+  //check the JSON elements first
   JSONMap::iterator clients = root.find("clients");
   if (clients != root.end() && !clients->second->IsArray())
   {
@@ -90,6 +95,28 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
     return;
   }
 
+  JSONMap::iterator timeout = root.find("timeout");
+  if (timeout != root.end() && !timeout->second->IsNumber())
+  {
+    LogError("%s: invalid value for timeout: %s", source.c_str(), ToJSON(timeout->second).c_str());
+    return;
+  }
+
+  JSONMap::iterator clientindex = root.find("clientindex");
+  if (clientindex != root.end() && !clientindex->second->IsNumber())
+  {
+    LogError("%s: invalid value for clientindex: %s", source.c_str(), ToJSON(clientindex->second).c_str());
+    return;
+  }
+
+  JSONMap::iterator controlindex = root.find("controlindex");
+  if (controlindex != root.end() && !controlindex->second->IsNumber())
+  {
+    LogError("%s: invalid value for controlindex: %s", source.c_str(), ToJSON(controlindex->second).c_str());
+    return;
+  }
+
+  //if all the JSON elements are valid, parse them
   if (clients != root.end())
   {
     for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
@@ -102,6 +129,8 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
       SaveFile();
     else if (action->second->AsString() == "reload" && allowreload)
       LoadFile(true);
+    else if (action->second->AsString() == "wait")
+      WaitForChange(root, timeout, clientindex, controlindex);
   }
 
   //check if a message need to be sent to the main thread
@@ -194,7 +223,9 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
                                             gain, controlvalues);
   m_clients.push_back(jackclient);
   m_checkclients = true;
+
   m_clientindex++;
+  m_condition.Broadcast();
 
   Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
       name.c_str(), instances, gain[0], gain[1]);
@@ -214,7 +245,9 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
   //clients are deleted from the main thread, since it's waiting on its messagepipe
   jackclient->MarkDelete(); 
   m_checkclients = true;
+
   m_clientindex++;
+  m_condition.Broadcast();
 }
 
 void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
@@ -264,6 +297,8 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   if (!CheckControls(source, jackclient->Plugin(), controlvalues, false))
     return; //one or more control values don't exist in the plugin
 
+  bool controlupdated = false;
+
   if (instancesupdated && instances != jackclient->NrInstances())
   {
     //apply new instances, then tell the main thread to restart this client
@@ -271,6 +306,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
     jackclient->SetNrInstances(instances);
     jackclient->MarkRestart();
     m_checkclients = true;
+    controlupdated = true;
   }
 
   //update gain values
@@ -280,12 +316,22 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
     {
       LogDebug("Client \"%s\" setting %s to %f", name.c_str(), i == 0 ? "pregain" : "postgain", gain[i]);
       jackclient->UpdateGain(gain[i], i);
+      controlupdated = true;
     }
   }
 
   //update control values
   if (!controlvalues.empty())
+  {
     jackclient->UpdateControls(controlvalues);
+    controlupdated = true;
+  }
+
+  if (controlupdated)
+  {
+    m_controlindex++;
+    m_condition.Broadcast();
+  }
 }
 
 CClientsManager::LOADSTATE CClientsManager::LoadDouble(JSONMap& client, double& value,
@@ -518,18 +564,47 @@ CJackClient* CClientsManager::FindClient(const std::string& name)
   return NULL;
 }
 
+//should have locked m_condition before calling this
+void CClientsManager::WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
+                                    JSONMap::iterator& clientindex, JSONMap::iterator& controlindex)
+{
+  int64_t ptimeout = -1;
+  if (timeout != root.end())
+    ptimeout = Min(timeout->second->ToInt64(), 60000) * 1000;
+
+  int64_t pclientindex = -1;
+  if (clientindex != root.end())
+    pclientindex = clientindex->second->ToInt64();
+
+  int64_t pcontrolindex = -1;
+  if (controlindex != root.end())
+    pcontrolindex = controlindex->second->ToInt64();
+
+  //wait on m_condtion for changes on m_clientindex, m_controlindex or the timeout
+  int64_t start = GetTimeUs();
+  int64_t now   = start;
+  while (!m_stop && (pclientindex == -1 || (int64_t)m_clientindex == pclientindex) &&
+         (pcontrolindex == -1 || (int64_t)m_controlindex == pcontrolindex) && (now - start) < ptimeout)
+  {
+    m_condition.Wait(Max(ptimeout - (now - start), 0));
+    now = GetTimeUs();
+  }
+}
+
 CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
 {
   CJSONGenerator* generator = new CJSONGenerator(true);
 
   generator->MapOpen();
 
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
 
   if (!tofile)
   {
-    generator->AddString("index");
+    generator->AddString("clientindex");
     generator->AddInt(m_clientindex);
+    generator->AddString("controlindex");
+    generator->AddInt(m_controlindex);
   }
 
   generator->AddString("clients");
@@ -608,7 +683,7 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
 
 bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t lastconnect)
 {
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
 
   bool connected = false;
 
@@ -666,7 +741,7 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
 
 int CClientsManager::ClientPipes(pollfd*& fds, int extra)
 {
-  CLock lock(m_mutex);
+  CLock lock(m_condition);
 
   fds = new pollfd[m_clients.size() + extra];
 
@@ -691,7 +766,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
   //since in case of a jack event, every client sends a message
   for (int i = 0; i < 2; i++)
   {
-    CLock lock(m_mutex);
+    CLock lock(m_condition);
     bool gotmessage = false;
     for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
