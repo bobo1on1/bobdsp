@@ -55,6 +55,8 @@ void CClientsManager::Stop()
   for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     delete *it;
 
+  m_clients.clear();
+
   m_stop = true;
   m_condition.Broadcast();
 }
