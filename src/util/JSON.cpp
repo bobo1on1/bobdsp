@@ -40,7 +40,7 @@ static int JNull(void* ctx)
 
   //an element's type is set to TYPENULL in the constructor
   if (element->IsArray())
-    element->AsArray().push_back(new CJSONElement());
+    element->AsArray().push_back(new CJSONElement(element));
   else
     element = element->GetParent();
 
@@ -55,10 +55,9 @@ static int Boolean(void* ctx, int boolVal)
 
   if (element->IsArray())
   {
-    CJSONElement* child = new CJSONElement();
+    CJSONElement* child = new CJSONElement(element);
     child->SetType(TYPEBOOL);
     child->AsBool() = boolVal ? true : false;
-    child->SetParent(element);
     element->AsArray().push_back(child);
   }
   else
@@ -95,8 +94,7 @@ static int Number(void* ctx, const char * numberVal, YAJLSTRINGLEN numberLen)
   CJSONElement* parse;
   if (element->IsArray())
   {
-    CJSONElement* child = new CJSONElement();
-    child->SetParent(element);
+    CJSONElement* child = new CJSONElement(element);
     element->AsArray().push_back(child);
     parse = child;
   }
@@ -132,10 +130,9 @@ static int String(void* ctx, const unsigned char * stringVal, YAJLSTRINGLEN stri
 
   if (element->IsArray())
   {
-    CJSONElement* child = new CJSONElement();
+    CJSONElement* child = new CJSONElement(element);
     child->SetType(TYPESTRING);
     child->AsString().assign((const char*)stringVal, stringLen);
-    child->SetParent(element);
     element->AsArray().push_back(child);
   }
   else
@@ -155,9 +152,8 @@ static int StartMap(void* ctx)
   CJSONElement*& element = *(CJSONElement**)ctx;
   if (element->IsArray())
   {
-    CJSONElement* child = new CJSONElement();
+    CJSONElement* child = new CJSONElement(element);
     child->SetType(TYPEMAP);
-    child->SetParent(element);
     element->AsArray().push_back(child);
     element = child;
   }
@@ -187,9 +183,8 @@ static int MapKey(void* ctx, const unsigned char * key, YAJLSTRINGLEN stringLen)
   //allocate a new child element on the current map
   //then update the pointer, the parse functions will use the pointer to access the child
   //and afterwards set the pointer back to the parent
-  CJSONElement*& child = element->AsMap()[string((const char*)key, stringLen)];
-  child = new CJSONElement();
-  child->SetParent(element);
+  CJSONElement*& child = element->AsMap()[strkey];
+  child = new CJSONElement(element);
   element = child;
 
   return 1;
@@ -214,9 +209,8 @@ static int StartArray(void* ctx)
 
   if (element->IsArray())
   {
-    CJSONElement* child = new CJSONElement();
+    CJSONElement* child = new CJSONElement(element);
     child->SetType(TYPEARRAY);
-    child->SetParent(element);
     element->AsArray().push_back(child);
     element = child;
   }
@@ -320,7 +314,7 @@ CJSONElement* ParseJSON(const std::string& json, std::string*& error)
 {
   //allocate a root element, the type will be set in one of the parser functions
   //for valid JSON, this will be TYPEMAP
-  CJSONElement* root = new CJSONElement();
+  CJSONElement* root = new CJSONElement(NULL);
   CJSONElement* rootptr = root; //pointer for the yajl functions
 
   yajl_handle handle = AllocHandle(&rootptr);
@@ -336,7 +330,7 @@ CJSONElement* ParseJSONFile(const std::string& filename, std::string*& error)
 {
   //allocate a root element, the type will be set in one of the parser functions
   //for valid JSON, this will be TYPEMAP
-  CJSONElement* root = new CJSONElement();
+  CJSONElement* root = new CJSONElement(NULL);
   CJSONElement* rootptr = root; //pointer for the yajl functions
 
   ifstream infile(filename.c_str());
@@ -422,11 +416,11 @@ std::string ToJSON(CJSONElement* root, bool beautify/* = false*/)
   return generator.ToString();
 }
 
-CJSONElement::CJSONElement()
+CJSONElement::CJSONElement(CJSONElement* parent)
 {
   m_type = TYPENULL;
   memset(&m_data, 0, sizeof(m_data));
-  m_parent = NULL;
+  m_parent = parent;
   m_error = NULL;
 }
 

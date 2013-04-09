@@ -92,13 +92,12 @@ std::string ToJSON(CJSONElement* root, bool beautify = false);
 class CJSONElement
 {
   public:
-    CJSONElement();
+    CJSONElement(CJSONElement* parent);
     ~CJSONElement();
 
     void          SetType(ELEMENTTYPE type);
 
     CJSONElement* GetParent() { return m_parent; }
-    void          SetParent(CJSONElement* parent) { m_parent = parent; }
 
     void          SetError(std::string* error) { m_error = error; }
     std::string*  GetError() { return m_error; }
