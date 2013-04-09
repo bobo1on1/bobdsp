@@ -90,7 +90,12 @@ class CPort
     ~CPort();
 
     void          CheckBufferSize(jack_nframes_t nframes, float gain);
+    float*        GetBuffer(float* jackptr);
+    jack_port_t*  GetJackPort()   { return m_jackport;   }
+    bool          IsInput()       { return m_isinput;    }
+    unsigned long GetLadspaPort() { return m_ladspaport; }
 
+  private:
     jack_port_t*  m_jackport;
     unsigned long m_ladspaport;
     float*        m_buf;

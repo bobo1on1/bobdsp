@@ -15,10 +15,13 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "util/inclstdint.h"
+
 #include <cstdlib>
 
 #include "util/misc.h"
 #include "util/log.h"
+#include "util/floatbufferops.h"
 #include "ladspainstance.h"
 
 #include <cstring>
@@ -49,17 +52,36 @@ void CPort::CheckBufferSize(jack_nframes_t nframes, float gain)
     if (m_bufsize > 0)
     {
       free(m_buf);
-      m_buf = NULL;
+      m_buf     = NULL;
       m_bufsize = 0;
     }
   }
+  else if (m_bufsize != nframes)
+  {
+    free(m_buf);
+
+    //allocate a buffer aligned to 16 bytes so sse vector instructions can be used
+    //make it 16 bytes larger than needed so the offset can be adjusted
+    posix_memalign((void**)&m_buf, 16, nframes * sizeof(float) + 16);
+    m_bufsize = nframes;
+  }
+}
+
+float* CPort::GetBuffer(float* jackptr)
+{
+  if (m_buf)
+  {
+    //return a pointer to the buffer, and give it the same offset from a 16 byte alignment
+    //as the pointer to the jack buffer
+    //when copying from one buffer to the other, both buffers will be aligned to 16 bytes
+    //after at most 3 iterations, assuming that the jack pointer is at least aligned to 4 bytes
+    //this way, sse vector instructions can be used
+    uintptr_t offset = (uintptr_t)jackptr % 16;
+    return (float*)((uintptr_t)m_buf + offset);
+  }
   else
   {
-    if (m_bufsize != nframes)
-    {
-      m_buf = (float*)realloc(m_buf, nframes * sizeof(float));
-      m_bufsize = nframes;
-    }
+    return NULL;
   }
 }
 
@@ -173,7 +195,7 @@ void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
   {
     if (unregisterjack)
     {
-      int returnv = jack_port_unregister(m_client, m_ports.back().m_jackport);
+      int returnv = jack_port_unregister(m_client, m_ports.back().GetJackPort());
       if (returnv != 0)
         LogError("Client \"%s\" error %i unregistering port: \"%s\"",
                   m_name.c_str(), returnv, GetErrno().c_str());
@@ -210,38 +232,33 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
 {
   for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
   {
-    float* jackptr = (float*)jack_port_get_buffer(it->m_jackport, nframes);
+    float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), nframes);
 
-    if (it->m_isinput)
+    if (it->IsInput())
     {
       it->CheckBufferSize(nframes, pregain);
 
       //when input gain is needed, apply and copy audio to the temp buffer
-      //it->m_buf is allocated in CPort::CheckBufferSize(), only when gain != 1.0f
-      if (it->m_buf)
+      //CPort allocates a buffer in CPort::CheckBufferSize(), only when gain != 1.0f
+      float* buf = it->GetBuffer(jackptr);
+      if (buf)
       {
-        float* in   = jackptr;
-        float* out  = it->m_buf;
-        float* end  = in + nframes;
-        while(in != end)
-          *(out++) = *(in++) * pregain;
+        CopyApplyGain(jackptr, buf, nframes, pregain);
 
         //connect the ladspa port to the temp buffer
-        //it would probably be better to apply gain directly to the jack buffer
-        //but I don't know if that'll work right
-        m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, it->m_buf);
+        m_plugin->Descriptor()->connect_port(m_handle, it->GetLadspaPort(), buf);
       }
       else
       {
-        //no gain needed, copy the ladspa port directly to the jack buffer
-        m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, jackptr);
+        //no gain needed, connect the ladspa port directly to the jack buffer
+        m_plugin->Descriptor()->connect_port(m_handle, it->GetLadspaPort(), jackptr);
       }
     }
     else
     {
       //connect the ladspa output port to the jack output port
       //gain is applied directly on the jack output buffer afterwards
-      m_plugin->Descriptor()->connect_port(m_handle, it->m_ladspaport, jackptr);
+      m_plugin->Descriptor()->connect_port(m_handle, it->GetLadspaPort(), jackptr);
     }
   }
 
@@ -253,15 +270,8 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
   {
     for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
     {
-      if (!it->m_isinput)
-      {
-        float* jackptr = (float*)jack_port_get_buffer(it->m_jackport, nframes);
-        float* data    = jackptr;
-        float* end     = jackptr + nframes;
-
-        while (data != end)
-          *(data++) *= postgain;
-      }
+      if (!it->IsInput())
+        ApplyGain((float*)jack_port_get_buffer(it->GetJackPort(), nframes), nframes, postgain);
     }
   }
 }

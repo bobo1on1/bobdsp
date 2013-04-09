@@ -89,6 +89,7 @@ def build(bld):
                       src/visualizer.cpp\
                       src/util/alphanum.cpp\
                       src/util/condition.cpp\
+                      src/util/floatbufferops.cpp\
                       src/util/JSON.cpp\
                       src/util/log.cpp\
                       src/util/misc.cpp\

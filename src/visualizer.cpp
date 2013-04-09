@@ -255,6 +255,7 @@ void CVisType::ProcessAverage(int64_t vistime, void(*processfunc)(float, float&,
     m_hasvisoutput = true;
 }
 
+//TODO: use the functions in floatbufferops.cpp for these
 void CVisType::Square(float in, float& avg, int& samples)
 {
   avg += in * in;
