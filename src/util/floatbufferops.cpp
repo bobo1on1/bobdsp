@@ -17,30 +17,10 @@
  */
 
 #include "inclstdint.h"
-#include "config.h"
 #include "floatbufferops.h"
-
-//enable O3 optims to use SSE vector instructions
-//for some reason #pragma GCC optimize("O3") has no effect here, dunno why
-#define OPTIMIZE __attribute__((optimize("-O3")))\
-                 __attribute__((optimize("-ffast-math")))\
-                 __attribute__((optimize("-funroll-loops")))
-
-#if defined(HAVE_XMMINTRIN_H) && defined(__SSE__)
-  #include <xmmintrin.h>
-  #define USE_SSE
-#endif
+#include "ssedefs.h"
 
 #ifdef USE_SSE
-
-#define ALIGN 16
-
-union floatvec
-{
-  __m128   v;
-  float    f[4];
-  uint32_t i[4];
-};
 
 static bool IsAligned(float* ptr, int samples, float*& leadinend)
 {

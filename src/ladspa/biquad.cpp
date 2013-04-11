@@ -18,6 +18,8 @@
 
 #include <string.h>
 #include "biquad.h"
+#include "util/inclstdint.h"
+#include "util/ssedefs.h"
 
 using namespace BobDSPLadspa;
 
