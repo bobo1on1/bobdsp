@@ -16,14 +16,64 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "inclstdint.h"
+#include "config.h"
 #include "floatbufferops.h"
 
 //enable O3 optims to use SSE vector instructions
 //for some reason #pragma GCC optimize("O3") has no effect here, dunno why
 #define OPTIMIZE __attribute__((optimize("-O3")))\
-                 __attribute__((optimize("-ffast-math")))
+                 __attribute__((optimize("-ffast-math")))\
+                 __attribute__((optimize("-funroll-loops")))
 
+#if defined(HAVE_XMMINTRIN_H) && defined(__SSE__)
+  #include <xmmintrin.h>
+  #define USE_SSE
+#endif
 
+#ifdef USE_SSE
+
+#define ALIGN 16
+
+union floatvec
+{
+  __m128   v;
+  float    f[4];
+  uint32_t i[4];
+};
+
+static bool IsAligned(float* ptr, int samples, float*& leadinend)
+{
+  uintptr_t offset = (uintptr_t)ptr & (ALIGN - 1);
+  unsigned long bytes = samples * sizeof(float);
+  //check if the pointer is aligned to 16 bytes, and there are at least 16 bytes to process
+  if (offset == 0 && bytes >= ALIGN)
+  {
+    leadinend = ptr;
+    return true;
+  }
+  //check if the pointer is aligned to 4 bytes, then it's possible to get 16 byte alignment
+  //after at most 3 iterations, then check if there are at least 16 bytes to process after that
+  else if ((offset & 3) == 0 && bytes - (ALIGN - offset) >= ALIGN)
+  {
+    leadinend = (float*)(((uintptr_t)ptr & (~(ALIGN - 1))) + ALIGN);
+    return true;
+  }
+  //no good alignment, don't use SSE
+  else
+  {
+    return false;
+  }
+}
+
+inline float* VecEnd(float* endptr)
+{
+  return (float*)((uintptr_t)endptr & ~(ALIGN - 1));
+}
+
+#endif
+
+//the gcc vectorizer can handle this
 void OPTIMIZE ApplyGain(float* data, int samples, float gain) 
 {
   float* dataptr = data;
@@ -39,40 +89,226 @@ void OPTIMIZE CopyApplyGain(float* in, float* out, int samples, float gain)
   float* inend  = inptr + samples;
   float* outptr = out;
 
+#ifdef USE_SSE
+  //check if both pointers are aligned to 16 bytes,
+  //or if both pointers are aligned to 4 bytes
+  //and have the same alignment offset from 16
+  //and if there are enough samples to do at least one SSE pass
+  unsigned long bytes = samples * sizeof(float);
+  uintptr_t inoffset = (uintptr_t)inptr & (ALIGN - 1);
+  uintptr_t outoffset = (uintptr_t)outptr & (ALIGN - 1);
+  if ((inoffset == 0 && outoffset == 0 && bytes >= 16) ||
+      ((inoffset & 3) == 0 && inoffset == outoffset && bytes - (ALIGN - inoffset) >= ALIGN))
+  {
+    //process any samples up to 16 byte alignment
+    if (inoffset != 0)
+    {
+      float* leadinend = (float*)(((uintptr_t)inptr & ~(ALIGN - 1)) + ALIGN);
+      while (inptr != leadinend)
+        *(outptr++) = *(inptr++) * gain;
+    }
+
+    //create a float vector to multiply with
+    floatvec vecgain;
+    for (int i = 0; i < 4; i++)
+      vecgain.f[i] = gain;
+
+    //get 4 floats from the aligned inptr, multiply with gain,
+    //then store them into the aligned outptr
+    __m128 vecin;
+    __m128 vecout;
+    float* vecend = VecEnd(inend);
+    while (inptr != vecend)
+    {
+      vecin = _mm_load_ps(inptr);
+      vecout = _mm_mul_ps(vecin, vecgain.v);
+      _mm_store_ps(outptr, vecout);
+      inptr += 4;
+      outptr += 4;
+    }
+  }
+#endif
+
+  //process any remaining samples
+  //the gcc vectorizer will also handle SSE with unaligned pointers here
   while (inptr != inend)
     *(outptr++) = *(inptr++) * gain;
 }
 
-void OPTIMIZE AvgSquare(float* data, int samples, float& avg)
+static void OPTIMIZE ProcessFloatStats(float* data, int samples, float& output,
+                                       void(*ProcessFunc)(float*& dataptr, float* end, float& output),
+                                       void(*ProcessFuncSSE)(float*& dataptr, float* end, float& output))
 {
   float* dataptr = data;
   float* end     = dataptr + samples;
 
-  while (dataptr != end)
+#ifdef USE_SSE
+  float* leadinend;
+  if (IsAligned(data, samples, leadinend))
   {
-    avg += *dataptr * *dataptr;
-    dataptr++;
+    //process floats until dataptr is aligned to 16 bytes
+    ProcessFunc(dataptr, leadinend, output);
+
+    //process 4 floats at a time with SSE until there are less than 4 floats to process
+    ProcessFuncSSE(dataptr, VecEnd(end), output);
   }
+#endif
+
+  //process any remaining floats
+  ProcessFunc(dataptr, end, output);
+}
+
+static void OPTIMIZE AvgSquareProcess(float*& dataptr, float* end, float& output)
+{
+  //optim, increasing a local pointer is faster than doing it via a reference variable
+  float* privdataptr = dataptr;
+
+  while (privdataptr != end)
+  {
+    output += *privdataptr * *privdataptr;
+    privdataptr++;
+  }
+
+  dataptr = privdataptr;
+}
+
+static void OPTIMIZE AvgSquareProcessSSE(float*& dataptr, float* end, float& output)
+{
+#ifdef USE_SSE
+  float* privdataptr = dataptr;
+
+  //place to store averages from SSE
+  floatvec avgs;
+  avgs.v = _mm_setzero_ps();
+
+  //process 4 floats at a time with SSE until
+  //there are less than 4 floats to process
+  __m128 vecdata;
+  while (privdataptr != end)
+  {
+    //load 4 floats from an aligned float* into vecdata
+    vecdata = _mm_load_ps(privdataptr);
+    //multiply vecdata with itself and add the result to avgs
+    avgs.v = _mm_add_ps(avgs.v, _mm_mul_ps(vecdata, vecdata));
+    privdataptr += 4;
+  }
+
+  //add the 4 averages from SSE to the average
+  for (int i = 0; i < 4; i++)
+    output += avgs.f[i];
+
+  dataptr = privdataptr;
+#endif
+}
+
+void OPTIMIZE AvgSquare(float* data, int samples, float& avg)
+{
+  ProcessFloatStats(data, samples, avg, AvgSquareProcess, AvgSquareProcessSSE);
+}
+
+static void OPTIMIZE AvgAbsProcess(float*& dataptr, float* end, float& output)
+{
+  //optim, increasing a local pointer is faster than doing it via a reference variable
+  float* privdataptr = dataptr;
+
+  while (privdataptr != end)
+    output += __builtin_fabs(*(privdataptr++));
+
+  dataptr = privdataptr;
+}
+
+static void OPTIMIZE AvgAbsProcessSSE(float*& dataptr, float* end, float& output)
+{
+#ifdef USE_SSE
+  float* privdataptr = dataptr;
+
+  //place to store values from SSE
+  floatvec avgs;
+  avgs.v = _mm_setzero_ps();
+
+  //AND mask to set the sign bit to 0
+  floatvec absmask;
+  for (int i = 0; i < 4; i++)
+    absmask.i[i] = 0x7FFFFFFF;
+
+  //process 4 floats at a time with SSE until
+  //there are less than 4 floats to process
+  __m128 vecdata;
+  while (privdataptr != end)
+  {
+    //load 4 floats from an aligned float* into vecdata
+    vecdata = _mm_load_ps(privdataptr);
+    //set the sign bit to 0 to get the absolute value, the add the result to avgs
+    avgs.v = _mm_add_ps(avgs.v, _mm_and_ps(vecdata, absmask.v));
+    privdataptr += 4;
+  }
+
+  //add the result from SSE
+  for (int i = 0; i < 4; i++)
+    output += avgs.f[i];
+
+  dataptr = privdataptr;
+#endif
 }
 
 void OPTIMIZE AvgAbs(float* data, int samples, float& avg)
 {
-  float* dataptr = data;
-  float* end     = dataptr + samples;
+  ProcessFloatStats(data, samples, avg, AvgAbsProcess, AvgAbsProcessSSE);
+}
 
-  while (dataptr != end)
-    avg += __builtin_fabs(*(dataptr++));
+static void OPTIMIZE HighestAbsProcess(float*& dataptr, float* end, float& output)
+{
+  //optim, increasing a local pointer is faster than doing it via a reference variable
+  float* privdataptr = dataptr;
+
+  while (privdataptr != end)
+  {
+    float absval = *(privdataptr++);
+    if (absval > output)
+      absval = output;
+  }
+
+  dataptr = privdataptr;
+}
+
+static void OPTIMIZE HighestAbsProcessSSE(float*& dataptr, float* end, float& output)
+{
+#ifdef USE_SSE
+  float* privdataptr = dataptr;
+
+  //place to store values from SSE
+  floatvec highest;
+  highest.v = _mm_setzero_ps();
+
+  //AND mask to set the sign bit to 0
+  floatvec absmask;
+  for (int i = 0; i < 4; i++)
+    absmask.i[i] = 0x7FFFFFFF;
+
+  //process 4 floats at a time with SSE until
+  //there are less than 4 floats to process
+  __m128 vecdata;
+  while (privdataptr != end)
+  {
+    //load 4 floats from an aligned float* into vecdata
+    vecdata = _mm_load_ps(privdataptr);
+    //set the sign bit to 0 to get the absolute value, the add the result to avgs
+    highest.v = _mm_max_ps(highest.v, _mm_and_ps(vecdata, absmask.v));
+    privdataptr += 4;
+  }
+
+  //add the result from SSE
+  for (int i = 0; i < 4; i++)
+  {
+    if (highest.f[i] > output)
+      output = highest.f[i];
+  }
+
+  dataptr = privdataptr;
+#endif
 }
 
 void OPTIMIZE HighestAbs(float* data, int samples, float& value)
 {
-  float* dataptr = data;
-  float* end     = dataptr + samples;
-
-  while (dataptr != end)
-  {
-    float absval = __builtin_fabs(*(dataptr++));
-    if (absval > value)
-      value = absval;
-  }
+  ProcessFloatStats(data, samples, value, HighestAbsProcess, HighestAbsProcessSSE);
 }
