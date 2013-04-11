@@ -21,6 +21,8 @@
 #include <sys/time.h>
 #include "dither.h"
 #include "util/misc.h"
+#include "util/inclstdint.h"
+#include "util/ssedefs.h"
 
 using namespace BobDSPLadspa;
 
@@ -47,7 +49,7 @@ void CDither::Activate()
 {
 }
 
-void CDither::Run(unsigned long samplecount)
+void OPTIMIZE CDither::Run(unsigned long samplecount)
 {
   LADSPA_Data* in    = m_ports[0];
   LADSPA_Data* inend = m_ports[0] + samplecount;
