@@ -67,6 +67,7 @@ class CJackClient : public CMessagePump
     std::string    m_name;
     int            m_nrinstances;
     int            m_samplerate;
+    int            m_buffersize;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
     int            m_events;
@@ -102,6 +103,9 @@ class CJackClient : public CMessagePump
 
     static int  SJackSamplerateCallback(jack_nframes_t nframes, void *arg);
     int         PJackSamplerateCallback(jack_nframes_t nframes);
+
+    static int  SJackBufferSizeCallback(jack_nframes_t nframes, void *arg);
+    int         PJackBufferSizeCallback(jack_nframes_t nframes);
 };
 
 #endif //JACKCLIENT_H

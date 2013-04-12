@@ -89,7 +89,7 @@ class CPort
     CPort(jack_port_t* jackport, unsigned long ladspaport, bool isinput);
     ~CPort();
 
-    void          CheckBufferSize(jack_nframes_t nframes, float gain);
+    void          AllocateBuffer(int buffersize);
     float*        GetBuffer(float* jackptr);
     jack_port_t*  GetJackPort()   { return m_jackport;   }
     bool          IsInput()       { return m_isinput;    }
@@ -99,7 +99,6 @@ class CPort
     jack_port_t*  m_jackport;
     unsigned long m_ladspaport;
     float*        m_buf;
-    unsigned int  m_bufsize;
     bool          m_isinput;
 };
 
@@ -107,13 +106,14 @@ class CLadspaInstance
 {
   public:
     CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances,
-        CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate);
+        CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate, int buffersize);
     ~CLadspaInstance();
 
     bool Connect();
     void Disconnect(bool unregisterjack = true);
     void Activate();
     void Deactivate();
+    void AllocateBuffers(int buffersize);
     void Run(jack_nframes_t nframes, float pregain, float postgain);
 
   private:
@@ -125,6 +125,7 @@ class CLadspaInstance
     int                m_totalinstances;
     CLadspaPlugin*     m_plugin;
     int                m_samplerate;
+    int                m_buffersize;
     LADSPA_Handle      m_handle;
     std::vector<CPort> m_ports;
     bool               m_activated;

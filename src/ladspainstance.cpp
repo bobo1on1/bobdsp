@@ -16,14 +16,12 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "util/inclstdint.h"
-
-#include <cstdlib>
-
 #include "util/misc.h"
 #include "util/log.h"
 #include "util/floatbufferops.h"
 #include "ladspainstance.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <assert.h>
 
@@ -35,7 +33,6 @@ CPort::CPort(jack_port_t* jackport, unsigned long ladspaport, bool isinput)
   m_ladspaport = ladspaport;
   m_isinput    = isinput;
   m_buf        = NULL;
-  m_bufsize    = 0;
 }
 
 CPort::~CPort()
@@ -43,50 +40,28 @@ CPort::~CPort()
   free(m_buf);
 }
 
-void CPort::CheckBufferSize(jack_nframes_t nframes, float gain)
+void CPort::AllocateBuffer(int buffersize)
 {
-  //allocate a temp buffer if gain needs to be added
-  //deallocate if no gain is needed
-  if (gain == 1.0f)
-  {
-    if (m_bufsize > 0)
-    {
-      free(m_buf);
-      m_buf     = NULL;
-      m_bufsize = 0;
-    }
-  }
-  else if (m_bufsize != nframes)
-  {
-    free(m_buf);
+  free(m_buf);
 
-    //allocate a buffer aligned to 16 bytes so sse vector instructions can be used
-    //make it 16 bytes larger than needed so the offset can be adjusted
-    posix_memalign((void**)&m_buf, 16, nframes * sizeof(float) + 16);
-    m_bufsize = nframes;
-  }
+  //allocate a buffer aligned to 16 bytes so sse vector instructions can be used
+  //make it 16 bytes larger than needed so the offset can be adjusted
+  posix_memalign((void**)&m_buf, 16, buffersize * sizeof(float) + 16);
 }
 
 float* CPort::GetBuffer(float* jackptr)
 {
-  if (m_buf)
-  {
-    //return a pointer to the buffer, and give it the same offset from a 16 byte alignment
-    //as the pointer to the jack buffer
-    //when copying from one buffer to the other, both buffers will be aligned to 16 bytes
-    //after at most 3 iterations, assuming that the jack pointer is at least aligned to 4 bytes
-    //this way, sse vector instructions can be used
-    uintptr_t offset = (uintptr_t)jackptr % 16;
-    return (float*)((uintptr_t)m_buf + offset);
-  }
-  else
-  {
-    return NULL;
-  }
+  //return a pointer to the buffer, and give it the same offset from a 16 byte alignment
+  //as the pointer to the jack buffer
+  //when copying from one buffer to the other, both buffers will be aligned to 16 bytes
+  //after at most 3 iterations, assuming that the jack pointer is at least aligned to 4 bytes
+  //this way, sse vector instructions can be used
+  uintptr_t offset = (uintptr_t)jackptr & 15;
+  return (float*)((uintptr_t)m_buf + offset);
 }
 
 CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name, int instance, int totalinstances, 
-    CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate) :
+    CLadspaPlugin* plugin, controlmap& controlinputs, int samplerate, int buffersize) :
   m_controlinputs(controlinputs)
 {
   m_client         = client;
@@ -95,6 +70,7 @@ CLadspaInstance::CLadspaInstance(jack_client_t* client, const std::string& name,
   m_totalinstances = totalinstances;
   m_plugin         = plugin;
   m_samplerate     = samplerate;
+  m_buffersize     = buffersize;
   m_activated      = false;
   m_handle         = NULL;
 }
@@ -177,6 +153,8 @@ bool CLadspaInstance::Connect()
     }
   }
 
+  AllocateBuffers(m_buffersize);
+
   return true;
 }
 
@@ -227,6 +205,13 @@ void CLadspaInstance::Deactivate()
   }
 }
 
+void CLadspaInstance::AllocateBuffers(int buffersize)
+{
+  m_buffersize = buffersize;
+  for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
+    it->AllocateBuffer(buffersize);
+}
+
 //this is called from the jack client thread
 void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
 {
@@ -236,13 +221,10 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
 
     if (it->IsInput())
     {
-      it->CheckBufferSize(nframes, pregain);
-
       //when input gain is needed, apply and copy audio to the temp buffer
-      //CPort allocates a buffer in CPort::CheckBufferSize(), only when gain != 1.0f
-      float* buf = it->GetBuffer(jackptr);
-      if (buf)
+      if (pregain != 1.0f)
       {
+        float* buf = it->GetBuffer(jackptr);
         CopyApplyGain(jackptr, buf, nframes, pregain);
 
         //connect the ladspa port to the temp buffer

@@ -49,6 +49,7 @@ CJackClient::CJackClient(CLadspaPlugin* plugin, const std::string& name, int nri
   m_restart       = false;
   m_exitstatus    = (jack_status_t)0;
   m_samplerate    = 0;
+  m_buffersize    = 0;
   m_events        = 0;
 
   for (int i = 0; i < 2; i++)
@@ -105,6 +106,7 @@ bool CJackClient::ConnectInternal()
   jack_on_info_shutdown(m_client, SJackInfoShutdownCallback, this);
 
   m_samplerate = jack_get_sample_rate(m_client);
+  m_buffersize = jack_get_buffer_size(m_client);
 
   Log("Client \"%s\" connected to jackd, got name \"%s\", samplerate %i",
       m_name.c_str(), jack_get_client_name(m_client), m_samplerate);
@@ -122,6 +124,12 @@ bool CJackClient::ConnectInternal()
   returnv = jack_set_sample_rate_callback(m_client, SJackSamplerateCallback, this);
   if (returnv != 0)
     LogError("Client \"%s\" error %i setting samplerate callback: \"%s\"",
+             m_name.c_str(), returnv, GetErrno().c_str());
+
+  //set the buffer size callback so that the pregain buffer can be reallocated
+  returnv = jack_set_buffer_size_callback(m_client, SJackBufferSizeCallback, this);
+  if (returnv != 0)
+    LogError("Client \"%s\" error %i setting buffer size callback: \"%s\"",
              m_name.c_str(), returnv, GetErrno().c_str());
 
   //enable port registration callback, so we know when to connect new ports
@@ -194,6 +202,7 @@ void CJackClient::Disconnect()
   m_events     = 0;
   m_exitstatus = (jack_status_t)0;
   m_samplerate = 0;
+  m_buffersize = 0;
 
   //if this client was marked for restart, reset the flag
   m_restart = false;
@@ -216,8 +225,8 @@ void CJackClient::InitLadspa()
   //allocate plugin instances
   for (int instance = 0; instance < m_nrinstances; instance++)
   {
-    CLadspaInstance* ladspainstance = new CLadspaInstance(m_client, m_name, instance, m_nrinstances,
-                                                          m_plugin, m_controlinputs, m_samplerate);
+    CLadspaInstance* ladspainstance = new CLadspaInstance(m_client, m_name, instance, m_nrinstances, m_plugin,
+                                                          m_controlinputs, m_samplerate, m_buffersize);
     m_instances.push_back(ladspainstance);
   }
 }
@@ -382,6 +391,23 @@ int CJackClient::PJackSamplerateCallback(jack_nframes_t nframes)
     //send a message to the main thread that the samplerate changed
     m_events |= SAMPLERATE_CHANGED;
     CheckMessages();
+  }
+
+  return 0;
+}
+
+int CJackClient::SJackBufferSizeCallback(jack_nframes_t nframes, void *arg)
+{
+  return ((CJackClient*)arg)->PJackBufferSizeCallback(nframes);
+}
+
+int CJackClient::PJackBufferSizeCallback(jack_nframes_t nframes)
+{
+  if ((int)nframes != m_buffersize)
+  {
+    m_buffersize = nframes;
+    for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
+      (*it)->AllocateBuffers(m_buffersize);
   }
 
   return 0;
