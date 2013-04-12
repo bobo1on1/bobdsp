@@ -73,7 +73,7 @@ class CJackClient : public CMessagePump
     virtual void PJackProcessCallback(jack_nframes_t nframes) = 0;
 
     static  void SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg);
-    void         PJackInfoShutdownCallback(jack_status_t code, const char *reason);
+    virtual void PJackInfoShutdownCallback(jack_status_t code, const char *reason);
 
     static  void SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg);
     void         PJackPortRegistrationCallback(jack_port_id_t port, int reg);

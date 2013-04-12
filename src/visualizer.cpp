@@ -89,16 +89,13 @@ bool CVisType::Connect(jack_client_t* client, int samplerate, int64_t interval)
   }
 }
 
-void CVisType::Disconnect(jack_client_t* client, bool unregister)
+void CVisType::Disconnect(jack_client_t* client)
 {
   if (m_port)
   {
-    if (unregister)
-    {
-      int returnv = jack_port_unregister(client, m_port);
-      if (returnv != 0)
-        LogError("Error %i unregistering visualizer port \"%s\": \"%s\"", returnv, m_name.c_str(), GetErrno().c_str());
-    }
+    int returnv = jack_port_unregister(client, m_port);
+    if (returnv != 0)
+      LogError("Error %i unregistering visualizer port \"%s\": \"%s\"", returnv, m_name.c_str(), GetErrno().c_str());
 
     m_port = NULL;
   }
@@ -314,13 +311,9 @@ void CVisType::ToJSON(CJSONGenerator& generator, bool values)
 }
 
 CVisualizer::CVisualizer() :
-  CJSONSettings(".bobdsp/visualizers.json", "visualizer", m_viscond)
+  CJSONSettings(".bobdsp/visualizers.json", "visualizer", m_viscond),
+  CJackClient("BobDSP Visualizer", "visualizer", "visualizer")
 {
-  m_client       = NULL;
-  m_exitstatus   = (jack_status_t)0;
-  m_connected    = false;
-  m_wasconnected = true;
-  m_samplerate   = 0;
   m_vistime      = 0;
   m_index        = 0;
   m_interval     = 100000;
@@ -473,25 +466,19 @@ void CVisualizer::Process()
 
   while(!m_stop)
   {
-    m_connected = Connect();
-    if (!m_connected)
+    if (!IsConnected() && !Connect())
     {
-      Disconnect(true);
       USleep(1000000);
       continue;
-    }
-    else
-    {
-      m_wasconnected = true;
     }
 
     CLock lock(m_jackcond);
     m_jackcond.Wait(1000000);
 
-    if (m_exitstatus)
+    if (ExitStatus())
     {
-      LogError("Visualizer exited with code %i reason: \"%s\"", m_exitstatus, m_exitreason.c_str());
-      Disconnect(false);
+      LogError("Visualizer jack client exited with code %i reason: \"%s\"", ExitStatus(), ExitReason().c_str());
+      Disconnect();
       continue;
     }
 
@@ -519,11 +506,11 @@ void CVisualizer::Process()
       delete generator;
 
       m_index++;
-      m_viscond.Signal();
+      m_viscond.Broadcast();
     }
   }
 
-  Disconnect(true);
+  Disconnect();
 }
 
 std::string CVisualizer::JSON()
@@ -576,95 +563,6 @@ std::string CVisualizer::JSON(const std::string& postjson, const std::string& so
   return m_json;
 }
 
-bool CVisualizer::Connect()
-{
-  if (m_connected)
-    return true;
-
-  LogDebug("Connecting visualizer to jack");
-
-  //this is set in PJackInfoShutdownCallback(), init to 0 here so we know when the jack thread has exited
-  m_exitstatus = (jack_status_t)0; 
-  m_exitreason.clear();
-
-  //try to connect to jackd
-  m_client = jack_client_open("BobDSP Visualizer", JackNoStartServer, NULL);
-  if (m_client == NULL)
-  {
-    if (m_wasconnected || g_printdebuglevel)
-    {
-      LogError("Error connecting visualizer to jackd: \"%s\"", GetErrno().c_str());
-      m_wasconnected = false; //only print this to the log once
-    }
-    return false;
-  }
-
-  //we want to know when the jack thread shuts down, so we can restart it
-  jack_on_info_shutdown(m_client, SJackInfoShutdownCallback, this);
-
-  m_samplerate = jack_get_sample_rate(m_client);
-
-  Log("Visualizer connected to jackd, got name \"%s\", samplerate %i", jack_get_client_name(m_client), m_samplerate);
-
-  //SJackProcessCallback gets called when jack has new audio data to process
-  int returnv = jack_set_process_callback(m_client, SJackProcessCallback, this);
-  if (returnv != 0)
-  {
-    LogError("Error %i setting visualizer process callback: \"%s\"", returnv, GetErrno().c_str());
-    return false;
-  }
-
-  //register a jack port for each visualizer
-  for (vector<CVisType>::iterator it = m_visualizers.begin(); it != m_visualizers.end(); it++)
-  {
-    if (!it->Connect(m_client, m_samplerate, m_interval))
-      return false;
-  }
-
-  //everything set up, activate
-  returnv = jack_activate(m_client);
-  if (returnv != 0)
-  {
-    LogError("Error %i activating visualizer: \"%s\"", returnv, GetErrno().c_str());
-    return false;
-  }
-
-  //initialize the visualizer time
-  m_vistime = GetTimeUs() + m_interval;
-
-  //jack thread name needs to be set in the jack callback
-  m_nameset = false;
-
-  return true;
-}
-
-void CVisualizer::Disconnect(bool unregisterjack)
-{
-  m_connected = false;
-
-  if (m_client)
-  {
-    //deactivate the client
-    int returnv = jack_deactivate(m_client);
-    if (returnv != 0)
-      LogError("Error %i deactivating visualizer: \"%s\"", returnv, GetErrno().c_str());
-
-    //unregister ports, unless the jack thread exited because jackd stopped, since this might hang in libjack
-    if (unregisterjack)
-    {
-      for (vector<CVisType>::iterator it = m_visualizers.begin(); it != m_visualizers.end(); it++)
-        it->Disconnect(m_client, unregisterjack);
-    }
-
-    //destroy the jack client
-    returnv = jack_client_close(m_client);
-    if (returnv != 0)
-      LogError("Error %i closing visualizer: \"%s\"", returnv, GetErrno().c_str());
-
-    m_client = NULL;
-  }
-}
-
 CJSONGenerator* CVisualizer::VisualizersToJSON(bool values)
 {
   CJSONGenerator* generator = new CJSONGenerator(true);
@@ -694,10 +592,25 @@ CJSONGenerator* CVisualizer::VisualizersToJSON(bool values)
   return generator;
 }
 
-int CVisualizer::SJackProcessCallback(jack_nframes_t nframes, void *arg)
+bool CVisualizer::PreActivate()
 {
-  ((CVisualizer*)arg)->PJackProcessCallback(nframes);
-  return 0;
+  //register a jack port for each visualizer
+  for (vector<CVisType>::iterator it = m_visualizers.begin(); it != m_visualizers.end(); it++)
+  {
+    if (!it->Connect(m_client, m_samplerate, m_interval))
+      return false;
+  }
+
+  //initialize the visualizer time
+  m_vistime = GetTimeUs() + m_interval;
+
+  return true;
+}
+
+void CVisualizer::PostDeactivate()
+{
+  for (vector<CVisType>::iterator it = m_visualizers.begin(); it != m_visualizers.end(); it++)
+    it->Disconnect(m_client);
 }
 
 void CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
@@ -715,18 +628,6 @@ void CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
 
   if (lock.HasLock())
     m_jackcond.Signal();
-
-  //set the name of this thread if needed
-  if (!m_nameset)
-  {
-    CThread::SetCurrentThreadName("jack visualizer");
-    m_nameset = true;
-  }
-}
-
-void CVisualizer::SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg)
-{
-  ((CVisualizer*)arg)->PJackInfoShutdownCallback(code, reason);
 }
 
 void CVisualizer::PJackInfoShutdownCallback(jack_status_t code, const char *reason)

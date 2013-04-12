@@ -25,6 +25,7 @@
 #include "util/misc.h"
 #include "util/JSON.h"
 #include "jsonsettings.h"
+#include "jackclient.h"
 
 #include <string>
 #include <vector>
@@ -50,7 +51,7 @@ class CVisType
     std::string Name()    { return m_name;    }
 
     bool Connect(jack_client_t* client, int samplerate, int64_t interval);
-    void Disconnect(jack_client_t* client, bool unregister);
+    void Disconnect(jack_client_t* client);
     void ProcessJack(bool locked, jack_nframes_t nframes, int64_t time);
 
     void Append(int bufindex, float* data, int samples, int64_t time);
@@ -94,36 +95,24 @@ class CVisType
     int          m_visamplitudesamples;
 };
 
-class CVisualizer : public CThread, public CJSONSettings
+class CVisualizer : public CThread, public CJSONSettings, public CJackClient
 {
   public:
     CVisualizer();
     ~CVisualizer();
 
-    jack_status_t      ExitStatus() { return m_exitstatus; }
-    const std::string& ExitReason() { return m_exitreason; }
-
-    void               Start();
-    void               Process();
-    std::string        JSON();
-    std::string        JSON(const std::string& postjson, const std::string& source);
+    void                    Start();
+    void                    Process();
+    std::string             JSON();
+    std::string             JSON(const std::string& postjson, const std::string& source);
 
   private:
     virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
     void                    LoadVisualizers(JSONArray& jsonvisualizers, const std::string& source);
 
-    bool                    Connect();
-    void                    Disconnect(bool unregisterjack);
     CJSONGenerator*         VisualizersToJSON(bool values);
 
-    bool                    m_connected;
-    bool                    m_wasconnected;
-    jack_client_t*          m_client;
-    jack_status_t           m_exitstatus;
-    std::string             m_exitreason;
-    bool                    m_nameset;
-    int                     m_samplerate;
     CCondition              m_jackcond;
     int64_t                 m_interval;
     int64_t                 m_vistime;
@@ -134,11 +123,10 @@ class CVisualizer : public CThread, public CJSONSettings
     unsigned int            m_index;
     CCondition              m_viscond;
 
-    static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
-    void        PJackProcessCallback(jack_nframes_t nframes);
-
-    static void SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg);
-    void        PJackInfoShutdownCallback(jack_status_t code, const char *reason);
+    virtual bool            PreActivate();
+    virtual void            PostDeactivate();
+    void                    PJackProcessCallback(jack_nframes_t nframes);
+    void                    PJackInfoShutdownCallback(jack_status_t code, const char *reason);
 };
 
 #endif //VISUALIZER_H
