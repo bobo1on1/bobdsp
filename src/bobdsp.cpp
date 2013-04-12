@@ -140,7 +140,7 @@ CBobDSP::~CBobDSP()
 void CBobDSP::Setup()
 {
   //set up locked memory for better realtime performance
-  SetupRT(1024 * 1024 * 10); //10 mb
+  //SetupRT(1024 * 1024 * 10); //10 mb
 
   //init the logfile
   SetLogFile("bobdsp.log");
