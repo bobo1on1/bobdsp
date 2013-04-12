@@ -312,7 +312,7 @@ void CVisType::ToJSON(CJSONGenerator& generator, bool values)
 
 CVisualizer::CVisualizer() :
   CJSONSettings(".bobdsp/visualizers.json", "visualizer", m_viscond),
-  CJackClient("BobDSP Visualizer", "visualizer", "visualizer")
+  CJackClient("BobDSP Visualizer", "visualizer", "jack visualizer", "visualizer")
 {
   m_vistime      = 0;
   m_index        = 0;

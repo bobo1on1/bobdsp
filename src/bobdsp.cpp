@@ -386,12 +386,15 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 
 void CBobDSP::ProcessMessages(int64_t timeout)
 {
+  const int extra = 6;
+
   pollfd* fds;
-  int nrclientpipes = m_clientsmanager.ClientPipes(fds, 5);
+  int nrclientpipes = m_clientsmanager.ClientPipes(fds, extra);
   unsigned int nrfds = nrclientpipes;
 
-  int pipes[5] = { m_stdout[0], m_stderr[0], m_signalfd, m_portconnector.MsgPipe(), m_clientsmanager.MsgPipe() };
-  int pipenrs[5] = { -1, -1, -1, -1, -1 };
+  int pipes[extra] = { m_stdout[0], m_stderr[0], m_signalfd, m_portconnector.MsgPipe(),
+                       m_clientsmanager.MsgPipe(), m_visualizer.MsgPipe()};
+  int pipenrs[extra] = { -1, -1, -1, -1, -1, -1 };
 
   for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
   {
@@ -448,6 +451,10 @@ void CBobDSP::ProcessMessages(int64_t timeout)
     //check for message from the clients manager
     if (pipenrs[4] != -1 && (fds[pipenrs[4]].revents & POLLIN))
       ProcessManagerMessages(m_clientsmanager);
+
+    //check for message from the clients manager
+    if (pipenrs[5] != -1 && (fds[pipenrs[5]].revents & POLLIN))
+      ProcessManagerMessages(m_visualizer);
   }
 
   delete[] fds;
@@ -525,7 +532,7 @@ void CBobDSP::ProcessManagerMessages(CMessagePump& manager)
   uint8_t msg;
   while ((msg = manager.GetMessage()) != MsgNone)
   {
-    LogDebug("got message %s from %s", MsgToString(msg), manager.Name());
+    LogDebug("got message %s from %s", MsgToString(msg), manager.Sender());
     if (msg == MsgConnectionsUpdated)
       m_checkconnect = m_checkdisconnect = true;
   }

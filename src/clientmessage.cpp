@@ -48,13 +48,13 @@ const char* MsgToString(ClientMessage msg)
     return "ERROR: INVALID MESSAGE";
 }
 
-CMessagePump::CMessagePump(const char* name)
+CMessagePump::CMessagePump(const char* sender)
 {
-  m_name = name;
+  m_sender = sender;
 
   if (pipe2(m_pipe, O_NONBLOCK) == -1)
   {
-    LogError("creating msg pipe for %s: %s", m_name, GetErrno().c_str());
+    LogError("creating msg pipe for %s: %s", m_sender, GetErrno().c_str());
     m_pipe[0] = m_pipe[1] = -1;
   }
 }
@@ -81,7 +81,7 @@ ClientMessage CMessagePump::GetMessage()
   else if (returnv == -1 && errno != EAGAIN)
   {
     int tmperrno = errno;
-    LogError("%s error reading msg from pipe: \"%s\"", m_name, GetErrno().c_str());
+    LogError("%s error reading msg from pipe: \"%s\"", m_sender, GetErrno().c_str());
     if (tmperrno != EINTR)
     {
       close(m_pipe[0]);
@@ -96,7 +96,7 @@ bool CMessagePump::WriteMessage(uint8_t msg)
 {
   if (m_pipe[1] == -1)
   {
-    LogError("%s message pipe closed", m_name);
+    LogError("%s message pipe closed", m_sender);
     return true; //can't write
   }
 
@@ -107,7 +107,7 @@ bool CMessagePump::WriteMessage(uint8_t msg)
   if (returnv == -1)
   {
     int tmperrno = errno;
-    LogError("%s error writing msg %s to pipe: \"%s\"", m_name, MsgToString(msg), GetErrno().c_str());
+    LogError("%s error writing msg %s to pipe: \"%s\"", m_sender, MsgToString(msg), GetErrno().c_str());
     if (tmperrno != EINTR && tmperrno != EAGAIN)
     {
       close(m_pipe[1]); //pipe broken, close it
@@ -118,5 +118,4 @@ bool CMessagePump::WriteMessage(uint8_t msg)
 
   return false; //need to try again
 }
-
 

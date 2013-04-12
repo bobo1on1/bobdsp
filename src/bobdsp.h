@@ -52,18 +52,18 @@ class CBobDSP
     CVisualizer&     Visualizer()      { return m_visualizer;     }
 
   private:
-    bool            m_stop;
     CPortConnector  m_portconnector;
     CPluginManager  m_pluginmanager;
     CClientsManager m_clientsmanager;
     CVisualizer     m_visualizer;
+    CHttpServer     m_httpserver;
+    bool            m_stop;
     bool            m_checkconnect;
     bool            m_checkdisconnect;
     bool            m_updateports;
     int             m_signalfd;
     int             m_stdout[2];
     int             m_stderr[2];
-    CHttpServer     m_httpserver;
 
     void SetupRT(int64_t memsize);
     void SetupSignals();

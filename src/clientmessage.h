@@ -44,16 +44,16 @@ inline const char* MsgToString(uint8_t msg)
 class CMessagePump
 {
   public:
-    CMessagePump(const char* name);
+    CMessagePump(const char* Sender);
     ~CMessagePump();
 
     int           MsgPipe() { return m_pipe[0]; }
     ClientMessage GetMessage();
     bool          WriteMessage(uint8_t msg);
-    const char*   Name() { return m_name; }
+    const char*   Sender() { return m_sender; }
 
   private:
-    const char* m_name;
+    const char* m_sender;
     int         m_pipe[2];
 };
 
