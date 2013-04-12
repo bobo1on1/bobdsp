@@ -110,7 +110,7 @@ class CLadspaInstance
     ~CLadspaInstance();
 
     bool Connect();
-    void Disconnect(bool unregisterjack = true);
+    void Disconnect();
     void Activate();
     void Deactivate();
     void AllocateBuffers(int buffersize);

@@ -158,7 +158,7 @@ bool CLadspaInstance::Connect()
   return true;
 }
 
-void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
+void CLadspaInstance::Disconnect()
 {
   //deactivate and clean up the ladspa plugin
   Deactivate();
@@ -171,13 +171,10 @@ void CLadspaInstance::Disconnect(bool unregisterjack /*= true*/)
   //close the jack ports
   while (!m_ports.empty())
   {
-    if (unregisterjack)
-    {
-      int returnv = jack_port_unregister(m_client, m_ports.back().GetJackPort());
-      if (returnv != 0)
-        LogError("Client \"%s\" error %i unregistering port: \"%s\"",
-                  m_name.c_str(), returnv, GetErrno().c_str());
-    }
+    int returnv = jack_port_unregister(m_client, m_ports.back().GetJackPort());
+    if (returnv != 0)
+      LogError("Client \"%s\" error %i unregistering port: \"%s\"",
+                m_name.c_str(), returnv, GetErrno().c_str());
 
     m_ports.pop_back();
   }

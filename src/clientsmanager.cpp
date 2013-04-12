@@ -52,7 +52,7 @@ void CClientsManager::Stop()
   CLock lock(m_condition);
 
   Log("Stopping %zu jack client(s)", m_clients.size());
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     delete *it;
 
   m_clients.clear();
@@ -77,7 +77,7 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
     {
       Log("Reload requested, marking all existing clients for deletion");
       m_checkclients = true;
-      for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+      for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
         (*it)->MarkDelete();
     }
   }
@@ -221,7 +221,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
     return; //control values don't match the plugin
 
   //everything ok, allocate a new client
-  CJackClient* jackclient = new CJackClient(ladspaplugin, name, instances,
+  CJackLadspa* jackclient = new CJackLadspa(ladspaplugin, name, instances,
                                             gain, controlvalues);
   m_clients.push_back(jackclient);
   m_checkclients = true;
@@ -235,7 +235,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
 
 void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, const std::string& source)
 {
-  CJackClient* jackclient = FindClient(name);
+  CJackLadspa* jackclient = FindClient(name);
   if (jackclient == NULL)
   {
     LogError("%sdoesn't exist", source.c_str());
@@ -254,7 +254,7 @@ void CClientsManager::DeleteClient(JSONMap& client, const std::string& name, con
 
 void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, const std::string& source)
 {
-  CJackClient* jackclient = FindClient(name);
+  CJackLadspa* jackclient = FindClient(name);
   if (jackclient == NULL)
   {
     LogError("%sdoesn't exist", source.c_str());
@@ -552,9 +552,9 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
   return allcontrolsok;
 }
 
-CJackClient* CClientsManager::FindClient(const std::string& name)
+CJackLadspa* CClientsManager::FindClient(const std::string& name)
 {
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
     if ((*it)->NeedsDelete())
       continue; //don't consider clients that have been marked for delete
@@ -612,7 +612,7 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
   generator->AddString("clients");
   generator->ArrayOpen();
 
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
     if ((*it)->NeedsDelete())
       continue; //don't add clients that have been marked for delete
@@ -689,7 +689,7 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
 
   bool connected = false;
 
-  vector<CJackClient*>::iterator it = m_clients.begin();
+  vector<CJackLadspa*>::iterator it = m_clients.begin();
   while (it != m_clients.end())
   {
     //if this client has been marked for removal, delete it and remove it from the vector
@@ -702,10 +702,15 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
     }
 
     //disconnect the client if it needs a restart, it'll get reconnected below
-    if((*it)->NeedsRestart())
+    if ((*it)->NeedsRestart())
     {
-      Log("Disconnecting client \"%s\" because of restart", (*it)->Name().c_str());
-      (*it)->Disconnect();
+      if ((*it)->IsConnected())
+      {
+        Log("Disconnecting client \"%s\" because of restart", (*it)->Name().c_str());
+        (*it)->Disconnect();
+      }
+
+      (*it)->ClearRestart();
     }
 
     //check if the jack thread has failed
@@ -748,7 +753,7 @@ int CClientsManager::ClientPipes(pollfd*& fds, int extra)
   fds = new pollfd[m_clients.size() + extra];
 
   int nrfds = 0;
-  for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
     int pipe = (*it)->MsgPipe();
     if (pipe != -1)
@@ -770,7 +775,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
   {
     CLock lock(m_condition);
     bool gotmessage = false;
-    for (vector<CJackClient*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
       uint8_t msg;
       while ((msg = (*it)->GetMessage()) != MsgNone)

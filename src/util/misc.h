@@ -45,6 +45,7 @@ namespace UTILNAMESPACE
   std::string FileNameExtension(const std::string& path);
   std::string ToLower(const std::string& in);
   std::string ToLower(const std::string& in, std::string& out);
+  std::string Capitalize(const std::string& in);
   bool StrToBool(const std::string& data, bool& value);
   int  DirLevel(const std::string& url);
 

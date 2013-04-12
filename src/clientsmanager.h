@@ -25,7 +25,7 @@
 #include <vector>
 #include <poll.h>
 
-#include "jackclient.h"
+#include "jackladspa.h"
 #include "ladspaplugin.h"
 #include "clientmessage.h"
 #include "jsonsettings.h"
@@ -49,7 +49,7 @@ class CClientsManager : public CMessagePump, public CJSONSettings
 
   private:
     CBobDSP&                  m_bobdsp;
-    std::vector<CJackClient*> m_clients;
+    std::vector<CJackLadspa*> m_clients;
     CCondition                m_condition;
     bool                      m_checkclients;
     bool                      m_stop;
@@ -75,7 +75,7 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     bool                    LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues);
     bool                    CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
                                           controlmap& controlvalues, bool checkmissing);
-    CJackClient*            FindClient(const std::string& name);
+    CJackLadspa*            FindClient(const std::string& name);
     void                    WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
                                           JSONMap::iterator& clientindex, JSONMap::iterator& controlindex);
 };

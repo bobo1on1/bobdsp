@@ -156,6 +156,15 @@ namespace UTILNAMESPACE
     return out;
   }
 
+  std::string Capitalize(const std::string& in)
+  {
+    string out = in;
+    if (!out.empty())
+      out[0] = toupper(out[0]);
+
+    return out;
+  }
+  
   bool StrToBool(const std::string& data, bool& value)
   {
     std::string data2 = data;

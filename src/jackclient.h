@@ -20,92 +20,72 @@
 #define JACKCLIENT_H
 
 #include <string>
-#include <vector>
 #include <jack/jack.h>
 
-#include "ladspaplugin.h"
-#include "ladspainstance.h"
 #include "clientmessage.h"
-#include "util/mutex.h"
+
+#define PORTEVENT_REGISTERED   0x01
+#define PORTEVENT_DEREGISTERED 0x02
+#define PORTEVENT_CONNECTED    0x04
+#define PORTEVENT_DISCONNECTED 0x08
+#define SAMPLERATE_CHANGED     0x10
 
 class CJackClient : public CMessagePump
 {
   public:
-    CJackClient(CLadspaPlugin* plugin, const std::string& name, int nrinstances,
-                double* gain, controlmap controlinputs);
+    CJackClient(const std::string& name, const std::string& logname, const std::string& threadname);
     ~CJackClient();
 
     bool Connect();
     void Disconnect();
     bool IsConnected()  { return m_connected;}
-    void MarkDelete()   { m_delete = true;   }
-    bool NeedsDelete()  { return m_delete;   }
-    void MarkRestart()  { m_restart = true;  }
-    bool NeedsRestart() { return m_restart;  }
-
-    int  NrInstances()                   { return m_nrinstances;        }
-    void SetNrInstances(int nrinstances) { m_nrinstances = nrinstances; }
 
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
 
-    CLadspaPlugin*     Plugin()           { return m_plugin;        }
-    const std::string& Name()             { return m_name;          }
-    double             GetGain(int index) { return m_gain[index];   }
-    void               UpdateGain(double gain, int index);
-    int                Samplerate()       { return m_samplerate;    }
-    void               GetControlInputs(controlmap& controlinputs);
-    void               UpdateControls(controlmap& controlinputs);
+    const std::string& Name()       { return m_name;          }
+    const std::string& LogName()    { return m_logname;       }
 
-  private:
+  protected:
     bool           m_connected;
     bool           m_wasconnected;
-    bool           m_delete;
-    bool           m_restart;
     jack_client_t* m_client;
-    CLadspaPlugin* m_plugin;
     std::string    m_name;
-    int            m_nrinstances;
+    std::string    m_logname;
+    std::string    m_threadname;
     int            m_samplerate;
     int            m_buffersize;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
     int            m_events;
 
-    CMutex         m_mutex;
-    controlvalue   m_gain[2]; //pregain, postgain
-    controlvalue   m_runninggain[2]; //copied from m_gain in the jack thread
-    controlmap     m_controlinputs;
-    controlmap     m_newcontrolinputs;
+    bool         ConnectInternal();
+    void         CheckMessages();
 
-    std::vector<CLadspaInstance*> m_instances;
+    virtual void PreConnect() {};
+    virtual bool PreActivate() { return true; };
+    virtual void PostDeactivate() {};
 
-    bool        ConnectInternal();
-    bool        ConnectJackPorts();
-    void        InitLadspa();
-    void        CheckMessages();
-    void        TransferNewControlInputs(controlmap& controlinputs);
+    static  void SJackThreadInitCallback(void *arg);
+    void         PJackThreadInitCallback();
 
-    static void SJackThreadInitCallback(void *arg);
-    void        PJackThreadInitCallback();
+    static  int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
+    virtual void PJackProcessCallback(jack_nframes_t nframes) = 0;
 
-    static int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
-    void        PJackProcessCallback(jack_nframes_t nframes);
+    static  void SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg);
+    void         PJackInfoShutdownCallback(jack_status_t code, const char *reason);
 
-    static void SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg);
-    void        PJackInfoShutdownCallback(jack_status_t code, const char *reason);
+    static  void SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg);
+    void         PJackPortRegistrationCallback(jack_port_id_t port, int reg);
 
-    static void SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg);
-    void        PJackPortRegistrationCallback(jack_port_id_t port, int reg);
+    static  void SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg);
+    void         PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
 
-    static void SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg);
-    void        PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
+    static  int  SJackSamplerateCallback(jack_nframes_t nframes, void *arg);
+    virtual int  PJackSamplerateCallback(jack_nframes_t nframes);
 
-    static int  SJackSamplerateCallback(jack_nframes_t nframes, void *arg);
-    int         PJackSamplerateCallback(jack_nframes_t nframes);
-
-    static int  SJackBufferSizeCallback(jack_nframes_t nframes, void *arg);
-    int         PJackBufferSizeCallback(jack_nframes_t nframes);
+    static  int  SJackBufferSizeCallback(jack_nframes_t nframes, void *arg);
+    virtual int  PJackBufferSizeCallback(jack_nframes_t nframes);
 };
 
 #endif //JACKCLIENT_H
