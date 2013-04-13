@@ -19,6 +19,9 @@
 #ifndef BIQUAD_H
 #define BIQUAD_H
 
+#include "config.h"
+#include "util/inclstdint.h"
+#include "util/ssedefs.h"
 #include "biquadcoefs.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
@@ -37,14 +40,27 @@ namespace BobDSPLadspa
       void Deactivate();
 
     private:
+#ifdef USE_SSE
+      void RunSingle(float*& in, float* inend, float*& out, __m128& indelay,
+                     __m128& outdelay, __m128& acoeffs, __m128& bcoeffs);
+      void RunQuad(float*& in, float* inend, float*& out, __m128& indelay,
+                   __m128& outdelay, __m128& acoeffs, __m128& bcoeffs);
+#endif
+
       EFILTER      m_type;
       CBiquadCoef  m_coefs;
       float        m_samplerate;
       LADSPA_Data* m_ports[6];
+
+#ifdef USE_SSE
+      float*       m_indelay;
+      float*       m_outdelay;
+#else
       LADSPA_Data  m_indelay[2];
       LADSPA_Data  m_outdelay[2];
       int          m_delay1;
       int          m_delay2;
+#endif
   };
 }
 

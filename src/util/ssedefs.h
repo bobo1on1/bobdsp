@@ -16,6 +16,9 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef SSEDEFS_H
+#define SSEDEFS_H
+
 #include "config.h"
 
 //enable O3 optims to use SSE vector instructions
@@ -36,4 +39,5 @@
     uint32_t i[4];
   };
 
+#endif
 #endif
