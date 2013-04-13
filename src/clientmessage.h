@@ -45,7 +45,7 @@ class CMessagePump
 {
   public:
     CMessagePump(const char* Sender);
-    ~CMessagePump();
+    virtual ~CMessagePump();
 
     int           MsgPipe() { return m_pipe[0]; }
     ClientMessage GetMessage();

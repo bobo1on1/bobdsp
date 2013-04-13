@@ -35,7 +35,7 @@ class CJackClient : public CMessagePump
   public:
     CJackClient(const std::string& name, const std::string& logname,
                 const std::string& threadname, const char* sender = "jack client");
-    ~CJackClient();
+    virtual ~CJackClient();
 
     bool Connect();
     void Disconnect();
