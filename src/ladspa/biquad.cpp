@@ -49,7 +49,7 @@ void CBiquad::Activate()
   m_coefs.Calculate(m_type, m_samplerate, m_ports, true);
 }
 
-void CBiquad::Run(unsigned long samplecount)
+void OPTIMIZE CBiquad::Run(unsigned long samplecount)
 {
   //calculate the coeffients on each run, since they might change
   m_coefs.Calculate(m_type, m_samplerate, m_ports, false);
