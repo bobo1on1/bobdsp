@@ -65,15 +65,15 @@
       {
         $("#tabsdiv").tabs();
         $("#connectionslist").sortable({distance:15});
-        $("#apply").button();
-        $("#applyandsave").button();
-        $("#restore").button();
-        $("#reset").button();
-        $("#addnew").button();
+        $("#conapply").button();
+        $("#conapplyandsave").button();
+        $("#conrestore").button();
+        $("#conreset").button();
+        $("#conaddnew").button();
         $("#outselectable").selectable({stop:portUnSelect});
         $("#inselectable").selectable({stop:portUnSelect});
-        $("#addport").button();
-        $("#addportregex").button();
+        $("#conaddport").button();
+        $("#conaddportregex").button();
         $("#spinner").spinner({ incremental: false, min: 1});
         $("#spinner").spinner("value", 1);
 
@@ -89,15 +89,15 @@
         var connectionelements =
         {
           connectionslist    : $("#connectionslist"),
-          resetbutton        : $("#reset"),
-          applybutton        : $("#apply"),
-          applyandsavebutton : $("#applyandsave"),
-          restorebutton      : $("#restore"),
-          addnewbutton       : $("#addnew"),
+          resetbutton        : $("#conreset"),
+          applybutton        : $("#conapply"),
+          applyandsavebutton : $("#conapplyandsave"),
+          restorebutton      : $("#conrestore"),
+          addnewbutton       : $("#conaddnew"),
           outports           : $("#outselectable"),
           inports            : $("#inselectable"),
-          addportbutton      : $("#addport"),
-          addportregexbutton : $("#addportregex")
+          addportbutton      : $("#conaddport"),
+          addportregexbutton : $("#conaddportregex")
         };
 
         BobDSPConnections(connectionelements);
@@ -126,11 +126,11 @@
       <div id="connectionsdiv">
 
         <br>
-        <button id="apply">Apply</button>
-        <button id="applyandsave">Apply and save</button>
-        <button id="restore">Restore saved settings</button>
-        <button id="reset">Reset form</button>
-        <button id="addnew">Add new connection</button>
+        <button id="conapply">Apply</button>
+        <button id="conapplyandsave">Apply and save</button>
+        <button id="conrestore">Restore saved settings</button>
+        <button id="conreset">Reset form</button>
+        <button id="conaddnew">Add new connection</button>
         <br>
         <br>
 
@@ -149,8 +149,8 @@
         </tr>
         </table>
 
-        <button id="addport">Add from ports</button>
-        <button id="addportregex">Add from ports as regex</button>
+        <button id="conaddport">Add from ports</button>
+        <button id="conaddportregex">Add from ports as regex</button>
 
       </div>
       <div id="visualizersdiv">
