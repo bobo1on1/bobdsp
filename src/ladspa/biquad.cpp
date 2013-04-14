@@ -23,7 +23,7 @@
 using namespace BobDSPLadspa;
 
 //optim, force inlining because of reference variables
-#define INLINE __attribute__((always_inline))
+#define INLINE inline __attribute__((always_inline))
 
 CBiquad::CBiquad(EFILTER type, unsigned long samplerate)
 {
