@@ -26,8 +26,10 @@
                  __attribute__((optimize("-ffast-math")))\
                  __attribute__((optimize("-funroll-loops")))
 
-#if defined(HAVE_XMMINTRIN_H) && defined(__SSE__)
-  #include <xmmintrin.h>
+#if defined(HAVE_X86INTRIN_H) && defined(__SSE__)
+
+  #include <x86intrin.h>
+
   #define USE_SSE
 
   #define ALIGN 16

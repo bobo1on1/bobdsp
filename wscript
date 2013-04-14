@@ -46,7 +46,7 @@ def configure(conf):
   conf.check(header_name='time.h')
   conf.check(header_name='unistd.h')
   conf.check(header_name='uriparser/Uri.h')
-  conf.check(header_name='xmmintrin.h', mandatory=False)
+  conf.check(header_name='x86intrin.h', mandatory=False)
   conf.check(header_name='yajl/yajl_gen.h')
   conf.check(header_name='yajl/yajl_parse.h')
   conf.check(header_name='yajl/yajl_version.h', mandatory=False)
