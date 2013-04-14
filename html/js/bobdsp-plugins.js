@@ -1,6 +1,8 @@
 function BobDSPPlugins(pluginelements)
 {
   var clientsdiv = pluginelements.clientsdiv;
+  var clientsavebutton = pluginelements.clientsavebutton;
+  var clientrestorebutton = pluginelements.clientrestorebutton;
 
   var clients = new Array();
   var clientindex  = -1;
@@ -9,6 +11,19 @@ function BobDSPPlugins(pluginelements)
   function loadClients()
   {
     $.getJSON("clients", loadPostSuccess);
+  }
+
+  function postReload()
+  {
+    //post a reload action, the long poll will handle the actual reload
+    var postjson = {action: "reload"};
+    $.post("clients", JSON.stringify(postjson));
+  }
+
+  function postSave()
+  {
+    var postjson = {action: "save"};
+    $.post("clients", JSON.stringify(postjson));
   }
 
   function loadPostSuccess(data)
@@ -454,6 +469,8 @@ function BobDSPPlugins(pluginelements)
     return controlrow;
   }
 
+  clientrestorebutton.click(function() {postReload();});
+  clientsavebutton.click(function() {postSave();});
 
   loadClients();
 }

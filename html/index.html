@@ -76,6 +76,8 @@
         $("#conaddportregex").button();
         $("#spinner").spinner({ incremental: false, min: 1});
         $("#spinner").spinner("value", 1);
+        $("#clientsave").button();
+        $("#clientrestore").button();
 
         //if multiple elements are selected, deselect them except the first
         function portUnSelect(event, ui)
@@ -104,7 +106,9 @@
 
         var pluginElements =
         {
-          clientsdiv : $("#clientsdiv")
+          clientsdiv          : $("#clientsdiv"),
+          clientsavebutton    : $("#clientsave"),
+          clientrestorebutton : $("#clientrestore")
         };
 
         BobDSPPlugins(pluginElements);
@@ -120,6 +124,8 @@
         <li><a href="#controlsdiv">Controls</a></li>
       </ul>
       <div id="pluginsdiv">
+        <button id="clientsave">Save</button>
+        <button id="clientrestore">Restore saved settings</button>
         <div id="clientsdiv">
         </div>
       </div>
