@@ -405,14 +405,21 @@ int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std
 //and delete the CJSONGenerator afterwards
 int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator)
 {
-  uint64_t size = generator->GetGenBufSize();
-  struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),
-                                                                    JSONReadCallback, generator, JSONReadFreeCallback);
-  MHD_add_response_header(response, "Content-Type", "application/json");
-  int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
-  MHD_destroy_response(response);
+  if (generator)
+  {
+    uint64_t size = generator->GetGenBufSize();
+    struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),
+                                                                      JSONReadCallback, generator, JSONReadFreeCallback);
+    MHD_add_response_header(response, "Content-Type", "application/json");
+    int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
 
-  return returnv;
+    return returnv;
+  }
+  else
+  {
+    return MHD_NO;
+  }
 }
 
 RETHTSIZE CHttpServer::JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max)
