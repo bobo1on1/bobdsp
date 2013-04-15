@@ -244,6 +244,7 @@ void CBobDSP::Process()
 
 void CBobDSP::Cleanup()
 {
+  m_httpserver.SignalStop();
   m_visualizer.AsyncStopThread();
   m_portconnector.Stop();
   m_clientsmanager.Stop();

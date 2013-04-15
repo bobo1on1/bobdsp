@@ -44,6 +44,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_daemon = NULL;
   m_port = 8080;
   m_postdatasize = 0;
+  m_stop = false;
 }
 
 CHttpServer::~CHttpServer()
@@ -88,11 +89,21 @@ void CHttpServer::Stop()
   }
 }
 
+void CHttpServer::SignalStop()
+{
+  m_stop = true;
+}
+
 int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,
                                     const char *url, const char *method,
                                     const char *version, const char *upload_data,
                                     size_t *upload_data_size, void **con_cls)
 {
+  CHttpServer* httpserver = (CHttpServer*)cls;
+  //deny all requests when stopped
+  if (httpserver->m_stop)
+    return MHD_NO;
+
   const MHD_ConnectionInfo* connectioninfo = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
 
   sockaddr* sock = (sockaddr*)connectioninfo->client_addr;
@@ -136,8 +147,6 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   CThread::SetCurrentThreadName(string(method) + " " + url);
 
   LogDebug("%s method: \"%s\" version: \"%s\" url: \"%s\"", host.c_str(), method, version, url);
-
-  CHttpServer* httpserver = (CHttpServer*)cls;
 
   //convert percent encoded chars
   char* tmpurl = new char[strlen(url) + 1];

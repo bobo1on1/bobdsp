@@ -65,6 +65,7 @@ class CHttpServer
     bool Start();
     bool IsStarted() { return m_daemon != NULL; }
     void Stop();
+    void SignalStop();
 
   private:
     struct MHD_Daemon* m_daemon;
@@ -72,6 +73,7 @@ class CHttpServer
     CBobDSP&           m_bobdsp;
     CMutex             m_mutex;
     int64_t            m_postdatasize;
+    bool               m_stop;
 
     static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                          const char *url, const char *method,
