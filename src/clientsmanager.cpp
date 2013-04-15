@@ -777,7 +777,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
     bool gotmessage = false;
     for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
     {
-      uint8_t msg;
+      ClientMessage msg;
       while ((msg = (*it)->GetMessage()) != MsgNone)
       {
         LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
@@ -793,6 +793,7 @@ void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect,
           checkconnect = true;
 
         gotmessage = true;
+        (*it)->ConfirmMessage(msg);
       }
     }
     lock.Leave();

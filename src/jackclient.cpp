@@ -36,7 +36,6 @@ CJackClient::CJackClient(const std::string& name, const std::string& logname,
   m_connected    = false;
   m_wasconnected = true;
   m_exitstatus   = (jack_status_t)0;
-  m_events       = 0;
 }
 
 CJackClient::~CJackClient()
@@ -171,31 +170,9 @@ void CJackClient::Disconnect()
   }
 
   m_connected  = false;
-  m_events     = 0;
   m_exitstatus = (jack_status_t)0;
   m_samplerate = 0;
   m_buffersize = 0;
-}
-
-void CJackClient::CheckMessages()
-{
-  if (m_events)
-  {
-    if ((m_events & PORTEVENT_REGISTERED) && WriteMessage(MsgPortRegistered))
-      m_events &= ~PORTEVENT_REGISTERED;
-
-    if ((m_events & PORTEVENT_DEREGISTERED) && WriteMessage(MsgPortDeregistered))
-      m_events &= ~PORTEVENT_DEREGISTERED;
-
-    if ((m_events & PORTEVENT_CONNECTED) && WriteMessage(MsgPortConnected))
-      m_events &= ~PORTEVENT_CONNECTED;
-
-    if ((m_events & PORTEVENT_DISCONNECTED) && WriteMessage(MsgPortDisconnected))
-      m_events &= ~PORTEVENT_DISCONNECTED;
-
-    if ((m_events & SAMPLERATE_CHANGED) && WriteMessage(MsgSamplerateChanged))
-      m_events &= ~SAMPLERATE_CHANGED;
-  }
 }
 
 void CJackClient::SJackThreadInitCallback(void *arg)
@@ -240,11 +217,9 @@ void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, vo
 void CJackClient::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
 {
   if (reg)
-    m_events |= PORTEVENT_REGISTERED;
+    WriteSingleMessage(MsgPortRegistered);
   else
-    m_events |= PORTEVENT_DEREGISTERED;
-
-  CheckMessages();
+    WriteSingleMessage(MsgPortDeregistered);
 }
 
 void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
@@ -255,11 +230,9 @@ void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, i
 void CJackClient::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
   if (connect)
-    m_events |= PORTEVENT_CONNECTED;
+    WriteSingleMessage(MsgPortConnected);
   else
-    m_events |= PORTEVENT_DISCONNECTED;
-
-  CheckMessages();
+    WriteSingleMessage(MsgPortDisconnected);
 }
 
 int CJackClient::SJackSamplerateCallback(jack_nframes_t nframes, void *arg)

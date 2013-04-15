@@ -24,12 +24,6 @@
 
 #include "clientmessage.h"
 
-#define PORTEVENT_REGISTERED   0x01
-#define PORTEVENT_DEREGISTERED 0x02
-#define PORTEVENT_CONNECTED    0x04
-#define PORTEVENT_DISCONNECTED 0x08
-#define SAMPLERATE_CHANGED     0x10
-
 class CJackClient : public CMessagePump
 {
   public:
@@ -58,10 +52,8 @@ class CJackClient : public CMessagePump
     int            m_buffersize;
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
-    int            m_events;
 
     bool         ConnectInternal();
-    void         CheckMessages();
 
     virtual void PreConnect() {};
     virtual bool PreActivate() { return true; };

@@ -48,6 +48,8 @@ const char* MsgToString(ClientMessage msg)
     return "ERROR: INVALID MESSAGE";
 }
 
+atom CMessagePump::m_msgstates[MsgSize];
+
 CMessagePump::CMessagePump(const char* sender)
 {
   m_sender = sender;
@@ -92,7 +94,7 @@ ClientMessage CMessagePump::GetMessage()
   return MsgNone;
 }
 
-bool CMessagePump::WriteMessage(uint8_t msg)
+bool CMessagePump::WriteMessage(ClientMessage msg)
 {
   if (m_pipe[1] == -1)
   {
@@ -100,7 +102,8 @@ bool CMessagePump::WriteMessage(uint8_t msg)
     return true; //can't write
   }
 
-  int returnv = write(m_pipe[1], &msg, 1);
+  uint8_t msgbyte = msg;
+  int returnv = write(m_pipe[1], &msgbyte, 1);
   if (returnv == 1)
     return true; //write successful
 
@@ -117,5 +120,35 @@ bool CMessagePump::WriteMessage(uint8_t msg)
   }
 
   return false; //need to try again
+}
+
+bool CMessagePump::WriteSingleMessage(ClientMessage msg)
+{
+  //a message here will only be sent if the previous message
+  //of the same type has been confirmed by the main thread
+  //this is used to prevent flooding the main thread
+  //with jack port messages
+  if (MsgCAS(m_msgstates + msg, 0, 1))
+  {
+    if (WriteMessage(msg))
+    {
+      return true;
+    }
+    else
+    {
+      //if writing the message fails, set the state back to 0
+      MsgCAS(m_msgstates + msg, 1, 0);
+      return false;
+    }
+  }
+  else
+  {
+    return true;
+  }
+}
+
+void CMessagePump::ConfirmMessage(ClientMessage msg)
+{
+  MsgCAS(m_msgstates + msg, 1, 0);
 }
 

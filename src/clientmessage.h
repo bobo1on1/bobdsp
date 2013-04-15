@@ -20,6 +20,7 @@
 #define CLIENTMESSAGE_H
 
 #include "util/inclstdint.h"
+#include "util/atomic.h"
 
 enum ClientMessage
 {
@@ -32,6 +33,7 @@ enum ClientMessage
   MsgSamplerateChanged,
   MsgConnectionsUpdated,
   MsgCheckClients,
+  MsgSize
 };
 
 const char* MsgToString(ClientMessage msg);
@@ -49,12 +51,17 @@ class CMessagePump
 
     int           MsgPipe() { return m_pipe[0]; }
     ClientMessage GetMessage();
-    bool          WriteMessage(uint8_t msg);
     const char*   Sender() { return m_sender; }
+    void          ConfirmMessage(ClientMessage msg);
+
+  protected:
+    bool          WriteMessage(ClientMessage msg);
+    bool          WriteSingleMessage(ClientMessage msg);
 
   private:
-    const char* m_sender;
-    int         m_pipe[2];
+    const char*   m_sender;
+    int           m_pipe[2];
+    static atom   m_msgstates[MsgSize];
 };
 
 #endif //CLIENTMESSAGE_H

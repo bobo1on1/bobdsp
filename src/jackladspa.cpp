@@ -143,9 +143,6 @@ void CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
   //process audio
   for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
     (*it)->Run(nframes, m_runninggain[0], m_runninggain[1]);
-
-  //check if we need to send a message to the main loop
-  CheckMessages();
 }
 
 int CJackLadspa::PJackSamplerateCallback(jack_nframes_t nframes)
@@ -155,9 +152,8 @@ int CJackLadspa::PJackSamplerateCallback(jack_nframes_t nframes)
     //if the jack samplerate changes, restart the client
     MarkRestart();
 
-    //send a message to the main thread that the samplerate changed
-    m_events |= SAMPLERATE_CHANGED;
-    CheckMessages();
+    //signal the main thread that this thread needs a restart
+    WriteMessage(MsgSamplerateChanged);
   }
 
   return 0;

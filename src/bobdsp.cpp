@@ -529,12 +529,22 @@ void CBobDSP::ProcessStdFd(const char* name, int& fd)
 
 void CBobDSP::ProcessManagerMessages(CMessagePump& manager)
 {
-  uint8_t msg;
+  ClientMessage msg;
   while ((msg = manager.GetMessage()) != MsgNone)
   {
     LogDebug("got message %s from %s", MsgToString(msg), manager.Sender());
     if (msg == MsgConnectionsUpdated)
       m_checkconnect = m_checkdisconnect = true;
+    else if (msg == MsgPortRegistered)
+      m_updateports = m_checkconnect = true;
+    else if (msg == MsgPortDeregistered)
+      m_updateports = true;
+    else if (msg == MsgPortConnected)
+      m_checkdisconnect = true;
+    else if (msg == MsgPortDisconnected)
+      m_checkconnect = true;
+
+    manager.ConfirmMessage(msg);
   }
 }
 

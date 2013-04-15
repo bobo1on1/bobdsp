@@ -73,6 +73,10 @@ def configure(conf):
   conf.check(function_name='clock_gettime', header_name='time.h', lib='rt', uselib_store='rt', mandatory=False,
              msg='Checking for clock_gettime in librt')
 
+  fragment = 'int main(int argc, char *argv[]) {unsigned long x; __sync_bool_compare_and_swap(&x, 0, 1); return 0;}'
+  conf.check(fragment=fragment, msg='Checking for __sync_bool_compare_and_swap',
+             define_name='HAVE_SYNC_BOOL_COMPARE_AND_SWAP', mandatory=False)
+
   conf.write_config_header('config.h')
 
 def build(bld):
