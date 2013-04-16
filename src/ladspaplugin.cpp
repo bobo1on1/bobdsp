@@ -286,7 +286,7 @@ bool CLadspaPlugin::HasUpperBound(unsigned long port)
     return false;
 }
 
-float CLadspaPlugin::LowerBound(unsigned long port, int samplerate /*= 48000*/)
+float CLadspaPlugin::LowerBound(unsigned long port, int samplerate)
 {
   LADSPA_PortRangeHint hint = PortRangeHint(port);
   if (LADSPA_IS_HINT_SAMPLE_RATE(hint.HintDescriptor))
@@ -295,7 +295,7 @@ float CLadspaPlugin::LowerBound(unsigned long port, int samplerate /*= 48000*/)
     return hint.LowerBound;
 }
 
-float CLadspaPlugin::UpperBound(unsigned long port, int samplerate /*= 48000*/)
+float CLadspaPlugin::UpperBound(unsigned long port, int samplerate)
 {
   LADSPA_PortRangeHint hint = PortRangeHint(port);
   if (LADSPA_IS_HINT_SAMPLE_RATE(hint.HintDescriptor))
@@ -336,7 +336,7 @@ bool CLadspaPlugin::HasDefault(unsigned long port)
     return false;
 }
 
-float CLadspaPlugin::DefaultValue(unsigned long port, int samplerate /*= 48000*/)
+float CLadspaPlugin::DefaultValue(unsigned long port, int samplerate)
 {
   if (HasDefault(port))
   {

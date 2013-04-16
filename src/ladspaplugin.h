@@ -59,13 +59,13 @@ class CLadspaPlugin
     bool                        IsAudioOutput(unsigned long port);
     bool                        HasLowerBound(unsigned long port);
     bool                        HasUpperBound(unsigned long port);
-    float                       LowerBound(unsigned long port, int samplerate = 48000);
-    float                       UpperBound(unsigned long port, int samplerate = 48000);
+    float                       LowerBound(unsigned long port, int samplerate);
+    float                       UpperBound(unsigned long port, int samplerate);
     bool                        IsToggled(unsigned long port);
     bool                        IsLogarithmic(unsigned long port);
     bool                        IsInteger(unsigned long port);
     bool                        HasDefault(unsigned long port);
-    float                       DefaultValue(unsigned long port, int samplerate = 48000);
+    float                       DefaultValue(unsigned long port, int samplerate);
 
     int AudioInputPorts();
     int AudioOutputPorts();
