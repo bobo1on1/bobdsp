@@ -718,7 +718,21 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
     {
       LogError("Client \"%s\" exited with code %i reason: \"%s\"",
                (*it)->Name().c_str(), (int)(*it)->ExitStatus(), (*it)->ExitReason().c_str());
-      (*it)->Disconnect();
+
+      //in case of jack2, if jackd exits, libjack will deallocate all the jack clients of this process when
+      //jack_client_open() is called, so all the jack clients will need to be shut down first
+      if ((*it)->ExitStatus() == JackFailure)
+      {
+        Log("Jackd seems to have exited, disconnecting all clients");
+        for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+          (*it)->Disconnect();
+
+        break;
+      }
+      else
+      {
+        (*it)->Disconnect();
+      }
     }
 
     //keep trying to connect
