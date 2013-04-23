@@ -244,13 +244,19 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
   //run the ladspa plugin on the audio data
   m_plugin->Descriptor()->run(m_handle, nframes);
 
-  //apply gain for all jack output ports
-  if (postgain != 1.0f)
+  //postprocess
+  for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
   {
-    for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
+    if (!it->IsInput())
     {
-      if (!it->IsInput())
-        ApplyGain((float*)jack_port_get_buffer(it->GetJackPort(), nframes), nframes, postgain);
+      float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), nframes);
+
+      //set denormals of output buffers to zero
+      DenormalsToZero(jackptr, nframes);
+
+      //apply gain for output ports if needed
+      if (postgain != 1.0f)
+        ApplyGain(jackptr, nframes, postgain);
     }
   }
 }

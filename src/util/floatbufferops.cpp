@@ -17,6 +17,8 @@
  */
 
 #include "inclstdint.h"
+#include <float.h>
+
 #include "floatbufferops.h"
 #include "ssedefs.h"
 
@@ -113,6 +115,67 @@ void OPTIMIZE CopyApplyGain(float* in, float* out, int samples, float gain)
   //the gcc vectorizer will also handle SSE with unaligned pointers here
   while (inptr != inend)
     *(outptr++) = *(inptr++) * gain;
+}
+
+void OPTIMIZE DenormalsToZero(float* data, int samples)
+{
+  float* dataptr = data;
+  float* end     = dataptr + samples;
+
+#ifdef USE_SSE
+  //AND mask to set the sign bit to 0
+  floatvec absmask;
+  for (int i = 0; i < 4; i++)
+    absmask.i[i] = 0x7FFFFFFF;
+
+  //value to compare to, lower than this is a denormal
+  floatvec cmpval;
+  for (int i = 0; i < 4; i++)
+    cmpval.f[i] = FLT_MIN;
+
+  float* leadinend;
+  if (IsAligned(data, samples, leadinend))
+  {
+    //process until dataptr is 16 bytes aligned
+    while (dataptr != leadinend)
+    {
+      if (__builtin_fabs(*dataptr) < FLT_MIN)
+        *dataptr = 0.0f;
+
+      dataptr++;
+    }
+
+    __m128 vec;
+    __m128 result;
+    float* vecend = VecEnd(end);
+    while (dataptr != vecend)
+    {
+      //load from a 16 byte aligned pointer
+      vec = _mm_load_ps(dataptr);
+      //set sign bit to zero to get the absolute value
+      vec = _mm_and_ps(vec, absmask.v);
+
+      //create an AND mask with all ones if the value is equal or greater than FLT_MIN
+      //if it's lower create an AND mask of all zeros
+      result = _mm_cmpge_ps(vec, cmpval.v);
+
+      //apply the AND mask, and store the values back into the 16 byte aligned pointer
+      vec = _mm_and_ps(vec, result);
+      _mm_store_ps(dataptr, vec);
+
+      dataptr += 4;
+    }
+  }
+#endif
+
+  //process remaining values
+  while (dataptr != end)
+  {
+    if (__builtin_fabs(*dataptr) < FLT_MIN)
+      *dataptr = 0.0f;
+
+    dataptr++;
+  }
 }
 
 static void OPTIMIZE ProcessFloatStats(float* data, int samples, float& output,
@@ -292,3 +355,4 @@ void OPTIMIZE HighestAbs(float* data, int samples, float& value)
 {
   ProcessFloatStats(data, samples, value, HighestAbsProcess, HighestAbsProcessSSE);
 }
+

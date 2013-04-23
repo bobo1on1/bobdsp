@@ -22,6 +22,7 @@ def configure(conf):
   conf.check(header_name='dlfcn.h')
   conf.check(header_name='errno.h')
   conf.check(header_name='fcntl.h')
+  conf.check(header_name='float.h')
   conf.check(header_name='inttypes.h')
   conf.check(header_name='jack/jack.h')
   conf.check(header_name='ladspa.h')

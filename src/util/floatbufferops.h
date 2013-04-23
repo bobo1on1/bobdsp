@@ -20,6 +20,7 @@
 
 void ApplyGain(float* data, int samples, float gain);
 void CopyApplyGain(float* in, float* out, int samples, float gain);
+void DenormalsToZero(float* data, int samples);
 void AvgSquare(float* data, int samples, float& avg);
 void AvgAbs(float* data, int samples, float& avg);
 void HighestAbs(float* data, int samples, float& value);
