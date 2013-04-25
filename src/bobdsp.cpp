@@ -16,6 +16,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE //for pipe2
 #endif //_GNU_SOURCE
@@ -33,6 +35,7 @@
 #include <sys/mman.h>
 #include <sys/signalfd.h>
 #include <locale.h>
+#include <getopt.h>
 
 #include "util/log.h"
 #include "util/misc.h"
@@ -58,54 +61,54 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   m_stdout[0] = m_stdout[1] = -1;
   m_stderr[0] = m_stderr[1] = -1;
 
-  bool dofork = false;
-
   //make sure all numeric string<->float conversions are done using the C locale
   setlocale(LC_NUMERIC, "C");
 
-  //parse commandline options
-  for (int i = 1; i < argc; i++)
+
+  struct option longoptions[] =
   {
-    if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0)
+   {"debug",    no_argument,       NULL, 'd'},
+   {"fork",     no_argument,       NULL, 'f'},
+   {"help",     no_argument,       NULL, 'h'},
+   {"port",     required_argument, NULL, 'p'},
+   {"html-dir", required_argument, NULL, 't'},
+   {0, 0, 0, 0}
+  };
+
+  const char* shortoptions = "dfhp:t:";
+  int         optionindex = 0;
+  int         c;
+  bool        dofork = false;
+
+  while ((c = getopt_long(argc, argv, shortoptions, longoptions, &optionindex)) != -1)
+  {
+    if (c == 'd')
     {
       g_printdebuglevel = true;
     }
-    else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--fork") == 0)
+    else if (c == 'f')
     {
       dofork = true;
     }
-    else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0)
+    else if (c == 'p')
     {
-      if (i == argc - 1)
-      {
-        printf("Error: option %s requires an argument\n", argv[i]);
-        exit(1);
-      }
-
-      i++;
       int port;
-      if (!StrToInt(argv[i], port) || port < 0 || port > 65535)
+      if (!StrToInt(optarg, port) || port < 0 || port > 65535)
       {
-        printf("Error: invalid argument %s for option %s\n", argv[i], argv[i - 1]);
+        fprintf(stderr, "Error: invalid argument %s for port\n", optarg);
         exit(1);
       }
 
       m_httpserver.SetPort(port);
     }
-    else
+    else if (c == 't')
     {
-      printf(
-             "\n"
-             "usage: bobdsp [OPTION]\n"
-             "\n"
-             "  options:\n"
-             "\n"
-             "    -d, --debug       enable debug logging\n"
-             "    -f, --fork        daemonize, suppresses logging to stderr\n"
-             "    -p, --port [PORT] set the port for the http server\n"
-             "\n"
-             );
-      exit(0);
+      m_httpserver.SetHtmlDirectory(optarg);
+    }
+    else if (c == 'h' || c == '?')
+    {
+      PrintHelpMessage();
+      exit(1);
     }
   }
 
@@ -135,6 +138,23 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
 
 CBobDSP::~CBobDSP()
 {
+}
+
+void CBobDSP::PrintHelpMessage()
+{
+  printf(
+         "\n"
+         "usage: bobdsp [OPTION]\n"
+         "\n"
+         "  options:\n"
+         "\n"
+         "    -d, --debug       enable debug logging\n"
+         "    -f, --fork        daemonize, suppresses logging to stderr\n"
+         "    -p, --port [PORT] set the port for the http server\n"
+         "    -h, --help        print this message\n"
+         "    -t, --html-dir    set the html directory\n"
+         "\n"
+         );
 }
 
 void CBobDSP::Setup()

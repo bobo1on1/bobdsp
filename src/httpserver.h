@@ -61,6 +61,7 @@ class CHttpServer
     ~CHttpServer();
 
     void SetPort(int port) { m_port = port; }
+    void SetHtmlDirectory(const char* dir);
 
     bool Start();
     bool IsStarted() { return m_daemon != NULL; }
@@ -74,6 +75,7 @@ class CHttpServer
     CMutex             m_mutex;
     int64_t            m_postdatasize;
     bool               m_stop;
+    std::string        m_htmldir;
 
     static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                          const char *url, const char *method,

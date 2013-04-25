@@ -23,6 +23,7 @@ def configure(conf):
   conf.check(header_name='errno.h')
   conf.check(header_name='fcntl.h')
   conf.check(header_name='float.h')
+  conf.check(header_name='getopt.h')
   conf.check(header_name='inttypes.h')
   conf.check(header_name='jack/jack.h')
   conf.check(header_name='ladspa.h')
@@ -77,6 +78,8 @@ def configure(conf):
   fragment = 'int main(int argc, char *argv[]) {unsigned long x; __sync_bool_compare_and_swap(&x, 0, 1); return 0;}'
   conf.check(fragment=fragment, msg='Checking for __sync_bool_compare_and_swap',
              define_name='HAVE_SYNC_BOOL_COMPARE_AND_SWAP', mandatory=False)
+
+  conf.define("PREFIX", conf.env["PREFIX"]);
 
   conf.write_config_header('config.h')
 

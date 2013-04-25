@@ -16,6 +16,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
 #include "bobdsp.h"
 #include "httpserver.h"
 #include "util/log.h"
@@ -45,11 +46,17 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_port = 8080;
   m_postdatasize = 0;
   m_stop = false;
+  m_htmldir = RemoveSlashAtEnd(PREFIX) + "/share/bobdsp/html";
 }
 
 CHttpServer::~CHttpServer()
 {
   Stop();
+}
+
+void CHttpServer::SetHtmlDirectory(const char* dir)
+{
+  m_htmldir = RemoveSlashAtEnd(dir);
 }
 
 bool CHttpServer::Start()
@@ -190,7 +197,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else
     {
-      return CreateFileDownload(connection, strurl, "html");
+      return CreateFileDownload(connection, strurl, httpserver->m_htmldir.c_str());
     }
   }
   else if (strcmp(method, "POST") == 0)

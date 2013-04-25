@@ -65,6 +65,7 @@ class CBobDSP
     int             m_stdout[2];
     int             m_stderr[2];
 
+    void PrintHelpMessage();
     void SetupRT(int64_t memsize);
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
