@@ -111,7 +111,10 @@ def build(bld):
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')
 
-#set cssshlib_PATTERN to produce bobdsp.so from target='bobdsp'
+#install html files
+  bld.install_files('${PREFIX}/share/bobdsp', bld.path.ant_glob('html/**/*'), relative_trick=True)
+
+#set cxxshlib_PATTERN to produce bobdsp.so from target='bobdsp'
   bld.env.cxxshlib_PATTERN = '%s.so'
   bld.shlib(source='src/ladspa/biquad.cpp\
                     src/ladspa/biquadcoefs.cpp\
