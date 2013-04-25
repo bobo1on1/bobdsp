@@ -30,10 +30,19 @@ CBiquad::CBiquad(EFILTER type, unsigned long samplerate)
   memset(m_ports, 0, sizeof(m_ports));
   m_type = type;
   m_samplerate = samplerate;
+
+#ifdef USE_SSE
+  m_indelay = NULL;
+  m_outdelay = NULL;
+#endif
 }
 
 CBiquad::~CBiquad()
 {
+#ifdef USE_SSE
+  free(m_indelay);
+  free(m_outdelay);
+#endif
 }
 
 void CBiquad::ConnectPort(unsigned long port, LADSPA_Data* datalocation)
@@ -44,6 +53,8 @@ void CBiquad::ConnectPort(unsigned long port, LADSPA_Data* datalocation)
 void CBiquad::Activate()
 {
 #ifdef USE_SSE
+  free(m_indelay);
+  free(m_outdelay);
   posix_memalign((void**)&m_indelay, 16, 4 * sizeof(float));
   posix_memalign((void**)&m_outdelay, 16, 4 * sizeof(float));
   memset(m_indelay, 0, 4 * sizeof(float));
@@ -215,6 +226,8 @@ void CBiquad::Deactivate()
 #ifdef USE_SSE
   free(m_indelay);
   free(m_outdelay);
+  m_indelay = NULL;
+  m_outdelay = NULL;
 #endif
 }
 
