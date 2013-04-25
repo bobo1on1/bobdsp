@@ -89,8 +89,10 @@ void OPTIMIZE CBiquad::Run(unsigned long samplecount)
   __m128 bcoeffs  = _mm_set_ps(0.0f, m_coefs.b2, m_coefs.b1, m_coefs.b0);
   
   //run the quad filter
-  if (samplecount >= 4)
-    RunQuad(in, in + (samplecount & ~3), out, indelay, outdelay, acoeffs, bcoeffs);
+  //disabled for now since it caused distortion at the nyquist and half the nyquist frequency
+  //possibly the order of loading and storing is the wrong way around
+  //if (samplecount >= 4)
+    //RunQuad(in, in + (samplecount & ~3), out, indelay, outdelay, acoeffs, bcoeffs);
 
   //run the single filter on the remaining samples
   RunSingle(in, inend, out, indelay, outdelay, acoeffs, bcoeffs);
