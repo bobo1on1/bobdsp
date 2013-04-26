@@ -105,9 +105,13 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     {
       m_httpserver.SetHtmlDirectory(optarg);
     }
-    else if (c == 'h' || c == '?')
+    else if (c == 'h')
     {
       PrintHelpMessage();
+      exit(1);
+    }
+    else if (c == '?')
+    {
       exit(1);
     }
   }
