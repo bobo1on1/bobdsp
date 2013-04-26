@@ -148,11 +148,11 @@ void CBobDSP::PrintHelpMessage()
          "\n"
          "  options:\n"
          "\n"
-         "    -d, --debug       enable debug logging\n"
-         "    -f, --fork        daemonize, suppresses logging to stderr\n"
-         "    -p, --port [PORT] set the port for the http server\n"
-         "    -h, --help        print this message\n"
-         "    -t, --html-dir    set the html directory\n"
+         "    -d, --debug        enable debug logging\n"
+         "    -f, --fork         daemonize, suppresses logging to stderr\n"
+         "    -p, --port=PORT    set the port for the http server\n"
+         "    -h, --help         print this message\n"
+         "    -t, --html-dir=DIR set the html directory\n"
          "\n"
          );
 }
