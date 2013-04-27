@@ -24,21 +24,18 @@ using namespace BobDSPLadspa;
 
 CBiquadCoef::CBiquadCoef()
 {
+  m_initialized = false;
   Passthrough();
-
-  for (size_t i = 0; i < sizeof(m_oldsettings) / sizeof(m_oldsettings[0]); i++)
-    m_oldsettings[i] = -1.0f;
 }
 
 CBiquadCoef::~CBiquadCoef()
 {
-  Passthrough();
 }
 
-void CBiquadCoef::Calculate(EFILTER type, float samplerate, LADSPA_Data** ports, bool force)
+void CBiquadCoef::Calculate(EFILTER type, float samplerate, LADSPA_Data** ports)
 {
   if (type == LINKWITZTRANSFORM)
-    LinkwitzTransform(samplerate, ports, force);
+    LinkwitzTransform(samplerate, ports);
   else
     Passthrough();
 }
@@ -57,7 +54,7 @@ void CBiquadCoef::Passthrough()
 //ported from the spreadsheet at http://www.minidsp.com/applications/advanced-tools/linkwitz-transform
 //I don't understand what's going on here, so I can't explain what it's doing
 
-void CBiquadCoef::LinkwitzTransform(float samplerate, LADSPA_Data** ports, bool force)
+void CBiquadCoef::LinkwitzTransform(float samplerate, LADSPA_Data** ports)
 {
   /*
     B3 = f0
@@ -84,8 +81,8 @@ void CBiquadCoef::LinkwitzTransform(float samplerate, LADSPA_Data** ports, bool 
   
     */
 
-  //only calculate the coefficients if the parameters changed,
-  //or when forced to calculate them
+  //only calculate the coefficients if the parameters changed
+  //or when the coefficients have not been calculated
   bool changed = false;
   for (int i = 0; i < 4; i++)
   {
@@ -96,8 +93,10 @@ void CBiquadCoef::LinkwitzTransform(float samplerate, LADSPA_Data** ports, bool 
     }
   }
 
-  if (!changed && !force)
+  if (!changed && m_initialized)
     return;
+
+  m_initialized = true;
 
   //clamp frequencies and Q factors to something sane
   LADSPA_Data f0 = Clamp(*ports[2], 1.0f, samplerate * 0.4f);
