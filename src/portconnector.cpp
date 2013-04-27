@@ -595,28 +595,29 @@ void CPortConnector::MatchConnection(vector<CPortConnection>::iterator& it, vect
 
 void CPortConnector::UpdatePorts()
 {
-  //build up a temp list
-  const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
-  if (!ports)
-    return;
-
   std::list<CJackPort> jackports;
-  for (const char** portname = ports; *portname != NULL; portname++)
+
+  //jack_get_ports returns NULL when there are no ports
+  const char** ports = jack_get_ports(m_client, NULL, NULL, 0);
+  if (ports)
   {
-    const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
-    if (!jackport)
+    for (const char** portname = ports; *portname != NULL; portname++)
     {
-      LogError("Unable to get flags from port \"%s\"", *portname);
-      continue;
+      const jack_port_t* jackport = jack_port_by_name(m_client, *portname);
+      if (!jackport)
+      {
+        LogError("Unable to get flags from port \"%s\"", *portname);
+        continue;
+      }
+
+      int portflags = jack_port_flags(jackport);
+
+      LogDebug("Found %s port \"%s\"", portflags & JackPortIsInput ? "input" : "output", *portname);
+      jackports.push_back(CJackPort(*portname, portflags));
     }
-
-    int portflags = jack_port_flags(jackport);
-
-    LogDebug("Found %s port \"%s\"", portflags & JackPortIsInput ? "input" : "output", *portname);
-    jackports.push_back(CJackPort(*portname, portflags));
+    jackports.sort();
+    jack_free((void*)ports);
   }
-  jackports.sort();
-  jack_free((void*)ports);
 
   //check if the list really changed, it might not if the main loop got a delayed event from a jack client
   bool changed = jackports.size() != m_jackports.size();
