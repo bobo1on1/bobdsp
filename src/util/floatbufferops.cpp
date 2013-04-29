@@ -145,23 +145,23 @@ void OPTIMIZE DenormalsToZero(float* data, int samples)
       dataptr++;
     }
 
-    __m128 vec;
+    __m128 sample;
     __m128 result;
     float* vecend = VecEnd(end);
     while (dataptr != vecend)
     {
       //load from a 16 byte aligned pointer
-      vec = _mm_load_ps(dataptr);
+      sample = _mm_load_ps(dataptr);
       //set sign bit to zero to get the absolute value
-      vec = _mm_and_ps(vec, absmask.v);
+      result = _mm_and_ps(sample, absmask.v);
 
       //create an AND mask with all ones if the value is equal or greater than FLT_MIN
       //if it's lower create an AND mask of all zeros
-      result = _mm_cmpge_ps(vec, cmpval.v);
+      result = _mm_cmpge_ps(result, cmpval.v);
 
       //apply the AND mask, and store the values back into the 16 byte aligned pointer
-      vec = _mm_and_ps(vec, result);
-      _mm_store_ps(dataptr, vec);
+      sample = _mm_and_ps(sample, result);
+      _mm_store_ps(dataptr, sample);
 
       dataptr += 4;
     }
