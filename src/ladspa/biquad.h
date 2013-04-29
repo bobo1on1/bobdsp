@@ -41,10 +41,8 @@ namespace BobDSPLadspa
 
     private:
 #ifdef USE_SSE
-      void RunSingle(float*& in, float* inend, float*& out, __m128& indelay,
-                     __m128& outdelay, __m128& acoeffs, __m128& bcoeffs);
-      void RunQuad(float*& in, float* inend, float*& out, __m128& indelay,
-                   __m128& outdelay, __m128& acoeffs, __m128& bcoeffs);
+      void RunSingle(float*& in, float* inend, float*& out, __m128 acoeffs, __m128 bcoeffs);
+      void RunQuad(float*& in, float* inend, float*& out, __m128 acoeffs, __m128 bcoeffs);
 #endif
 
       EFILTER      m_type;
@@ -53,8 +51,8 @@ namespace BobDSPLadspa
       LADSPA_Data* m_ports[6];
 
 #ifdef USE_SSE
-      float*       m_indelay;
-      float*       m_outdelay;
+      __m128       m_indelay;
+      __m128       m_outdelay;
 #else
       LADSPA_Data  m_indelay[2];
       LADSPA_Data  m_outdelay[2];
