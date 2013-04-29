@@ -82,6 +82,10 @@ class CHttpServer
                                          const char *version, const char *upload_data,
                                          size_t *upload_data_size, void **con_cls);
 
+    static void      RequestCompleted(void* cls, struct MHD_Connection* connection,
+                                      void** con_cls, enum MHD_RequestTerminationCode toe);
+    static void      SenderInfo(struct MHD_Connection* connection, std::string& host, std::string& port);
+
     static int       CreateError(struct MHD_Connection *connection, int errorcode);
     static int       CreateRedirect(struct MHD_Connection *connection, const std::string& location);
     static int       CreateFileDownload(struct MHD_Connection *connection, const std::string& url,

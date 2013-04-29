@@ -75,7 +75,10 @@ bool CHttpServer::Start()
 
   unsigned int timeout = 60 * 60; //one hour timeout
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
-                              &AnswerToConnection, this, MHD_OPTION_CONNECTION_TIMEOUT, timeout, MHD_OPTION_END);
+                              &AnswerToConnection, this,
+                              MHD_OPTION_CONNECTION_TIMEOUT, timeout,
+                              MHD_OPTION_NOTIFY_COMPLETED, RequestCompleted, NULL,
+                              MHD_OPTION_END);
 
   CThread::SetCurrentThreadName(threadname);
 
@@ -107,51 +110,17 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
                                     size_t *upload_data_size, void **con_cls)
 {
   CHttpServer* httpserver = (CHttpServer*)cls;
+
   //deny all requests when stopped
   if (httpserver->m_stop)
     return MHD_NO;
 
-  const MHD_ConnectionInfo* connectioninfo = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
-
-  sockaddr* sock = (sockaddr*)connectioninfo->client_addr;
-  socklen_t size;
-  if (sock->sa_family == AF_INET)
-    size = sizeof(sockaddr_in);
-  else if (sock->sa_family == AF_INET6)
-    size = sizeof(sockaddr_in6);
-  else
-  {
-    size = 0;
-    LogError("Unknown protocol %u", sock->sa_family);
-  }
-
-  //convert ip:port to string
-  char hostbuf[NI_MAXHOST];
-  char servbuf[NI_MAXSERV];
-  string host;
-  if (size > 0)
-  {
-    //pass NI_NUMERICHOST to prevent a dns lookup, this might take a long time
-    //and will slow down the http request
-    int returnv = getnameinfo(sock, size, hostbuf, sizeof(hostbuf), servbuf,
-                              sizeof(servbuf), NI_NUMERICHOST | NI_NUMERICSERV);
-    if (returnv == 0)
-    {
-      if (sock->sa_family == AF_INET6)
-        host = string("[") + hostbuf + "]:" + servbuf;
-      else
-        host = string(hostbuf) + ":" + servbuf;
-    }
-    else
-    {
-      LogError("getnameinfo(): %s", gai_strerror(returnv));
-    }
-  }
-
-  if (host.empty())
-    host = "unknown";
-
+  //set thread name to current method and url
   CThread::SetCurrentThreadName(string(method) + " " + url);
+
+  string host;
+  string port;
+  SenderInfo(connection, host, port);
 
   LogDebug("%s method: \"%s\" version: \"%s\" url: \"%s\"", host.c_str(), method, version, url);
 
@@ -272,6 +241,66 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   }
 
   return CreateError(connection, MHD_HTTP_NOT_FOUND);
+}
+
+void CHttpServer::RequestCompleted(void* cls, struct MHD_Connection* connection,
+                                   void** con_cls, enum MHD_RequestTerminationCode toe)
+{
+  string host;
+  string port;
+  SenderInfo(connection, host, port);
+
+  //when the request is completed, set the thread name to the http port,
+  //in case of http keep-alive this thread will keep running until the connection is closed
+  CThread::SetCurrentThreadName(string("http:") + port);
+}
+
+void CHttpServer::SenderInfo(struct MHD_Connection* connection, std::string& host, std::string& port)
+{
+  const MHD_ConnectionInfo* connectioninfo = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
+
+  sockaddr* sock = (sockaddr*)connectioninfo->client_addr;
+  socklen_t size;
+  if (sock->sa_family == AF_INET)
+    size = sizeof(sockaddr_in);
+  else if (sock->sa_family == AF_INET6)
+    size = sizeof(sockaddr_in6);
+  else
+  {
+    size = 0;
+    LogError("Unknown protocol %u", sock->sa_family);
+  }
+
+  //convert ip:port to string
+  char hostbuf[NI_MAXHOST];
+  char servbuf[NI_MAXSERV];
+  if (size > 0)
+  {
+    //pass NI_NUMERICHOST to prevent a dns lookup, this might take a long time
+    //and will slow down the http request
+    int returnv = getnameinfo(sock, size, hostbuf, sizeof(hostbuf), servbuf,
+                              sizeof(servbuf), NI_NUMERICHOST | NI_NUMERICSERV);
+    if (returnv == 0)
+    {
+      if (sock->sa_family == AF_INET6)
+        host = string("[") + hostbuf + "]:" + servbuf;
+      else
+        host = string(hostbuf) + ":" + servbuf;
+
+      port = servbuf;
+    }
+    else
+    {
+      LogError("getnameinfo(): %s", gai_strerror(returnv));
+      host = "unknown";
+      port.clear();
+    }
+  }
+  else
+  {
+    host = "unknown";
+    port.clear();
+  }
 }
 
 int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
