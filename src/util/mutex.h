@@ -27,7 +27,7 @@ class CMutex
 {
   public:
     CMutex();
-    ~CMutex();
+    virtual ~CMutex();
     bool Lock();
     void Unlock();
     bool TryLock();
