@@ -613,7 +613,7 @@ void CVisualizer::PostDeactivate()
     it->Disconnect(m_client);
 }
 
-void CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
+int CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
 {
   //get a timestamp of the first sample in the buffer
   int64_t now = GetTimeUs();
@@ -628,6 +628,8 @@ void CVisualizer::PJackProcessCallback(jack_nframes_t nframes)
 
   if (lock.HasLock())
     m_jackcond.Signal();
+
+  return 0;
 }
 
 void CVisualizer::PJackInfoShutdownCallback(jack_status_t code, const char *reason)

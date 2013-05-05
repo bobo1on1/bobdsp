@@ -34,8 +34,6 @@
 #include "clientsmanager.h"
 #include "visualizer.h"
 
-#define CONNECTINTERVAL 1000000
-
 class CBobDSP
 {
   public:
@@ -58,9 +56,6 @@ class CBobDSP
     CVisualizer     m_visualizer;
     CHttpServer     m_httpserver;
     bool            m_stop;
-    bool            m_checkconnect;
-    bool            m_checkdisconnect;
-    bool            m_updateports;
     int             m_signalfd;
     int             m_stdout[2];
     int             m_stderr[2];

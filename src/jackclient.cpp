@@ -25,6 +25,8 @@
 
 using namespace std;
 
+list<CJackClient*> CJackClient::m_clientinstances;
+
 CJackClient::CJackClient(const std::string& name, const std::string& logname,
                          const std::string& threadname, const char* sender /*= "jack client"*/):
   CMessagePump(sender)
@@ -36,10 +38,24 @@ CJackClient::CJackClient(const std::string& name, const std::string& logname,
   m_connected    = false;
   m_wasconnected = true;
   m_exitstatus   = (jack_status_t)0;
+
+  //save a pointer to this instance, in case all clients need to be disconnected from jack
+  //saving it to a static list means that the portconnect and visualizer will
+  //also be saved here
+  m_clientinstances.push_back(this);
 }
 
 CJackClient::~CJackClient()
 {
+  //remove pointer
+  for (list<CJackClient*>::iterator it = m_clientinstances.begin(); it != m_clientinstances.end(); it++)
+  {
+    if (*it == this)
+    {
+      m_clientinstances.erase(it);
+      break;
+    }
+  }
 }
 
 bool CJackClient::Connect()
@@ -175,6 +191,33 @@ void CJackClient::Disconnect()
   m_buffersize = 0;
 }
 
+void CJackClient::DisconnectAll()
+{
+  //disconnect all instances of CJackClient
+  for (list<CJackClient*>::iterator it = m_clientinstances.begin(); it != m_clientinstances.end(); it++)
+    (*it)->Disconnect();
+}
+
+void CJackClient::CheckExitStatus()
+{
+  if (m_exitstatus)
+  {
+    LogError("%s exited with code %i reason: \"%s\"", m_logname.c_str(), (int)m_exitstatus, m_exitreason.c_str());
+
+    //in case of jack2, if jackd exits, libjack will deallocate all the jack clients of this process when
+    //jack_client_open() is called, so all the jack clients will need to be disconnected first
+    if (m_exitstatus == JackFailure)
+    {
+      Log("Jackd seems to have exited, disconnecting all clients");
+      DisconnectAll();
+    }
+    else
+    {
+      Disconnect();
+    }
+  }
+}
+
 void CJackClient::SJackThreadInitCallback(void *arg)
 {
   ((CJackClient*)arg)->PJackThreadInitCallback();
@@ -188,7 +231,11 @@ void CJackClient::PJackThreadInitCallback()
 
 int CJackClient::SJackProcessCallback(jack_nframes_t nframes, void *arg)
 {
-  ((CJackClient*)arg)->PJackProcessCallback(nframes);
+  return ((CJackClient*)arg)->PJackProcessCallback(nframes);
+}
+
+int CJackClient::PJackProcessCallback(jack_nframes_t nframes)
+{
   return 0;
 }
 
@@ -216,10 +263,6 @@ void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, vo
 
 void CJackClient::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
 {
-  if (reg)
-    WriteSingleMessage(MsgPortRegistered);
-  else
-    WriteSingleMessage(MsgPortDeregistered);
 }
 
 void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg)
@@ -229,10 +272,6 @@ void CJackClient::SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, i
 
 void CJackClient::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
-  if (connect)
-    WriteSingleMessage(MsgPortConnected);
-  else
-    WriteSingleMessage(MsgPortDisconnected);
 }
 
 int CJackClient::SJackSamplerateCallback(jack_nframes_t nframes, void *arg)

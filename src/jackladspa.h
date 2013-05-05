@@ -69,7 +69,7 @@ class CJackLadspa : public CJackClient
     void TransferNewControlInputs(controlmap& controlinputs);
     int  PJackSamplerateCallback(jack_nframes_t nframes);
     int  PJackBufferSizeCallback(jack_nframes_t nframes);
-    void PJackProcessCallback(jack_nframes_t nframes);
+    int  PJackProcessCallback(jack_nframes_t nframes);
 };
 
 #endif //JACKLADSPA_H

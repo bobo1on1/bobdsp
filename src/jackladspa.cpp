@@ -123,7 +123,7 @@ void CJackLadspa::TransferNewControlInputs(controlmap& controlinputs)
   }
 }
 
-void CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
+int CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
 {
   //check if gain was updated, use a trylock to prevent blocking the realtime jack thread
   CLock lock(m_mutex, true);
@@ -143,6 +143,8 @@ void CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
   //process audio
   for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
     (*it)->Run(nframes, m_runninggain[0], m_runninggain[1]);
+
+  return 0;
 }
 
 int CJackLadspa::PJackSamplerateCallback(jack_nframes_t nframes)
@@ -153,7 +155,7 @@ int CJackLadspa::PJackSamplerateCallback(jack_nframes_t nframes)
     MarkRestart();
 
     //signal the main thread that this thread needs a restart
-    WriteMessage(MsgSamplerateChanged);
+    WriteSingleMessage(MsgSamplerateChanged);
   }
 
   return 0;

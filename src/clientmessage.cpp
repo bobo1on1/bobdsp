@@ -151,4 +151,3 @@ void CMessagePump::ConfirmMessage(ClientMessage msg)
 {
   MsgCAS(m_msgstates + msg, 1, 0);
 }
-

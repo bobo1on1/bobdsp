@@ -137,7 +137,10 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
 
   //check if a message need to be sent to the main thread
   if (m_checkclients)
-    m_checkclients = !WriteMessage(MsgCheckClients);
+  {
+    WriteSingleMessage(MsgCheckClients);
+    m_checkclients = false;
+  }
 }
 
 void CClientsManager::LoadClient(CJSONElement* jsonclient, std::string source)
@@ -683,11 +686,13 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
   return generator;
 }
 
-bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t lastconnect)
+void CClientsManager::Process(bool& triedconnect, bool& allconnected, bool tryconnect)
 {
   CLock lock(m_condition);
 
-  bool connected = false;
+  //check if any client has exited and needs to be disconnected
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    (*it)->CheckExitStatus();
 
   vector<CJackLadspa*>::iterator it = m_clients.begin();
   while (it != m_clients.end())
@@ -713,41 +718,15 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
       (*it)->ClearRestart();
     }
 
-    //check if the jack thread has failed
-    if ((*it)->ExitStatus())
-    {
-      LogError("Client \"%s\" exited with code %i reason: \"%s\"",
-               (*it)->Name().c_str(), (int)(*it)->ExitStatus(), (*it)->ExitReason().c_str());
-
-      //in case of jack2, if jackd exits, libjack will deallocate all the jack clients of this process when
-      //jack_client_open() is called, so all the jack clients will need to be shut down first
-      if ((*it)->ExitStatus() == JackFailure)
-      {
-        Log("Jackd seems to have exited, disconnecting all clients");
-        for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-          (*it)->Disconnect();
-
-        allconnected = false;
-        break;
-      }
-      else
-      {
-        (*it)->Disconnect();
-      }
-    }
-
     //keep trying to connect
     //only try to connect at the interval to prevent hammering jackd
     if (!(*it)->IsConnected())
     {
-      allconnected = false;
-      if (GetTimeUs() - lastconnect >= CONNECTINTERVAL)
+      if (tryconnect)
       {
         triedconnect = true;
         if ((*it)->Connect())
         {
-          connected = true;
-
           //update samplerate
           if ((*it)->Samplerate() != 0)
             m_bobdsp.PluginManager().SetSamplerate((*it)->Samplerate());
@@ -755,10 +734,12 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
       }
     }
 
+    //if not all clients are connected, the main thread needs to retry
+    if (!(*it)->IsConnected())
+      allconnected = false;
+
     it++;
   }
-
-  return connected;
 }
 
 int CClientsManager::ClientPipes(pollfd*& fds, int extra)
@@ -782,44 +763,17 @@ int CClientsManager::ClientPipes(pollfd*& fds, int extra)
   return nrfds;
 }
 
-void CClientsManager::ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports)
+void CClientsManager::ProcessMessages()
 {
-  //check events of all clients, instead of just the ones that poll() returned on
-  //since in case of a jack event, every client sends a message
-  for (int i = 0; i < 2; i++)
+  CLock lock(m_condition);
+  for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
   {
-    CLock lock(m_condition);
-    bool gotmessage = false;
-    for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+    ClientMessage msg;
+    while ((msg = (*it)->GetMessage()) != MsgNone)
     {
-      ClientMessage msg;
-      while ((msg = (*it)->GetMessage()) != MsgNone)
-      {
-        LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
-        if (msg == MsgExited)
-          updateports = true;
-        else if (msg == MsgPortRegistered)
-          updateports = checkconnect = true;
-        else if (msg == MsgPortDeregistered)
-          updateports = true;
-        else if (msg == MsgPortConnected)
-          checkdisconnect = true;
-        else if (msg == MsgPortDisconnected)
-          checkconnect = true;
-
-        gotmessage = true;
-        (*it)->ConfirmMessage(msg);
-      }
+      LogDebug("got message %s from client \"%s\"", MsgToString(msg), (*it)->Name().c_str());
+      (*it)->ConfirmMessage(msg);
     }
-    lock.Leave();
-
-    //in case of a jack event, every connected client sends a message
-    //to make sure we get them all in one go, if a message from one client is received
-    //wait a millisecond, then check all clients for messages again
-    if (gotmessage && i == 0)
-      USleep(1000);
-    else
-      break;
   }
 }
 

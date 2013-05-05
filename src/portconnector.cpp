@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <memory>
 #include <fstream>
+#include <algorithm>
 
 #include "bobdsp.h"
 #include "portconnector.h"
@@ -32,13 +33,10 @@ using namespace std;
 #define SETTINGSFILE ".bobdsp/connections.json"
 
 CPortConnector::CPortConnector(CBobDSP& bobdsp) :
-  CMessagePump("portconnector"),
+  CJackClient("BobDSP Portconnector", "portconnector", "portconnector", "portconnector"),
   CJSONSettings(SETTINGSFILE, "connection", m_condition),
   m_bobdsp(bobdsp)
 {
-  m_client = NULL;
-  m_connected = false;
-  m_wasconnected = true;
   m_stop = false;
   m_portindex = 0;
   m_waitingthreads = 0;
@@ -47,35 +45,6 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
 
 CPortConnector::~CPortConnector()
 {
-  Disconnect();
-}
-
-bool CPortConnector::Connect()
-{
-  m_connected = ConnectInternal();
-  if (!m_connected)
-    Disconnect();
-  else
-    m_wasconnected = true;
-
-  return m_connected;
-}
-
-void CPortConnector::Disconnect()
-{
-  if (m_client)
-  {
-    LogDebug("Disconnecting portconnector");
-
-    int returnv = jack_client_close(m_client);
-    if (returnv != 0)
-      LogError("Portconnector error %i closing client: \"%s\"",
-               returnv, GetErrno().c_str());
-
-    m_client = NULL;
-  }
-
-  m_connected = false;
 }
 
 CJSONGenerator* CPortConnector::SettingsToJSON(bool tofile)
@@ -121,7 +90,10 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
 
   //if the connections are updated, signal the main thread
   if (m_connectionsupdated)
-    m_connectionsupdated = !WriteMessage(MsgConnectionsUpdated);
+  {
+    WriteSingleMessage(MsgConnectionsUpdated);
+    m_connectionsupdated = false;
+  }
 }
 
 void CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::string& source)
@@ -355,53 +327,9 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
     return PortsToJSON();
 }
 
-void CPortConnector::Process(bool& checkconnect, bool& checkdisconnect, bool& updateports)
+bool CPortConnector::Process()
 {
-  if (!checkconnect && !checkdisconnect && !updateports)
-    return; //nothing to do
-
-  //connect, connect ports and disconnect
-  //since this client will never be active, if we leave it connected
-  //then jackd will never signal any of the other bobdsp clients when it quits
-  Connect();
-  ProcessInternal(checkconnect, checkdisconnect, updateports);
-  Disconnect();
-}
-
-void CPortConnector::Stop()
-{
-  CLock lock(m_condition);
-  //interrupt all waiting httpserver threads so we don't hang on exit
-  m_portindex++;
-  m_stop = true;
-  m_condition.Broadcast(); 
-}
-
-bool CPortConnector::ConnectInternal()
-{
-  if (m_connected)
-    return true; //already connected
-
-  LogDebug("Connecting portconnector to jack");
-
-  m_client = jack_client_open("bobdsp_portconnector", JackNoStartServer, NULL);
-
-  if (m_client == NULL)
-  {
-    if (m_wasconnected || g_printdebuglevel)
-    {
-      LogError("Portconnector error connecting to jackd: \"%s\"", GetErrno().c_str());
-      m_wasconnected = false;
-    }
-    return false;
-  }
-
-  return true;
-} 
-
-void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports)
-{
-  if (!m_connected)
+  if (!IsConnected())
   {
     //jackd is probably not running, clear the list of ports
     if (!m_jackports.empty())
@@ -411,30 +339,50 @@ void CPortConnector::ProcessInternal(bool& checkconnect, bool& checkdisconnect, 
       m_portindex++;
       m_condition.Broadcast();
     }
-    return;
-  }
 
-  //update the ports list
-  if (updateports)
+    //clear any port changes, they're invalid here because there's no jack connection
+    if (!m_portchanges.empty())
+    {
+      CLock lock(m_portchangelock);
+      m_portchanges.clear();
+    }
+
+    //no need to retry
+    return true;
+  }
+  else
   {
-    UpdatePorts();
-    updateports = false;
+    CLock lock(m_condition);
+
+    ProcessUpdates();
+
+    bool success = true;
+
+    //if disconnecting or connecting ports fails, retry in a short time
+    if (!DisconnectPorts())
+      success = false;
+
+    if (!ConnectPorts())
+      success = false;
+
+    return success;
   }
+}
 
-  //connect ports that match the regexes
-  if (checkconnect)
-    checkconnect = !ConnectPorts();
+void CPortConnector::Stop()
+{
+  Disconnect();
 
-  //disconnect ports that don't match the regexes
-  if (checkdisconnect)
-    checkdisconnect = !DisconnectPorts();
+  CLock lock(m_condition);
+  //interrupt all waiting httpserver threads so we don't hang on exit
+  m_portindex++;
+  m_stop = true;
+  m_condition.Broadcast(); 
 }
 
 bool CPortConnector::ConnectPorts()
 {
   bool success = true;
-
-  CLock lock(m_condition);
 
   for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
@@ -513,8 +461,6 @@ bool CPortConnector::DisconnectPorts()
       jack_free((void*)connections);
     }
   }
-
-  CLock lock(m_condition);
 
   //match every connection to our regexes in connections
   for (vector< pair<string, string> >::iterator con = connectionlist.begin(); con != connectionlist.end(); con++)
@@ -619,36 +565,76 @@ void CPortConnector::UpdatePorts()
     jack_free((void*)ports);
   }
 
-  //check if the list really changed, it might not if the main loop got a delayed event from a jack client
-  bool changed = jackports.size() != m_jackports.size();
-  if (!changed)
-  {
-    list<CJackPort>::iterator oldport = m_jackports.begin();
-    list<CJackPort>::iterator newport = jackports.begin();
+  CLock lock(m_condition);
+  m_jackports.swap(jackports);
+  m_portindex++;
+  m_condition.Broadcast();
+}
 
-    while (oldport != m_jackports.end())
+void CPortConnector::ProcessUpdates()
+{
+  CLock lock(m_portchangelock);
+  if (!m_portchanges.empty())
+  {
+    for (vector<pair<int, CJackPort> >::iterator it = m_portchanges.begin(); it != m_portchanges.end(); it++)
     {
-      if (*oldport != *newport)
-      {
-        changed = true;
-        break;
-      }
-      oldport++;
-      newport++;
-    }
-  }
+      LogDebug("%s port \"%s\" %s", it->second.Flags() & JackPortIsInput ? "input" : "output",
+               it->second.Name().c_str(), it->first ? "registered" : "deregistered");
 
-  //if the list of connections really changed, update and signal threads waiting on m_condition
-  if (changed)
-  {
-    CLock lock(m_condition);
-    m_jackports.swap(jackports);
+      if (it->first) //port registered
+      {
+        m_jackports.push_back(it->second);
+      }
+      else //port deregistered
+      {
+        list<CJackPort>::iterator port = find(m_jackports.begin(), m_jackports.end(), it->second);
+        if (port != m_jackports.end())
+          m_jackports.erase(port);
+      }
+    }
+    m_portchanges.clear();
+    m_jackports.sort();
+    m_jackports.unique();
+
     m_portindex++;
     m_condition.Broadcast();
   }
+}
+
+bool CPortConnector::PreActivate()
+{
+  UpdatePorts();
+  return true;
+}
+
+void CPortConnector::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
+{
+  jack_port_t* portptr = jack_port_by_id(m_client, port);
+  string name(jack_port_name(portptr));
+  int flags = jack_port_flags(portptr);
+
+  CJackPort jackport(name, flags);
+
+  //store the reg flag together with the CJackPort into m_portchanges
+  //this will be processed from the main thread
+  //a separate mutex is used for this, since m_condition
+  //is locked by the main thread when calling jack functions
+  //if m_condition is locked here, a deadlock will happen
+  CLock lock(m_portchangelock);
+  m_portchanges.push_back(make_pair(reg, jackport));
+  lock.Leave();
+
+  if (reg)
+    WriteSingleMessage(MsgPortRegistered);
   else
-  {
-    LogDebug("Port list update requested but list did not change");
-  }
+    WriteSingleMessage(MsgPortDeregistered);
+}
+
+void CPortConnector::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
+{
+  if (connect)
+    WriteSingleMessage(MsgPortConnected);
+  else
+    WriteSingleMessage(MsgPortDisconnected);
 }
 

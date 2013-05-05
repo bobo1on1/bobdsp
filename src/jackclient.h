@@ -20,6 +20,7 @@
 #define JACKCLIENT_H
 
 #include <string>
+#include <list>
 #include <jack/jack.h>
 
 #include "clientmessage.h"
@@ -34,6 +35,7 @@ class CJackClient : public CMessagePump
     bool Connect();
     void Disconnect();
     bool IsConnected()  { return m_connected;}
+    void CheckExitStatus();
 
     jack_status_t      ExitStatus() { return m_exitstatus; }
     const std::string& ExitReason() { return m_exitreason; }
@@ -53,7 +55,11 @@ class CJackClient : public CMessagePump
     jack_status_t  m_exitstatus;
     std::string    m_exitreason;
 
+    static std::list<CJackClient*> m_clientinstances;
+
     bool         ConnectInternal();
+
+    static void  DisconnectAll();
 
     virtual void PreConnect() {};
     virtual bool PreActivate() { return true; };
@@ -63,16 +69,16 @@ class CJackClient : public CMessagePump
     void         PJackThreadInitCallback();
 
     static  int  SJackProcessCallback(jack_nframes_t nframes, void *arg);
-    virtual void PJackProcessCallback(jack_nframes_t nframes) = 0;
+    virtual int  PJackProcessCallback(jack_nframes_t nframes);
 
     static  void SJackInfoShutdownCallback(jack_status_t code, const char *reason, void *arg);
     virtual void PJackInfoShutdownCallback(jack_status_t code, const char *reason);
 
     static  void SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg);
-    void         PJackPortRegistrationCallback(jack_port_id_t port, int reg);
+    virtual void PJackPortRegistrationCallback(jack_port_id_t port, int reg);
 
     static  void SJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect, void *arg);
-    void         PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
+    virtual void PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
 
     static  int  SJackSamplerateCallback(jack_nframes_t nframes, void *arg);
     virtual int  PJackSamplerateCallback(jack_nframes_t nframes);

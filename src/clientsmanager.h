@@ -41,9 +41,9 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     ~CClientsManager();
 
     void            Stop();
-    bool            Process(bool& triedconnect, bool& allconnected, int64_t lastconnect);
+    void            Process(bool& triedconnect, bool& allconnected, bool tryconnect);
     int             ClientPipes(pollfd*& fds, int extra);
-    void            ProcessMessages(bool& checkconnect, bool& checkdisconnect, bool& updateports);
+    void            ProcessMessages();
 
     CJSONGenerator* ClientsToJSON(bool tofile);
 

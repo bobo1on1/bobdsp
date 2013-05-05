@@ -42,8 +42,9 @@
 #include "util/timeutils.h"
 #include "util/JSON.h"
 
-#define PORTRETRY         15625
-#define TIMEOUT_INFINITE  -1000
+#define CONNECTINTERVAL   1000000
+#define PORTCHECKINTERVAL  100000
+#define TIMEOUT_INFINITE    -1000
 
 using namespace std;
 
@@ -52,11 +53,8 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   m_clientsmanager(*this),
   m_httpserver(*this)
 {
-  m_stop            = false;
-  m_checkconnect    = false;
-  m_checkdisconnect = false;
-  m_updateports     = false;
-  m_signalfd        = -1;
+  m_stop     = false;
+  m_signalfd = -1;
 
   m_stdout[0] = m_stdout[1] = -1;
   m_stderr[0] = m_stderr[1] = -1;
@@ -189,75 +187,49 @@ void CBobDSP::Setup()
 
 void CBobDSP::Process()
 {
-  int64_t timeout = TIMEOUT_INFINITE;
-  int64_t portretryinterval = 0;
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
-  //make sure to retrieve the ports list
-  m_updateports = true;
 
   m_visualizer.Start();
 
   while(!m_stop)
   {
     bool triedconnect = false;
-    bool allconnected = true;
+    bool tryconnect = GetTimeUs() - lastconnect >= CONNECTINTERVAL;
 
-    //check if we need to start the http server
-    if (!m_httpserver.IsStarted())
+    //check if the port connector jack client has exited
+    m_portconnector.CheckExitStatus();
+
+    if (tryconnect)
     {
-      allconnected = false; //use timeout in ProcessMessages()
-      if (GetTimeUs() - lastconnect >= CONNECTINTERVAL)
+      if (!m_httpserver.IsStarted())
       {
         m_httpserver.Start();
-        triedconnect = true; //update timestamp
+        triedconnect = true;
+      }
+
+      if (!m_portconnector.IsConnected())
+      {
+        m_portconnector.Connect();
+        triedconnect = true;
       }
     }
 
-    if (m_clientsmanager.Process(triedconnect, allconnected, lastconnect))
-    {
-      m_checkconnect = true;
-      m_updateports = true;
-    }
+    bool allconnected = true;
+    m_clientsmanager.Process(triedconnect, allconnected, tryconnect);
+
+    bool portsuccess = m_portconnector.Process();
 
     if (triedconnect)
       lastconnect = GetTimeUs();
 
-    //if a client connected, or a port callback was called
-    //process port connections, if it fails try again next time
-    m_portconnector.Process(m_checkconnect, m_checkdisconnect, m_updateports);
-
-    if (m_checkconnect || m_checkdisconnect || m_updateports)
-    {
-      //if the portconnector failed to process, retry after PORTRETRY,
-      //and multiply the retry time by 2 after each try, up to CONNECTINTERVAL
-      //the reason for this is that bobdsp might try to connect client ports
-      //before the client is made active
-      if (portretryinterval == 0)
-      {
-        portretryinterval = PORTRETRY;
-      }
-      else
-      {
-        portretryinterval *= 2;
-        if (portretryinterval > CONNECTINTERVAL)
-          portretryinterval = CONNECTINTERVAL;
-      }
-      timeout = portretryinterval;
-    }
-    else if (!allconnected)
-    {
-      //if not all clients are connected, retry after CONNECTINTERVAL
+    int64_t timeout;
+    if (!portsuccess)
+      timeout = PORTCHECKINTERVAL;
+    else if (!allconnected || !m_httpserver.IsStarted() || !m_portconnector.IsConnected())
       timeout = CONNECTINTERVAL;
-      //reset port connector interval
-      portretryinterval = 0;
-    }
     else
-    {
-      //everything ok, wait for events
-      timeout = TIMEOUT_INFINITE;
-      portretryinterval = 0;
-    }
+      timeout = TIMEOUT_INFINITE; //nothing to retry
 
     //process messages, blocks if there's nothing to do
     ProcessMessages(timeout);
@@ -492,7 +464,7 @@ void CBobDSP::ProcessClientMessages(pollfd* fds, int nrclientpipes)
   {
     if (fds[i].revents & POLLIN)
     {
-      m_clientsmanager.ProcessMessages(m_checkconnect, m_checkdisconnect, m_updateports);
+      m_clientsmanager.ProcessMessages();
       break;
     }
   }
@@ -558,17 +530,6 @@ void CBobDSP::ProcessManagerMessages(CMessagePump& manager)
   while ((msg = manager.GetMessage()) != MsgNone)
   {
     LogDebug("got message %s from %s", MsgToString(msg), manager.Sender());
-    if (msg == MsgConnectionsUpdated)
-      m_checkconnect = m_checkdisconnect = true;
-    else if (msg == MsgPortRegistered)
-      m_updateports = m_checkconnect = true;
-    else if (msg == MsgPortDeregistered)
-      m_updateports = true;
-    else if (msg == MsgPortConnected)
-      m_checkdisconnect = true;
-    else if (msg == MsgPortDisconnected)
-      m_checkconnect = true;
-
     manager.ConfirmMessage(msg);
   }
 }

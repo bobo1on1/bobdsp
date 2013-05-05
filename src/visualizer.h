@@ -125,7 +125,7 @@ class CVisualizer : public CThread, public CJSONSettings, public CJackClient
 
     virtual bool            PreActivate();
     virtual void            PostDeactivate();
-    void                    PJackProcessCallback(jack_nframes_t nframes);
+    int                     PJackProcessCallback(jack_nframes_t nframes);
     void                    PJackInfoShutdownCallback(jack_status_t code, const char *reason);
 };
 

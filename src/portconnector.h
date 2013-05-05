@@ -21,15 +21,15 @@
 
 #include <string>
 #include <vector>
-#include <jack/jack.h>
 #include <list>
+#include <utility>
 #include <pcrecpp.h>
 #include "util/JSON.h"
 #include "util/condition.h"
 #include "util/alphanum.h"
 #include "util/misc.h"
-#include "clientmessage.h"
 #include "jsonsettings.h"
+#include "jackclient.h"
 
 class CBobDSP;
 
@@ -107,12 +107,12 @@ class CJackPort
       return alphanum_comp(m_lname.c_str(), rhs.m_lname.c_str()) < 0;
     }
 
-    bool operator==(CJackPort& rhs)
+    bool operator==(const CJackPort& rhs)
     {
       return (m_name == rhs.m_name && m_flags == rhs.m_flags);
     }
 
-    bool operator!=(CJackPort& rhs)
+    bool operator!=(const CJackPort& rhs)
     {
       return !(*this == rhs);
     }
@@ -126,17 +126,13 @@ class CJackPort
     int         m_flags;
 };
 
-class CPortConnector : public CMessagePump, public CJSONSettings
+class CPortConnector : public CJackClient, public CJSONSettings
 {
   public:
     CPortConnector(CBobDSP& bobdsp);
     ~CPortConnector();
 
-    bool Connect();
-    void Disconnect();
-
-    void Process(bool& checkconnect, bool& checkdisconnect, bool& updateports);
-
+    bool Process();
     void Stop();
 
     CJSONGenerator* ConnectionsToJSON();
@@ -153,26 +149,27 @@ class CPortConnector : public CMessagePump, public CJSONSettings
     CCondition                   m_condition;
     int                          m_waitingthreads;
     bool                         m_connectionsupdated;
+    CBobDSP&                     m_bobdsp;
 
-    CBobDSP&       m_bobdsp;
-    jack_client_t* m_client;
-    bool           m_connected;
-    bool           m_wasconnected;
+    std::vector< std::pair<int, CJackPort> > m_portchanges;
+    CMutex                                   m_portchangelock;
 
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
     virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
 
     void LoadConnections(JSONArray& jsonconnections, const std::string& source);
 
-    bool ConnectInternal();
-    void ProcessInternal(bool& checkconnect, bool& checkdisconnect, bool& updateports);
-
     bool ConnectPorts();
     bool DisconnectPorts();
-    void MatchConnection(std::vector<CPortConnection>::iterator& it, std::vector< std::pair<std::string, std::string> >::iterator& con,
-                         bool& outmatch, bool& inmatch, bool removed);
+    void MatchConnection(std::vector<CPortConnection>::iterator& it, std::vector< std::pair<std::string,
+                         std::string> >::iterator& con, bool& outmatch, bool& inmatch, bool removed);
 
     void UpdatePorts();
+    void ProcessUpdates();
+
+    bool PreActivate();
+    void PJackPortRegistrationCallback(jack_port_id_t port, int reg);
+    void PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
 };
 
 #endif //PORTCONNECTOR_H
