@@ -727,6 +727,7 @@ bool CClientsManager::Process(bool& triedconnect, bool& allconnected, int64_t la
         for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
           (*it)->Disconnect();
 
+        allconnected = false;
         break;
       }
       else
