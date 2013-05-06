@@ -62,7 +62,6 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   //make sure all numeric string<->float conversions are done using the C locale
   setlocale(LC_NUMERIC, "C");
 
-
   struct option longoptions[] =
   {
    {"debug",    no_argument,       NULL, 'd'},
