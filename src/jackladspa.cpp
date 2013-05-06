@@ -42,6 +42,25 @@ CJackLadspa::CJackLadspa(CLadspaPlugin* plugin, const std::string& name, int nri
   {
     m_gain[i] = gain[i];
     m_runninggain[i] = gain[i];
+
+    m_runninggain[i].Update();
+    m_runninggain[i].SetSmooth(true);
+  }
+
+  for (unsigned long port = 0; port < m_plugin->PortCount(); port++)
+  {
+    if (m_plugin->IsControlInput(port))
+    {
+      controlmap::iterator it = m_controlinputs.find(m_plugin->PortName(port));
+      assert(it != m_controlinputs.end());
+
+      //apply the value before starting
+      it->second.Update();
+
+      //enable smooth transitions for input controls that are not integer or boolean
+      if (!m_plugin->IsInteger(port) && !m_plugin->IsToggled(port))
+        it->second.SetSmooth(true);
+    }
   }
 }
 
@@ -123,15 +142,38 @@ void CJackLadspa::TransferNewControlInputs(controlmap& controlinputs)
   }
 }
 
+bool CJackLadspa::NeedsSmooth()
+{
+  for (int i = 0; i < 2; i++)
+  {
+    if (m_runninggain[i].NeedsSmooth())
+      return true;
+  }
+
+  for (controlmap::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
+  {
+    if (it->second.NeedsSmooth())
+      return true;
+  }
+
+  return false;
+}
+
+#define SMOOTHBLOCK 0.001f
+#define SMOOTHTIME  0.05f
 int CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
 {
   //check if gain was updated, use a trylock to prevent blocking the realtime jack thread
   CLock lock(m_mutex, true);
   if (lock.HasLock())
   {
-    //update the gain
+    //update the gain, but only when it changed, otherwise m_floatorig
+    //in the controlvalue class gets overwritten
     for (int i = 0; i < 2; i++)
-      m_runninggain[i] = m_gain[i];
+    {
+      if (m_gain[i] != (double)m_runninggain[i])
+        m_runninggain[i] = m_gain[i];
+    }
 
     //apply updates to control values if there are any
     TransferNewControlInputs(m_controlinputs);
@@ -140,9 +182,44 @@ int CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
     lock.Leave();
   }
 
-  //process audio
-  for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
-    (*it)->Run(nframes, m_runninggain[0], m_runninggain[1]);
+  //process audio in small blocks with control smoothing when necessary
+  int processed = 0;
+  int blocksize = Min(Round32(SMOOTHBLOCK * m_samplerate), (int)nframes);
+  while (NeedsSmooth() && processed < (int)nframes)
+  {
+    int   process = Min((int)nframes - processed, blocksize);
+    float smoothval = ((float)process / SMOOTHTIME) / m_samplerate;
+
+    //move each gain value towards its target
+    for (int i = 0; i < 2; i++)
+      m_runninggain[i].Update(smoothval);
+
+    //move each control value towards its target
+    for (controlmap::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
+      it->second.Update(smoothval);
+
+    //process a small block of audio
+    for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
+      (*it)->Run(nframes, process, processed, m_runninggain[0].FloatVal(), m_runninggain[1].FloatVal());
+
+    processed += process;
+  }
+
+  //process remaining audio without smoothing the controls
+  if (processed < (int)nframes)
+  {
+    //update gain
+    for (int i = 0; i < 2; i++)
+      m_runninggain[i].Update();
+
+    //update controls
+    for (controlmap::iterator it = m_controlinputs.begin(); it != m_controlinputs.end(); it++)
+      it->second.Update();
+
+    //process the remaining audio
+    for (vector<CLadspaInstance*>::iterator it = m_instances.begin(); it != m_instances.end(); it++)
+      (*it)->Run(nframes, nframes - processed, processed, m_runninggain[0].FloatVal(), m_runninggain[1].FloatVal());
+  }
 
   return 0;
 }

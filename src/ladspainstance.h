@@ -32,32 +32,31 @@ class controlvalue
   public:
     controlvalue()
     {
-      m_doubleval = 0.0;
-      m_floatval  = 0.0f;
-      m_floatorig = 0.0f;
+      m_doubleval   = 0.0;
+      m_floatval    = 0.0f;
+      m_floatorig   = 0.0f;
+      m_floattarget = 0.0f;
+      m_smooth      = false;
     }
-
 
     controlvalue& operator= (double value)
     {
-      m_doubleval = value;
-      m_floatval  = value;
-      m_floatorig = value;
+      m_doubleval   = value;
+      m_floattarget = value;
+      m_floatorig   = m_floatval;
 
+      return *this;
+    }
+
+    //when assigning, only copy the double
+    controlvalue& operator= (controlvalue& right)
+    {
+      *this = right.m_doubleval;
       return *this;
     }
 
     operator double()
     {
-      //m_floatval can be changed via a float*,
-      //the original value is stored in m_floatorig
-      //if it changed, assign the same value to m_doubleval
-      if (m_floatval != m_floatorig)
-      {
-        m_floatorig = m_floatval;
-        m_doubleval = m_floatval;
-      }
-
       return m_doubleval;
     }
 
@@ -66,12 +65,54 @@ class controlvalue
       return &m_floatval;
     }
 
+    float FloatVal()
+    {
+      return m_floatval;
+    }
+
+    void SetSmooth(bool smooth)
+    {
+      m_smooth = smooth;
+    }
+
+    void Update(float mul = 1.0f)
+    {
+      //if the smoother is enabled, move m_floatval towards m_floattarget
+      //if m_floatval goes beyond m_floattarget, or if the addition did not change m_floatval
+      //assign m_floattarget to m_floatval
+      if (m_smooth && mul != 1.0f && m_floatval != m_floattarget)
+      {
+        float prev = m_floatval;
+        m_floatval += (m_floattarget - m_floatorig) * mul;
+        if ((m_floattarget > m_floatorig && m_floatval > m_floattarget) ||
+            (m_floattarget < m_floatorig && m_floatval < m_floattarget) ||
+            prev == m_floatval)
+        {
+          m_floatval = m_floattarget;
+        }
+      }
+      else
+      {
+        m_floatval = m_floattarget;
+      }
+    }
+
+    bool NeedsSmooth()
+    {
+      if (m_smooth && m_floatval != m_floattarget)
+        return true;
+      else
+        return false;
+    }
+
   private:
     //control values are stored here as double for generating JSON
     //and as float for passing into the LADSPA plugins
     double m_doubleval;
     float  m_floatval;
     float  m_floatorig;
+    float  m_floattarget;
+    bool   m_smooth;
 
     //don't allow assigning floats
     controlvalue& operator= (float value)
@@ -79,6 +120,12 @@ class controlvalue
       return *this;
     }
 
+    //casting to float forbidden, either cast to double to get m_doubleval
+    //or use FloatVal() to get m_floatval
+    operator float()
+    {
+      return 0.0f;
+    }
 };
 
 typedef std::map<std::string, controlvalue> controlmap;
@@ -114,7 +161,7 @@ class CLadspaInstance
     void Activate();
     void Deactivate();
     void AllocateBuffers(int buffersize);
-    void Run(jack_nframes_t nframes, float pregain, float postgain);
+    void Run(jack_nframes_t jackframes, int frames, int offset, float pregain, float postgain);
 
   private:
     std::string        m_name;

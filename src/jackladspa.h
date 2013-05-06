@@ -56,7 +56,7 @@ class CJackLadspa : public CJackClient
     int            m_nrinstances;
 
     CMutex         m_mutex;
-    controlvalue   m_gain[2]; //pregain, postgain
+    double         m_gain[2]; //pregain, postgain
     controlvalue   m_runninggain[2]; //copied from m_gain in the jack thread
     controlmap     m_controlinputs;
     controlmap     m_newcontrolinputs;
@@ -67,6 +67,7 @@ class CJackLadspa : public CJackClient
     bool PreActivate();
     void PostDeactivate();
     void TransferNewControlInputs(controlmap& controlinputs);
+    bool NeedsSmooth();
     int  PJackSamplerateCallback(jack_nframes_t nframes);
     int  PJackBufferSizeCallback(jack_nframes_t nframes);
     int  PJackProcessCallback(jack_nframes_t nframes);

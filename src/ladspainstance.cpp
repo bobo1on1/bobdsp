@@ -210,11 +210,11 @@ void CLadspaInstance::AllocateBuffers(int buffersize)
 }
 
 //this is called from the jack client thread
-void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
+void CLadspaInstance::Run(jack_nframes_t jackframes, int frames, int offset, float pregain, float postgain)
 {
   for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
   {
-    float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), nframes);
+    float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), jackframes) + offset;
 
     if (it->IsInput())
     {
@@ -222,7 +222,7 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
       if (pregain != 1.0f)
       {
         float* buf = it->GetBuffer(jackptr);
-        CopyApplyGain(jackptr, buf, nframes, pregain);
+        CopyApplyGain(jackptr, buf, frames, pregain);
 
         //connect the ladspa port to the temp buffer
         m_plugin->Descriptor()->connect_port(m_handle, it->GetLadspaPort(), buf);
@@ -242,21 +242,21 @@ void CLadspaInstance::Run(jack_nframes_t nframes, float pregain, float postgain)
   }
 
   //run the ladspa plugin on the audio data
-  m_plugin->Descriptor()->run(m_handle, nframes);
+  m_plugin->Descriptor()->run(m_handle, frames);
 
   //postprocess
   for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
   {
     if (!it->IsInput())
     {
-      float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), nframes);
+      float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), jackframes) + offset;
 
       //set denormals of output buffers to zero
-      DenormalsToZero(jackptr, nframes);
+      DenormalsToZero(jackptr, frames);
 
       //apply gain for output ports if needed
       if (postgain != 1.0f)
-        ApplyGain(jackptr, nframes, postgain);
+        ApplyGain(jackptr, frames, postgain);
     }
   }
 }
