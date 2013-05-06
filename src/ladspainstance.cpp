@@ -44,9 +44,15 @@ void CPort::AllocateBuffer(int buffersize)
 {
   free(m_buf);
 
+  int size = buffersize * sizeof(float) + 16;
+
   //allocate a buffer aligned to 16 bytes so sse vector instructions can be used
   //make it 16 bytes larger than needed so the offset can be adjusted
-  posix_memalign((void**)&m_buf, 16, buffersize * sizeof(float) + 16);
+  posix_memalign((void**)&m_buf, 16, size);
+
+  //write to it to make sure it's completely allocated
+  //if it's not, the jack realtime thread might block for a short time
+  memset(m_buf, 0, size);
 }
 
 float* CPort::GetBuffer(float* jackptr)
