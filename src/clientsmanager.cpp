@@ -138,7 +138,7 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
   //check if a message need to be sent to the main thread
   if (m_checkclients)
   {
-    WriteSingleMessage(MsgCheckClients);
+    SendMessage(MsgCheckClients);
     m_checkclients = false;
   }
 }

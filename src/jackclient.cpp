@@ -253,7 +253,7 @@ void CJackClient::PJackInfoShutdownCallback(jack_status_t code, const char *reas
   m_exitstatus = code;
 
   //tell the main loop this client has exited
-  WriteMessage(MsgExited);
+  SendMessage(MsgExited);
 }
 
 void CJackClient::SJackPortRegistrationCallback(jack_port_id_t port, int reg, void *arg)

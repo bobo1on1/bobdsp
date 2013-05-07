@@ -91,7 +91,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
   //if the connections are updated, signal the main thread
   if (m_connectionsupdated)
   {
-    WriteSingleMessage(MsgConnectionsUpdated);
+    SendMessage(MsgConnectionsUpdated);
     m_connectionsupdated = false;
   }
 }
@@ -650,16 +650,16 @@ void CPortConnector::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
   lock.Leave();
 
   if (reg)
-    WriteSingleMessage(MsgPortRegistered);
+    SendMessage(MsgPortRegistered);
   else
-    WriteSingleMessage(MsgPortDeregistered);
+    SendMessage(MsgPortDeregistered);
 }
 
 void CPortConnector::PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect)
 {
   if (connect)
-    WriteSingleMessage(MsgPortConnected);
+    SendMessage(MsgPortConnected);
   else
-    WriteSingleMessage(MsgPortDisconnected);
+    SendMessage(MsgPortDisconnected);
 }
 

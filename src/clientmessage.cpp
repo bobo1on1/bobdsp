@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stddef.h>
+#include <string.h>
 
 const char* MsgToString(ClientMessage msg)
 {
@@ -48,8 +49,6 @@ const char* MsgToString(ClientMessage msg)
     return "ERROR: INVALID MESSAGE";
 }
 
-atom CMessagePump::m_msgstates[MsgSize];
-
 CMessagePump::CMessagePump(const char* sender)
 {
   m_sender = sender;
@@ -59,6 +58,8 @@ CMessagePump::CMessagePump(const char* sender)
     LogError("creating msg pipe for %s: %s", m_sender, GetErrno().c_str());
     m_pipe[0] = m_pipe[1] = -1;
   }
+
+  memset((void*)m_msgstates, 0, sizeof(m_msgstates));
 }
 
 CMessagePump::~CMessagePump()
@@ -122,12 +123,12 @@ bool CMessagePump::WriteMessage(ClientMessage msg)
   return false; //need to try again
 }
 
-bool CMessagePump::WriteSingleMessage(ClientMessage msg)
+bool CMessagePump::SendMessage(ClientMessage msg)
 {
   //a message here will only be sent if the previous message
-  //of the same type has been confirmed by the main thread
+  //of the same type has been confirmed
   //this is used to prevent flooding the main thread
-  //with jack port messages
+  //with jack messages
   if (MsgCAS(m_msgstates + msg, 0, 1))
   {
     if (WriteMessage(msg))

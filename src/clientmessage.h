@@ -55,13 +55,14 @@ class CMessagePump
     void          ConfirmMessage(ClientMessage msg);
 
   protected:
-    bool          WriteMessage(ClientMessage msg);
-    bool          WriteSingleMessage(ClientMessage msg);
+    bool          SendMessage(ClientMessage msg);
 
   private:
+    bool          WriteMessage(ClientMessage msg);
+
     const char*   m_sender;
     int           m_pipe[2];
-    static atom   m_msgstates[MsgSize];
+    atom          m_msgstates[MsgSize];
 };
 
 #endif //CLIENTMESSAGE_H

@@ -232,7 +232,7 @@ int CJackLadspa::PJackSamplerateCallback(jack_nframes_t nframes)
     MarkRestart();
 
     //signal the main thread that this thread needs a restart
-    WriteSingleMessage(MsgSamplerateChanged);
+    SendMessage(MsgSamplerateChanged);
   }
 
   return 0;
