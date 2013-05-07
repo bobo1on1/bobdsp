@@ -94,12 +94,14 @@ class CJackPort
       ToLower(m_name, m_lname);
     }
 
-    const char* TypeStr()
+    const char* DirectionStr()
     {
       if (m_flags & JackPortIsOutput)
         return "output";
-      else
+      else if (m_flags & JackPortIsInput)
         return "input";
+      else
+        return "none";
     }
 
     bool operator<(CJackPort& rhs)

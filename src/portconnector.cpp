@@ -246,7 +246,7 @@ CJSONGenerator* CPortConnector::PortsToJSON()
     generator->AddString("name");
     generator->AddString(it->Name());
     generator->AddString("type");
-    generator->AddString(it->TypeStr());
+    generator->AddString(it->DirectionStr());
 
     generator->MapClose();
   }
@@ -578,21 +578,28 @@ void CPortConnector::ProcessUpdates()
   {
     for (vector<pair<int, CJackPort> >::iterator it = m_portchanges.begin(); it != m_portchanges.end(); it++)
     {
-      LogDebug("%s port \"%s\" %s", it->second.Flags() & JackPortIsInput ? "input" : "output",
-               it->second.Name().c_str(), it->first ? "registered" : "deregistered");
-
       if (it->first) //port registered
       {
+        LogDebug("%s port \"%s\" registered", Capitalize(it->second.DirectionStr()).c_str(), it->second.Name().c_str());
         m_jackports.push_back(it->second);
       }
       else //port deregistered
       {
-        list<CJackPort>::iterator port = find(m_jackports.begin(), m_jackports.end(), it->second);
+        LogDebug("Port \"%s\" deregistered", it->second.Name().c_str());
+
+        //port flags are unreliable when they are deregistered, so just check by name
+        list<CJackPort>::iterator port = m_jackports.begin();
+        while (port != m_jackports.end())
+        {
+          if (port->Name() == it->second.Name())
+            break;
+          port++;
+        }
+
         if (port != m_jackports.end())
           m_jackports.erase(port);
         else
-          LogError("Unable to find deregistered %s port %s", it->second.Flags() & JackPortIsInput ? "input" : "output",
-                   it->second.Name().c_str());
+          LogError("Unable to find deregistered port %s", it->second.Name().c_str());
       }
     }
     m_portchanges.clear();
