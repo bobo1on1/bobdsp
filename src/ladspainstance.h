@@ -36,6 +36,7 @@ class controlvalue
       m_floatval    = 0.0f;
       m_floatorig   = 0.0f;
       m_floattarget = 0.0f;
+      m_floatout    = 0.0f;
       m_smooth      = false;
     }
 
@@ -62,7 +63,7 @@ class controlvalue
 
     operator float*()
     {
-      return &m_floatval;
+      return &m_floatout;
     }
 
     float FloatVal()
@@ -95,6 +96,10 @@ class controlvalue
       {
         m_floatval = m_floattarget;
       }
+
+      //m_floatout can be changed by a ladspa plugin using the pointer
+      //so reset it here
+      m_floatout = m_floatval;
     }
 
     bool NeedsSmooth()
@@ -112,6 +117,7 @@ class controlvalue
     float  m_floatval;
     float  m_floatorig;
     float  m_floattarget;
+    float  m_floatout;
     bool   m_smooth;
 
     //don't allow assigning floats
