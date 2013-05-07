@@ -193,13 +193,13 @@ function BobDSPConnections(connectionelements)
         var li = document.createElement("li");
         li.setAttribute("class", "ui-widget-content");
         $(li).text(data.ports[i].name);
-        if (data.ports[i].type == "output")
+        if (data.ports[i].direction == "output")
         {
           outports.get(0).appendChild(li);
           if (selectedoutport.length > 0 && data.ports[i].name == selectedoutport[0].textContent)
             $(li).addClass("ui-selected");
         }
-        else
+        else if (data.ports[i].direction == "input")
         {
           inports.get(0).appendChild(li);
           if (selectedinport.length > 0 && data.ports[i].name == selectedinport[0].textContent)

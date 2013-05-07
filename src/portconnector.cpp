@@ -245,7 +245,7 @@ CJSONGenerator* CPortConnector::PortsToJSON()
 
     generator->AddString("name");
     generator->AddString(it->Name());
-    generator->AddString("type");
+    generator->AddString("direction");
     generator->AddString(it->DirectionStr());
 
     generator->MapClose();
@@ -387,7 +387,7 @@ bool CPortConnector::ConnectPorts()
   for (list<CJackPort>::iterator inport = m_jackports.begin(); inport != m_jackports.end(); inport++)
   {
     //only use input ports here
-    if (!(inport->Flags() & JackPortIsInput))
+    if (!inport->IsInput())
       continue;
 
     //check if the input port name matches an <in> regex
@@ -401,7 +401,7 @@ bool CPortConnector::ConnectPorts()
       //find output ports that match the <out> regex
       for (list<CJackPort>::iterator outport = m_jackports.begin(); outport != m_jackports.end(); outport++)
       {
-        if (!(outport->Flags() & JackPortIsOutput) || !it->OutMatch(outport->Name()))
+        if (!outport->IsOutput() || !it->OutMatch(outport->Name()))
           continue;
 
         LogDebug("Regex \"%s\" matches output port \"%s\"", it->Out().c_str(), outport->Name().c_str());
@@ -442,7 +442,7 @@ bool CPortConnector::DisconnectPorts()
   {
     //only check input ports, since every connection is between an input and output port
     //we will get all connections this way
-    if (!(inport->Flags() & JackPortIsInput))
+    if (!inport->IsInput())
         continue;
 
     const jack_port_t* jackportin = jack_port_by_name(m_client, inport->Name().c_str());
@@ -558,8 +558,10 @@ void CPortConnector::UpdatePorts()
 
       int portflags = jack_port_flags(jackport);
 
-      LogDebug("Found %s port \"%s\"", portflags & JackPortIsInput ? "input" : "output", *portname);
-      jackports.push_back(CJackPort(*portname, portflags));
+      CJackPort port(*portname, portflags);
+
+      LogDebug("Found %s port \"%s\"", port.DirectionStr(), port.Name().c_str());
+      jackports.push_back(port);
     }
     jackports.sort();
     jack_free((void*)ports);

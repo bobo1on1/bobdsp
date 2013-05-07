@@ -96,12 +96,22 @@ class CJackPort
 
     const char* DirectionStr()
     {
-      if (m_flags & JackPortIsOutput)
+      if (IsOutput())
         return "output";
-      else if (m_flags & JackPortIsInput)
+      else if (IsInput())
         return "input";
       else
         return "none";
+    }
+
+    bool IsOutput()
+    {
+      return (m_flags & JackPortIsOutput) == JackPortIsOutput;
+    }
+
+    bool IsInput()
+    {
+      return (m_flags & JackPortIsInput) == JackPortIsInput;
     }
 
     bool operator<(CJackPort& rhs)
