@@ -314,6 +314,7 @@ CVisualizer::CVisualizer() :
   CJSONSettings(".bobdsp/visualizers.json", "visualizer", m_viscond),
   CJackClient("BobDSP Visualizer", "visualizer", "jack visualizer", "visualizer")
 {
+  m_clienttype   = AudioProcessor;
   m_vistime      = 0;
   m_index        = 0;
   m_interval     = 100000;

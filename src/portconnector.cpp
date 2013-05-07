@@ -37,6 +37,7 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   CJSONSettings(SETTINGSFILE, "connection", m_condition),
   m_bobdsp(bobdsp)
 {
+  m_clienttype = ConnectionManager;
   m_stop = false;
   m_portindex = 0;
   m_waitingthreads = 0;

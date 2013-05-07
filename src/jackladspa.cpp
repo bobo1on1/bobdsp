@@ -30,6 +30,7 @@ CJackLadspa::CJackLadspa(CLadspaPlugin* plugin, const std::string& name, int nri
                          double* gain, controlmap controlinputs):
   CJackClient(name, string("client \"") + name + "\"", name)
 {
+  m_clienttype    = AudioProcessor;
   m_plugin        = plugin;
   m_nrinstances   = nrinstances;
   m_controlinputs = controlinputs;

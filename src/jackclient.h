@@ -44,6 +44,14 @@ class CJackClient : public CMessagePump
     const std::string& LogName()    { return m_logname;       }
 
   protected:
+    enum
+    {
+      None,
+      AudioProcessor,
+      ConnectionManager
+    }
+    m_clienttype;
+
     bool           m_connected;
     bool           m_wasconnected;
     jack_client_t* m_client;

@@ -20,6 +20,7 @@
 #include "util/misc.h"
 #include "util/log.h"
 #include "util/thread.h"
+#include <cassert>
 
 #include "jackclient.h"
 
@@ -31,6 +32,7 @@ CJackClient::CJackClient(const std::string& name, const std::string& logname,
                          const std::string& threadname, const char* sender /*= "jack client"*/):
   CMessagePump(sender)
 {
+  m_clienttype   = None;
   m_name         = name;
   m_logname      = logname;
   m_threadname   = threadname;
@@ -74,6 +76,8 @@ bool CJackClient::ConnectInternal()
   if (m_connected)
     return true; //already connected
 
+  assert(m_clienttype != None);
+
   LogDebug("Connecting %s to jackd", m_logname.c_str());
 
   //this is set in PJackInfoShutdownCallback(), init to 0 here so we know when the jack thread has exited
@@ -113,38 +117,43 @@ bool CJackClient::ConnectInternal()
     LogError("%s error %i setting thread init callback: \"%s\"",
              Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
 
-  //enable the samplerate callback, if the samplerate changes the client is restarted
-  //to update the ladspa plugin with the new samplerate
-  returnv = jack_set_sample_rate_callback(m_client, SJackSamplerateCallback, this);
-  if (returnv != 0)
-    LogError("%s error %i setting samplerate callback: \"%s\"",
-             Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
-
-  //set the buffer size callback so that the pregain buffer can be reallocated
-  returnv = jack_set_buffer_size_callback(m_client, SJackBufferSizeCallback, this);
-  if (returnv != 0)
-    LogError("%s error %i setting buffer size callback: \"%s\"",
-             Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
-
-  //enable port registration callback, so we know when to connect new ports
-  returnv = jack_set_port_registration_callback(m_client, SJackPortRegistrationCallback, this);
-  if (returnv != 0)
-    LogError("%s error %i setting port registration callback: \"%s\"",
-             Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
-
-  //enable port connect callback, so we know when to disconnect ports
-  returnv = jack_set_port_connect_callback(m_client, SJackPortConnectCallback, this);
-  if (returnv != 0)
-    LogError("%s error %i setting port connect callback: \"%s\"",
-             Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
-
-  //SJackProcessCallback gets called when jack has new audio data to process
-  returnv = jack_set_process_callback(m_client, SJackProcessCallback, this);
-  if (returnv != 0)
+  if (m_clienttype == AudioProcessor)
   {
-    LogError("%s error %i setting process callback: \"%s\"",
-             Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
-    return false;
+    //set the buffer size callback so that the pregain buffer can be reallocated
+    returnv = jack_set_buffer_size_callback(m_client, SJackBufferSizeCallback, this);
+    if (returnv != 0)
+      LogError("%s error %i setting buffer size callback: \"%s\"",
+               Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
+
+    //enable the samplerate callback, if the samplerate changes the client is restarted
+    //to update the ladspa plugin with the new samplerate
+    returnv = jack_set_sample_rate_callback(m_client, SJackSamplerateCallback, this);
+    if (returnv != 0)
+      LogError("%s error %i setting samplerate callback: \"%s\"",
+               Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
+
+    //SJackProcessCallback gets called when jack has new audio data to process
+    returnv = jack_set_process_callback(m_client, SJackProcessCallback, this);
+    if (returnv != 0)
+    {
+      LogError("%s error %i setting process callback: \"%s\"",
+               Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
+      return false;
+    }
+  }
+  else
+  {
+    //enable port registration callback, so we know when to connect new ports
+    returnv = jack_set_port_registration_callback(m_client, SJackPortRegistrationCallback, this);
+    if (returnv != 0)
+      LogError("%s error %i setting port registration callback: \"%s\"",
+               Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
+
+    //enable port connect callback, so we know when to disconnect ports
+    returnv = jack_set_port_connect_callback(m_client, SJackPortConnectCallback, this);
+    if (returnv != 0)
+      LogError("%s error %i setting port connect callback: \"%s\"",
+               Capitalize(m_logname).c_str(), returnv, GetErrno().c_str());
   }
 
   //let the derived class make jack ports
