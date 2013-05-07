@@ -594,7 +594,6 @@ void CPortConnector::ProcessUpdates()
     }
     m_portchanges.clear();
     m_jackports.sort();
-    m_jackports.unique();
 
     m_portindex++;
     m_condition.Broadcast();
