@@ -590,6 +590,9 @@ void CPortConnector::ProcessUpdates()
         list<CJackPort>::iterator port = find(m_jackports.begin(), m_jackports.end(), it->second);
         if (port != m_jackports.end())
           m_jackports.erase(port);
+        else
+          LogError("Unable to find deregistered %s port %s", it->second.Flags() & JackPortIsInput ? "input" : "output",
+                   it->second.Name().c_str());
       }
     }
     m_portchanges.clear();
