@@ -621,7 +621,21 @@ bool CPortConnector::PreActivate()
 void CPortConnector::PJackPortRegistrationCallback(jack_port_id_t port, int reg)
 {
   jack_port_t* portptr = jack_port_by_id(m_client, port);
-  string name(jack_port_name(portptr));
+
+  if (portptr == NULL)
+  {
+    LogError("jack_port_by_id returned NULL");
+    return;
+  }
+
+  const char* nameptr = jack_port_name(portptr);
+  if (nameptr == NULL)
+  {
+    LogError("jack_port_name returned NULL");
+    return;
+  }
+
+  string name(nameptr);
   int flags = jack_port_flags(portptr);
 
   CJackPort jackport(name, flags);
