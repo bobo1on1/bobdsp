@@ -109,7 +109,9 @@ class CJackPort
 
     bool operator==(const CJackPort& rhs)
     {
-      return (m_name == rhs.m_name && m_flags == rhs.m_flags);
+      return m_name == rhs.m_name &&
+             ((m_flags & JackPortIsOutput) == (rhs.m_flags & JackPortIsOutput) ||
+              (m_flags & JackPortIsInput) == (rhs.m_flags & JackPortIsInput));
     }
 
     bool operator!=(const CJackPort& rhs)
