@@ -19,9 +19,10 @@
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
+#include "inclstdint.h"
 #include "config.h"
 
-typedef volatile unsigned long atom;
+typedef volatile uint32_t atom;
 
 inline bool MsgCAS(atom* addr, atom oldval, atom newval)
 {
