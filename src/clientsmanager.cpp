@@ -707,6 +707,7 @@ void CClientsManager::Process(bool& triedconnect, bool& allconnected, bool tryco
     }
 
     //disconnect the client if it needs a restart, it'll get reconnected below
+    bool restart = false;
     if ((*it)->NeedsRestart())
     {
       if ((*it)->IsConnected())
@@ -716,13 +717,15 @@ void CClientsManager::Process(bool& triedconnect, bool& allconnected, bool tryco
       }
 
       (*it)->ClearRestart();
+      restart = true;
     }
 
     //keep trying to connect
     //only try to connect at the interval to prevent hammering jackd
+    //unless a restart is needed, then try immediately
     if (!(*it)->IsConnected())
     {
-      if (tryconnect)
+      if (tryconnect || restart)
       {
         triedconnect = true;
         if ((*it)->Connect())
