@@ -10,7 +10,12 @@ function BobDSPPlugins(pluginelements)
 
   function loadClients()
   {
-    $.getJSON("clients", loadPostSuccess);
+    $.ajax({
+        url: "clients",
+        dataType: "json",
+        success: loadPostSuccess,
+        timeout: 10000,
+        error: loadPostFail});
   }
 
   function postReload()
@@ -26,12 +31,39 @@ function BobDSPPlugins(pluginelements)
     $.post("clients", JSON.stringify(postjson));
   }
 
+  function loadPostFail()
+  {
+    //reset state
+    clientindex = -1;
+    controlindex = -1;
+
+    //remove old clients
+    for (var i = 0; i < clients.length; i++)
+      clientsdiv.get(0).removeChild(clients[i].div);
+
+    //make new array of 0 elements
+    clients = new Array();
+
+    //try to get the data again after one second
+    setTimeout(loadClients, 1000);
+  }
+
   function loadPostSuccess(data)
   {
     parseClients(data);
 
-    var postjson = {action: "wait", timeout: 60000, clientindex: clientindex, controlindex: controlindex};
-    $.post("clients", JSON.stringify(postjson), loadPostSuccess);
+    var timeout = 60000;
+    var postjson = {action: "wait", timeout: timeout, clientindex: clientindex, controlindex: controlindex};
+
+    $.ajax({ 
+      type: "POST",
+      url: "clients", 
+      data: JSON.stringify(postjson),
+      dataType: "json", 
+      success: loadPostSuccess, 
+      timeout: timeout + 10000,
+      error: loadPostFail
+    });
   }
 
   var inpost = false;
