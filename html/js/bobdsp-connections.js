@@ -98,12 +98,12 @@ function BobDSPConnections(connectionelements)
     connectionslist.get(0).appendChild(li);
   }
 
-  function addConnection(outport, inport)
+  function addConnection(outport, inport, asregex)
   {
     item = 
     {
-      out : outport,
-      in : inport,
+      out : asregex ? regexify(outport) : outport,
+      in : asregex ? regexify(inport) : inport,
       indisconnect : false,
       outdisconnect : false
     };
@@ -174,14 +174,24 @@ function BobDSPConnections(connectionelements)
     setTimeout(loadPorts, 1000);
   }
 
+  function isSelected(port, selectedports)
+  {
+    for (var i = 0; i < selectedports.length; i++)
+    {
+      if (selectedports[i].textContent == port.name)
+        return true;
+    }
+    return false;
+  }
+
   function parsePorts(data)
   {
     //bobdsp will only send the ports if the index changed
     //on a timeout, it will only send the index
     if (portindex != data.index)
     {
-      var selectedoutport = outports.children(".ui-selected");
-      var selectedinport  = inports.children(".ui-selected");
+      var selectedoutports = outports.children(".ui-selected");
+      var selectedinports = inports.children(".ui-selected");
 
       //clear the ports list
       outports.empty();
@@ -196,13 +206,13 @@ function BobDSPConnections(connectionelements)
         if (data.ports[i].direction == "output")
         {
           outports.get(0).appendChild(li);
-          if (selectedoutport.length > 0 && data.ports[i].name == selectedoutport[0].textContent)
+          if (isSelected(data.ports[i], selectedoutports))
             $(li).addClass("ui-selected");
         }
         else if (data.ports[i].direction == "input")
         {
           inports.get(0).appendChild(li);
-          if (selectedinport.length > 0 && data.ports[i].name == selectedinport[0].textContent)
+          if (isSelected(data.ports[i], selectedinports))
             $(li).addClass("ui-selected");
         }
       }
@@ -229,14 +239,23 @@ function BobDSPConnections(connectionelements)
 
   function addConnectionFromPort(asregex)
   {
-    var outport = outports.children(".ui-selected");
-    var inport  = inports.children(".ui-selected");
-    if (outport.length > 0 && inport.length > 0)
+    var selectedoutports = outports.children(".ui-selected");
+    var selectedinports  = inports.children(".ui-selected");
+
+    if (selectedoutports.length == 1 && selectedinports.length > 1)
     {
-      if (asregex)
-        addConnection(regexify(escapeRegex(outport[0].textContent)), regexify(escapeRegex(inport[0].textContent)));
-      else
-        addConnection(escapeRegex(outport[0].textContent), escapeRegex(inport[0].textContent));
+      for (var i = 0; i < selectedinports.length; i++)
+        addConnection(selectedoutports[0].textContent, selectedinports[i].textContent, asregex);
+    }
+    else if (selectedoutports.length > 1 && selectedinports.length == 1)
+    {
+      for (var i = 0; i < selectedoutports.length; i++)
+        addConnection(selectedoutports[i].textContent, selectedinports[0].textContent, asregex);
+    }
+    else if (selectedoutports.length == selectedinports.length)
+    {
+      for (var i = 0; i < selectedoutports.length ; i++)
+        addConnection(selectedoutports[i].textContent, selectedinports[i].textContent, asregex);
     }
   }
 

@@ -70,23 +70,14 @@
         $("#conrestore").button();
         $("#conreset").button();
         $("#conaddnew").button();
-        $("#outselectable").selectable({stop:portUnSelect});
-        $("#inselectable").selectable({stop:portUnSelect});
+        $("#outselectable").selectable();
+        $("#inselectable").selectable();
         $("#conaddport").button();
         $("#conaddportregex").button();
         $("#spinner").spinner({ incremental: false, min: 1});
         $("#spinner").spinner("value", 1);
         $("#clientsave").button();
         $("#clientrestore").button();
-
-        //if multiple elements are selected, deselect them except the first
-        function portUnSelect(event, ui)
-        {
-          $(".ui-selected:first", this).each(function()
-            {
-              $(this).siblings().removeClass("ui-selected");
-            });
-        };
 
         var connectionelements =
         {
