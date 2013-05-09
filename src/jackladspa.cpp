@@ -183,9 +183,14 @@ int CJackLadspa::PJackProcessCallback(jack_nframes_t nframes)
     lock.Leave();
   }
 
+  //chose a blocksize that is one millisecond of samples, then round up
+  //to the nearest multiple of 4
+  int blocksize = Max(Round32(SMOOTHBLOCK * m_samplerate), 4);
+  if ((blocksize & 3) != 0)
+    blocksize = (blocksize & ~3) + 4;
+
   //process audio in small blocks with control smoothing when necessary
   int processed = 0;
-  int blocksize = Min(Round32(SMOOTHBLOCK * m_samplerate), (int)nframes);
   while (NeedsSmooth() && processed < (int)nframes)
   {
     int   process = Min((int)nframes - processed, blocksize);

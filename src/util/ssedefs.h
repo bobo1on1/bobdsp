@@ -21,6 +21,8 @@
 
 #include "config.h"
 
+#define ALIGN 16
+
 //enable O3 optims to use SSE vector instructions
 #define OPTIMIZE __attribute__((optimize("-O3")))\
                  __attribute__((optimize("-ffast-math")))\
@@ -31,8 +33,6 @@
   #include <x86intrin.h>
 
   #define USE_SSE
-
-  #define ALIGN 16
 
   union floatvec
   {
