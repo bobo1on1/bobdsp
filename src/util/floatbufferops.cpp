@@ -91,7 +91,7 @@ void OPTIMIZE CopyApplyGain(float* in, float* out, int samples, float gain)
     }
 
     //create a float vector to multiply with
-    floatvec vecgain;
+    ssevec vecgain;
     for (int i = 0; i < 4; i++)
       vecgain.f[i] = gain;
 
@@ -124,12 +124,12 @@ void OPTIMIZE DenormalsToZero(float* data, int samples)
 
 #ifdef USE_SSE
   //AND mask to set the sign bit to 0
-  floatvec absmask;
+  ssevec absmask;
   for (int i = 0; i < 4; i++)
     absmask.i[i] = 0x7FFFFFFF;
 
   //value to compare to, lower than this is a denormal
-  floatvec cmpval;
+  ssevec cmpval;
   for (int i = 0; i < 4; i++)
     cmpval.f[i] = FLT_MIN;
 
@@ -221,7 +221,7 @@ static void OPTIMIZE AvgSquareProcessSSE(float*& dataptr, float* end, float& out
   float* privdataptr = dataptr;
 
   //place to store averages from SSE
-  floatvec avgs;
+  ssevec avgs;
   avgs.v = _mm_setzero_ps();
 
   //process 4 floats at a time with SSE until
@@ -266,11 +266,11 @@ static void OPTIMIZE AvgAbsProcessSSE(float*& dataptr, float* end, float& output
   float* privdataptr = dataptr;
 
   //place to store values from SSE
-  floatvec avgs;
+  ssevec avgs;
   avgs.v = _mm_setzero_ps();
 
   //AND mask to set the sign bit to 0
-  floatvec absmask;
+  ssevec absmask;
   for (int i = 0; i < 4; i++)
     absmask.i[i] = 0x7FFFFFFF;
 
@@ -320,11 +320,11 @@ static void OPTIMIZE HighestAbsProcessSSE(float*& dataptr, float* end, float& ou
   float* privdataptr = dataptr;
 
   //place to store values from SSE
-  floatvec highest;
+  ssevec highest;
   highest.v = _mm_setzero_ps();
 
   //AND mask to set the sign bit to 0
-  floatvec absmask;
+  ssevec absmask;
   for (int i = 0; i < 4; i++)
     absmask.i[i] = 0x7FFFFFFF;
 

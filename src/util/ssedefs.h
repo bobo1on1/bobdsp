@@ -34,7 +34,7 @@
 
   #define USE_SSE
 
-  union floatvec
+  union ssevec
   {
     __m128   v;
     float    f[4];
