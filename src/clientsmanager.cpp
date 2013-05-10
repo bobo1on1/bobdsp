@@ -727,13 +727,16 @@ void CClientsManager::Process(bool& triedconnect, bool& allconnected, bool tryco
     {
       if (tryconnect || restart)
       {
-        triedconnect = true;
         if ((*it)->Connect())
         {
           //update samplerate
           if ((*it)->Samplerate() != 0)
             m_bobdsp.PluginManager().SetSamplerate((*it)->Samplerate());
         }
+
+        //only signal that a connect was tried when this client has not been restarted
+        if (!restart)
+          triedconnect = true;
       }
     }
 
