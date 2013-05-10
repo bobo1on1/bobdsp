@@ -56,6 +56,7 @@ class CMessagePump
 
   protected:
     bool          SendMessage(ClientMessage msg);
+    virtual void  ProcessMessage(ClientMessage msg) {}
 
   private:
     bool          WriteMessage(ClientMessage msg);

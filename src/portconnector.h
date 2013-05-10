@@ -163,6 +163,9 @@ class CPortConnector : public CJackClient, public CJSONSettings
     CCondition                   m_condition;
     int                          m_waitingthreads;
     bool                         m_connectionsupdated;
+    bool                         m_checkupdate;
+    bool                         m_checkconnect;
+    bool                         m_checkdisconnect;
     CBobDSP&                     m_bobdsp;
 
     std::vector< std::pair<int, CJackPort> > m_portchanges;
@@ -173,6 +176,7 @@ class CPortConnector : public CJackClient, public CJSONSettings
 
     void LoadConnections(JSONArray& jsonconnections, const std::string& source);
 
+    void ProcessMessage(ClientMessage msg);
     bool ConnectPorts();
     bool DisconnectPorts();
     void MatchConnection(std::vector<CPortConnection>::iterator& it, std::vector< std::pair<std::string,

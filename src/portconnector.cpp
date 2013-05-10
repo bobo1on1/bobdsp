@@ -42,6 +42,9 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   m_portindex = 0;
   m_waitingthreads = 0;
   m_connectionsupdated = false;
+  m_checkupdate = false;
+  m_checkconnect = false;
+  m_checkdisconnect = false;
 }
 
 CPortConnector::~CPortConnector()
@@ -355,18 +358,20 @@ bool CPortConnector::Process()
   {
     CLock lock(m_condition);
 
-    ProcessUpdates();
+    if (m_checkupdate)
+    {
+      ProcessUpdates();
+      m_checkupdate = false;
+    }
 
-    bool success = true;
+    if (m_checkdisconnect)
+      m_checkdisconnect = !DisconnectPorts();
+
+    if (m_checkconnect)
+      m_checkconnect = !ConnectPorts();
 
     //if disconnecting or connecting ports fails, retry in a short time
-    if (!DisconnectPorts())
-      success = false;
-
-    if (!ConnectPorts())
-      success = false;
-
-    return success;
+    return !m_checkconnect && !m_checkdisconnect;
   }
 }
 
@@ -379,6 +384,20 @@ void CPortConnector::Stop()
   m_portindex++;
   m_stop = true;
   m_condition.Broadcast(); 
+}
+
+void CPortConnector::ProcessMessage(ClientMessage msg)
+{
+  if (msg == MsgPortRegistered)
+    m_checkupdate = m_checkconnect = true;
+  else if (msg == MsgPortDeregistered)
+    m_checkupdate = true;
+  else if (msg == MsgPortConnected)
+    m_checkdisconnect = true;
+  else if (msg == MsgPortDisconnected)
+    m_checkconnect = true;
+  else if (msg == MsgConnectionsUpdated)
+    m_checkconnect = m_checkdisconnect = true;
 }
 
 bool CPortConnector::ConnectPorts()
@@ -616,6 +635,8 @@ void CPortConnector::ProcessUpdates()
 bool CPortConnector::PreActivate()
 {
   UpdatePorts();
+  m_checkconnect = true;
+  m_checkdisconnect = true;
   return true;
 }
 

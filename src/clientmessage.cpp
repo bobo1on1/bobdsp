@@ -150,5 +150,6 @@ bool CMessagePump::SendMessage(ClientMessage msg)
 
 void CMessagePump::ConfirmMessage(ClientMessage msg)
 {
+  ProcessMessage(msg);
   MsgCAS(m_msgstates + msg, 1, 0);
 }
