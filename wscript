@@ -97,15 +97,15 @@ def build(bld):
                       src/pluginmanager.cpp\
                       src/portconnector.cpp\
                       src/visualizer.cpp\
+                      src/util/JSON.cpp\
                       src/util/alphanum.cpp\
                       src/util/condition.cpp\
                       src/util/floatbufferops.cpp\
-                      src/util/JSON.cpp\
                       src/util/log.cpp\
                       src/util/misc.cpp\
                       src/util/mutex.cpp\
-                      src/util/timeutils.cpp\
-                      src/util/thread.cpp',
+                      src/util/thread.cpp\
+                      src/util/timeutils.cpp',
               use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
@@ -118,9 +118,9 @@ def build(bld):
   bld.env.cxxshlib_PATTERN = '%s.so'
   bld.shlib(source='src/ladspa/biquad.cpp\
                     src/ladspa/biquadcoefs.cpp\
+                    src/ladspa/dither.cpp\
                     src/ladspa/filterdescriptions.cpp\
-                    src/ladspa/filterinterface.cpp\
-                    src/ladspa/dither.cpp',
+                    src/ladspa/filterinterface.cpp',
             use=['m'],
             includes='./src',
             cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPLadspa',
