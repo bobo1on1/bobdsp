@@ -162,7 +162,6 @@ class CPortConnector : public CJackClient, public CJSONSettings
     unsigned int                 m_portindex;
     CCondition                   m_condition;
     int                          m_waitingthreads;
-    bool                         m_connectionsupdated;
     bool                         m_checkupdate;
     bool                         m_checkconnect;
     bool                         m_checkdisconnect;

@@ -41,7 +41,6 @@ CPortConnector::CPortConnector(CBobDSP& bobdsp) :
   m_stop = false;
   m_portindex = 0;
   m_waitingthreads = 0;
-  m_connectionsupdated = false;
   m_checkupdate = false;
   m_checkconnect = false;
   m_checkdisconnect = false;
@@ -58,6 +57,8 @@ CJSONGenerator* CPortConnector::SettingsToJSON(bool tofile)
 
 void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
 {
+  bool connectionsupdated = false;
+
   //check the connections array and action string first, then parse them if they're valid
   JSONMap::iterator connections = root.find("connections");
   if (connections != root.end() && !connections->second->IsArray())
@@ -76,7 +77,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
   if (connections != root.end())
   {
     LoadConnections(connections->second->AsArray(), source);
-    m_connectionsupdated = true;
+    connectionsupdated = true;
   }
 
   if (action != root.end())
@@ -87,17 +88,14 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
     }
     else if (action->second->AsString() == "reload" && allowreload)
     {
-      m_connectionsupdated = true;
+      connectionsupdated = true;
       LoadFile(true);
     }
   }
 
   //if the connections are updated, signal the main thread
-  if (m_connectionsupdated)
-  {
+  if (connectionsupdated)
     SendMessage(MsgConnectionsUpdated);
-    m_connectionsupdated = false;
-  }
 }
 
 void CPortConnector::LoadConnections(JSONArray& jsonconnections, const std::string& source)
