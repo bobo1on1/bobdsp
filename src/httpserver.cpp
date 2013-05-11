@@ -47,6 +47,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_postdatasize = 0;
   m_stop = false;
   m_htmldir = RemoveSlashAtEnd(PREFIX) + "/share/bobdsp/html";
+  m_wasstarted = true;
 }
 
 CHttpServer::~CHttpServer()
@@ -84,8 +85,10 @@ bool CHttpServer::Start()
 
   if (m_daemon)
     Log("Started webserver on port %i", m_port);
-  else
+  else if (m_wasstarted || g_printdebuglevel)
     LogError("Unable to start webserver on port %i reason: \"%s\"", m_port, GetErrno().c_str());
+
+  m_wasstarted = m_daemon != NULL;
 
   return m_daemon != NULL;
 }

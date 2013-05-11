@@ -76,6 +76,7 @@ class CHttpServer
     int64_t            m_postdatasize;
     bool               m_stop;
     std::string        m_htmldir;
+    bool               m_wasstarted;
 
     static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                          const char *url, const char *method,
