@@ -184,7 +184,7 @@ class CPortConnector : public CJackClient, public CJSONSettings
     void UpdatePorts();
     void ProcessUpdates();
 
-    bool PreActivate();
+    bool PostActivate();
     void PJackPortRegistrationCallback(jack_port_id_t port, int reg);
     void PJackPortConnectCallback(jack_port_id_t a, jack_port_id_t b, int connect);
 };

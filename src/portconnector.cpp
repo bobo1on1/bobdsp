@@ -630,7 +630,7 @@ void CPortConnector::ProcessUpdates()
   }
 }
 
-bool CPortConnector::PreActivate()
+bool CPortConnector::PostActivate()
 {
   UpdatePorts();
   m_checkconnect = true;

@@ -169,6 +169,10 @@ bool CJackClient::ConnectInternal()
     return false;
   }
 
+  //let the portconnector request a list of ports
+  if (!PostActivate())
+    return false;
+
   return true;
 }
 

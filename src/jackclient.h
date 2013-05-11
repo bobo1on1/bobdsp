@@ -71,6 +71,7 @@ class CJackClient : public CMessagePump
 
     virtual void PreConnect() {};
     virtual bool PreActivate() { return true; };
+    virtual bool PostActivate() { return true; };
     virtual void PostDeactivate() {};
 
     static  void SJackThreadInitCallback(void *arg);
