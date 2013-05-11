@@ -31,6 +31,13 @@ function BobDSPPlugins(pluginelements)
     $.post("clients", JSON.stringify(postjson));
   }
 
+  function postDelete(client)
+  {
+    //post a deletion of a client, the long poll will handle the re-rendering of the page
+    var postjson = {clients: [{name: client.client.name, action: "delete"}]};
+    $.post("clients", JSON.stringify(postjson));
+  }
+
   function loadPostFail()
   {
     //reset state
@@ -181,13 +188,21 @@ function BobDSPPlugins(pluginelements)
 
   function makeClients(data)
   {
+    //save the current scroll position, since the removal of clients
+    //makes the window scroll up
+    var pos = $(document).scrollTop();
+
     //remove old clients
     for (var i = 0; i < clients.length; i++)
       clientsdiv.get(0).removeChild(clients[i].div);
 
+    //make new clients
     clients = new Array();
     for (var i = 0; i < data.clients.length; i++)
       addClient(data.clients[i]);
+
+    //set the scroll position back
+    $(document).scrollTop(pos);
   }
 
   function addClient(clientdata)
@@ -206,7 +221,7 @@ function BobDSPPlugins(pluginelements)
     client.div.appendChild(table);
     table.style.width = "500px";
 
-    table.appendChild(makeClientTitle(client.client.name));
+    table.appendChild(makeClientTitle(client));
 
     client.controls = new Array();
     client.controls[0] = makeClientSpinner(client, "instances", client.client.instances, 1, 20);
@@ -246,14 +261,21 @@ function BobDSPPlugins(pluginelements)
       table.appendChild(client.controls[i].row);
   }
 
-  function makeClientTitle(name)
+  function makeClientTitle(client)
   {
     var titlerow = document.createElement("tr");
     var title    = document.createElement("th");
 
     title.colSpan = 0;
     title.style.textAlign = "left";
-    $(title).text(name);
+
+    var deletebutton = document.createElement("button");
+    $(deletebutton).button({icons:{primary:"ui-icon-close"}, text:false});
+    title.appendChild(deletebutton);
+    $(deletebutton).click(function() {postDelete(client);});
+
+    title.appendChild(document.createTextNode(client.client.name));
+
     titlerow.appendChild(title);
 
     return titlerow;
