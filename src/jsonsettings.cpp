@@ -67,8 +67,7 @@ void CJSONSettings::LoadFile(bool reload)
     return;
   }
 
-  //don't allow a reload action when loading from a file
-  LoadSettings(json->AsMap(), reload, false, filename);
+  LoadSettings(json->AsMap(), reload, true, filename);
 }
 
 CJSONGenerator* CJSONSettings::LoadString(const std::string& strjson, const std::string& source,
@@ -88,7 +87,7 @@ CJSONGenerator* CJSONSettings::LoadString(const std::string& strjson, const std:
   }
   else
   {
-    LoadSettings(json->AsMap(), false, true, source);
+    LoadSettings(json->AsMap(), false, false, source);
   }
 
   if (returnsettings)

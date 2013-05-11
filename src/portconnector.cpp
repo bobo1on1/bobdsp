@@ -55,7 +55,7 @@ CJSONGenerator* CPortConnector::SettingsToJSON(bool tofile)
   return ConnectionsToJSON();
 }
 
-void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
+void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source)
 {
   bool connectionsupdated = false;
 
@@ -86,7 +86,7 @@ void CPortConnector::LoadSettings(JSONMap& root, bool reload, bool allowreload, 
     {
       SaveFile();
     }
-    else if (action->second->AsString() == "reload" && allowreload)
+    else if (action->second->AsString() == "reload" && !fromfile)
     {
       connectionsupdated = true;
       LoadFile(true);

@@ -53,8 +53,9 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     CCondition                m_condition;
     bool                      m_checkclients;
     bool                      m_stop;
-    int64_t                   m_clientindex; //changed whenever a client is added or deleted
+    int64_t                   m_clientindex;  //changed whenever a client is added or deleted
     int64_t                   m_controlindex; //changed whenever a control is changed
+    int64_t                   m_fileindex;    //set to m_clientindex whenever settings are loaded from a file
 
     enum LOADSTATE
     {
@@ -64,8 +65,8 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     };
 
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
-    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
-    void                    LoadClient(CJSONElement* jsonclient, std::string source);
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source);
+    void                    LoadClient(CJSONElement* jsonclient, bool update, std::string source);
     void                    AddClient(JSONMap& client, const std::string& name, const std::string& source);
     void                    DeleteClient(JSONMap& client, const std::string& name, const std::string& source);
     void                    UpdateClient(JSONMap& client, const std::string& name, const std::string& source);

@@ -328,7 +328,7 @@ CVisualizer::~CVisualizer()
 {
 }
 
-void CVisualizer::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
+void CVisualizer::LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source)
 {
   JSONMap::iterator visualizers = root.find("visualizers");
   if (visualizers != root.end() && !visualizers->second->IsArray())

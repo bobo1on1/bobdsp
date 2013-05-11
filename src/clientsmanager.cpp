@@ -41,6 +41,7 @@ CClientsManager::CClientsManager(CBobDSP& bobdsp):
   m_checkclients = false;
   m_clientindex = 0;
   m_controlindex = 0;
+  m_fileindex = -1;
 }
 
 CClientsManager::~CClientsManager()
@@ -67,13 +68,17 @@ CJSONGenerator* CClientsManager::SettingsToJSON(bool tofile)
   return ClientsToJSON(tofile);
 }
 
-void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source)
+void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source)
 {
+  //if loading from a file, and the client index has not changed since the previous file load
+  //update the clients instead
+  bool updateonreload = fromfile && reload && m_fileindex == m_clientindex;
+
   if (reload)
   {
     //reload requested, mark all clients for delete, reload the file
     //and set the flag that clients are deleted
-    if (!m_clients.empty())
+    if (!m_clients.empty() && !updateonreload)
     {
       Log("Reload requested, marking all existing clients for deletion");
       m_checkclients = true;
@@ -122,18 +127,12 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
   if (clients != root.end())
   {
     for (JSONArray::iterator it = clients->second->AsArray().begin(); it != clients->second->AsArray().end(); it++)
-      LoadClient(*it, source + ": ");
+      LoadClient(*it, updateonreload, source + ": ");
   }
 
-  if (action != root.end())
-  {
-    if (action->second->AsString() == "save")
-      SaveFile();
-    else if (action->second->AsString() == "reload" && allowreload)
-      LoadFile(true);
-    else if (action->second->AsString() == "wait")
-      WaitForChange(root, timeout, clientindex, controlindex);
-  }
+  //update m_fileindex to reflect the file load
+  if (fromfile)
+    m_fileindex = m_clientindex;
 
   //check if a message need to be sent to the main thread
   if (m_checkclients)
@@ -141,9 +140,19 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool allowreload,
     SendMessage(MsgCheckClients);
     m_checkclients = false;
   }
+
+  if (action != root.end())
+  {
+    if (action->second->AsString() == "save")
+      SaveFile();
+    else if (action->second->AsString() == "reload" && !fromfile)
+      LoadFile(true);
+    else if (action->second->AsString() == "wait")
+      WaitForChange(root, timeout, clientindex, controlindex);
+  }
 }
 
-void CClientsManager::LoadClient(CJSONElement* jsonclient, std::string source)
+void CClientsManager::LoadClient(CJSONElement* jsonclient, bool update, std::string source)
 {
   if (!jsonclient->IsMap())
   {
@@ -177,12 +186,12 @@ void CClientsManager::LoadClient(CJSONElement* jsonclient, std::string source)
   JSONMap::iterator action = client.find("action");
   if (action != client.end() && !action->second->IsString())
     LogError("%sinvalid value for action: %s", source.c_str(), ToJSON(action->second).c_str());
-  else if (action == client.end() || action->second->AsString() == "add")
+  else if ((action == client.end() && !update) || (action != client.end() && action->second->AsString() == "add"))
     AddClient(client, name->second->AsString(), source);
+  else if ((action == client.end() && update) || action->second->AsString() == "update")
+    UpdateClient(client, name->second->AsString(), source);
   else if (action->second->AsString() == "delete")
     DeleteClient(client, name->second->AsString(), source);
-  else if (action->second->AsString() == "update")
-    UpdateClient(client, name->second->AsString(), source);
   else
     LogError("%sinvalid action: \"%s\"", source.c_str(), action->second->AsString().c_str());
 }

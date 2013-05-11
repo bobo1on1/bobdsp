@@ -171,7 +171,7 @@ class CPortConnector : public CJackClient, public CJSONSettings
     CMutex                                   m_portchangelock;
 
     virtual CJSONGenerator* SettingsToJSON(bool tofile);
-    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source);
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source);
 
     void LoadConnections(JSONArray& jsonconnections, const std::string& source);
 

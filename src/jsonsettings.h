@@ -35,7 +35,7 @@ class CJSONSettings
 
   private:
 
-    virtual void            LoadSettings(JSONMap& root, bool reload, bool allowreload, const std::string& source) = 0;
+    virtual void            LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source) = 0;
     virtual CJSONGenerator* SettingsToJSON(bool tofile) = 0;
 
     const char* m_filename;
