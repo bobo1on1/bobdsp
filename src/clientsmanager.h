@@ -53,8 +53,8 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     CCondition                m_condition;
     bool                      m_checkclients;
     bool                      m_stop;
-    unsigned int              m_clientindex; //changed whenever a client is added or deleted
-    unsigned int              m_controlindex; //changed whenever a control is changed
+    int64_t                   m_clientindex; //changed whenever a client is added or deleted
+    int64_t                   m_controlindex; //changed whenever a control is changed
 
     enum LOADSTATE
     {

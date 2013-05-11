@@ -159,7 +159,7 @@ class CPortConnector : public CJackClient, public CJSONSettings
     std::vector<CPortConnection> m_removed;
     std::list<CJackPort>         m_jackports;
     bool                         m_stop;
-    unsigned int                 m_portindex;
+    int64_t                      m_portindex;
     CCondition                   m_condition;
     int                          m_waitingthreads;
     bool                         m_checkupdate;

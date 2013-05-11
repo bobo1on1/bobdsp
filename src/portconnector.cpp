@@ -318,7 +318,7 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
   //wait for the port index to change with the client requested timeout
   //the maximum timeout is one minute
   if (portindex == (int64_t)m_portindex && timeout > 0 && !m_stop)
-    m_condition.Wait(Min(timeout, 60000) * 1000, m_portindex, (unsigned int)portindex);
+    m_condition.Wait(Min(timeout, 60000) * 1000, m_portindex, portindex);
 
   m_waitingthreads--;
 
