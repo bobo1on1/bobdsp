@@ -118,11 +118,19 @@ function BobDSPPlugins(pluginelements)
       }
     }
 
-    //TODO: add a callback for when the POST fails
     if (postjson.clients.length > 0)
     {
       lastupdate = new Date().getTime();
-      $.post("clients", JSON.stringify(postjson), controlPostSuccess);
+
+      $.ajax({ 
+        type: "POST",
+        url: "clients", 
+        data: JSON.stringify(postjson),
+        dataType: "json", 
+        success: controlPostSuccess, 
+        timeout: 10000,
+        error: controlPostFail
+      });
     }
     else
     {
@@ -151,6 +159,11 @@ function BobDSPPlugins(pluginelements)
     inpost = false;
     parseClients(data);
     sendClientsUpdates();
+  }
+
+  function controlPostFail()
+  {
+    inpost = false;
   }
 
   function parseClients(data)
