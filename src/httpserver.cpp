@@ -74,10 +74,14 @@ bool CHttpServer::Start()
   string threadname = CThread::GetCurrentThreadName();
   CThread::SetCurrentThreadName("httpserver");
 
-  unsigned int timeout = 60 * 60; //one hour timeout
+  unsigned int timeout = 60; //one minute timeout
+  unsigned int limittotal = 500;
+  unsigned int limitindividual = 100;
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
                               &AnswerToConnection, this,
                               MHD_OPTION_CONNECTION_TIMEOUT, timeout,
+                              MHD_OPTION_CONNECTION_LIMIT, limittotal,
+                              MHD_OPTION_PER_IP_CONNECTION_LIMIT, limitindividual,
                               MHD_OPTION_NOTIFY_COMPLETED, RequestCompleted, NULL,
                               MHD_OPTION_END);
 
