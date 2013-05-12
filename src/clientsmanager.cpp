@@ -70,23 +70,6 @@ CJSONGenerator* CClientsManager::SettingsToJSON(bool tofile)
 
 void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool fromfile, const std::string& source)
 {
-  //if loading from a file, and the client index has not changed since the previous file load
-  //update the clients instead
-  bool updateonreload = fromfile && reload && m_fileindex == m_clientindex;
-
-  if (reload)
-  {
-    //reload requested, mark all clients for delete, reload the file
-    //and set the flag that clients are deleted
-    if (!m_clients.empty() && !updateonreload)
-    {
-      Log("Reload requested, marking all existing clients for deletion");
-      m_checkclients = true;
-      for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
-        (*it)->MarkDelete();
-    }
-  }
-
   //check the JSON elements first
   JSONMap::iterator clients = root.find("clients");
   if (clients != root.end() && !clients->second->IsArray())
@@ -121,6 +104,23 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool fromfile, co
   {
     LogError("%s: invalid value for controlindex: %s", source.c_str(), ToJSON(controlindex->second).c_str());
     return;
+  }
+
+  //if loading from a file, and the client index has not changed since the previous file load
+  //update the clients instead
+  bool updateonreload = fromfile && reload && m_fileindex == m_clientindex;
+
+  if (reload)
+  {
+    //reload requested, mark all clients for delete, reload the file
+    //and set the flag that clients are deleted
+    if (!m_clients.empty() && !updateonreload)
+    {
+      Log("Reload requested, marking all existing clients for deletion");
+      m_checkclients = true;
+      for (vector<CJackLadspa*>::iterator it = m_clients.begin(); it != m_clients.end(); it++)
+        (*it)->MarkDelete();
+    }
   }
 
   //if all the JSON elements are valid, parse them
