@@ -106,6 +106,13 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool fromfile, co
     return;
   }
 
+  JSONMap::iterator uuid = root.find("uuid");
+  if (uuid != root.end() && !uuid->second->IsString())
+  {
+    LogError("%s: invalid value for uuid: %s", source.c_str(), ToJSON(uuid->second).c_str());
+    return;
+  }
+
   //if loading from a file, and the client index has not changed since the previous file load
   //update the clients instead
   bool updateonreload = fromfile && reload && m_fileindex == m_clientindex;
@@ -148,7 +155,7 @@ void CClientsManager::LoadSettings(JSONMap& root, bool reload, bool fromfile, co
     else if (action->second->AsString() == "reload" && !fromfile)
       LoadFile(true);
     else if (action->second->AsString() == "wait")
-      WaitForChange(root, timeout, clientindex, controlindex);
+      WaitForChange(root, timeout, clientindex, controlindex, uuid);
   }
 }
 
@@ -580,7 +587,8 @@ CJackLadspa* CClientsManager::FindClient(const std::string& name)
 
 //should have locked m_condition before calling this
 void CClientsManager::WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
-                                    JSONMap::iterator& clientindex, JSONMap::iterator& controlindex)
+                                    JSONMap::iterator& clientindex, JSONMap::iterator& controlindex,
+                                    JSONMap::iterator& uuid)
 {
   int64_t ptimeout = -1;
   if (timeout != root.end())
@@ -594,11 +602,16 @@ void CClientsManager::WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
   if (controlindex != root.end())
     pcontrolindex = controlindex->second->ToInt64();
 
-  //wait on m_condtion for changes on m_clientindex, m_controlindex or the timeout
+  string uuidstr;
+  if (uuid != root.end())
+    uuidstr = uuid->second->AsString();
+
+  //wait on m_condtion for changes on m_clientindex, m_controlindex, the timeout or the uuid
   int64_t start = GetTimeUs();
   int64_t now   = start;
   while (!m_stop && (pclientindex == -1 || (int64_t)m_clientindex == pclientindex) &&
-         (pcontrolindex == -1 || (int64_t)m_controlindex == pcontrolindex) && (now - start) < ptimeout)
+         (pcontrolindex == -1 || (int64_t)m_controlindex == pcontrolindex) && (now - start) < ptimeout &&
+         uuidstr == m_bobdsp.GetUUID())
   {
     m_condition.Wait(Max(ptimeout - (now - start), 0));
     now = GetTimeUs();

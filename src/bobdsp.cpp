@@ -325,6 +325,12 @@ void CBobDSP::GetUUID(CJSONGenerator* generator)
   generator->AddString(m_uuid.c_str());
 }
 
+const std::string& CBobDSP::GetUUID()
+{
+  assert(m_uuid.length() > 0);
+  return m_uuid;
+}
+
 void CBobDSP::SetupSignals()
 {
   m_signalfd = -1;

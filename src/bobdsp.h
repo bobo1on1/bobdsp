@@ -44,12 +44,13 @@ class CBobDSP
     void Process();
     void Cleanup();
 
-    CPortConnector&  PortConnector()   { return m_portconnector;  }
-    CPluginManager&  PluginManager()   { return m_pluginmanager;  }
-    CClientsManager& ClientsManager()  { return m_clientsmanager; }
-    CVisualizer&     Visualizer()      { return m_visualizer;     }
+    CPortConnector&    PortConnector()  { return m_portconnector;  }
+    CPluginManager&    PluginManager()  { return m_pluginmanager;  }
+    CClientsManager&   ClientsManager() { return m_clientsmanager; }
+    CVisualizer&       Visualizer()     { return m_visualizer;     }
 
-    void             GetUUID(CJSONGenerator* generator);
+    void               GetUUID(CJSONGenerator* generator);
+    const std::string& GetUUID();
 
   private:
     CPortConnector  m_portconnector;

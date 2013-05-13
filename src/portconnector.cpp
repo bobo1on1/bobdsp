@@ -269,10 +269,12 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
   CJSONElement* json = ParseJSON(postjson, error);
   auto_ptr<CJSONElement> jsonauto(json);
 
-  //parse portindex and timeout, they should be JSON numbers
+  //parse portindex, timeout and uuid
   //if they're invalid, these defaults will be used instead
   int64_t portindex = -1;
   int64_t timeout   = 0;
+  string  uuid; 
+
   if (error)
   {
     LogError("%s: %s", source.c_str(), error->c_str());
@@ -303,6 +305,15 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
         else
           LogError("%s: invalid value for timeout: %s", source.c_str(), ToJSON(jsontimeout->second).c_str());
       }
+
+      JSONMap::iterator jsonuuid = json->AsMap().find("uuid");
+      if (jsonuuid != json->AsMap().end())
+      {
+        if (jsonuuid->second->IsString())
+          uuid = jsonuuid->second->AsString();
+        else
+          LogError("%s: invalid value for uuid: %s", source.c_str(), ToJSON(jsonuuid->second).c_str());
+      }
     }
   }
 
@@ -319,7 +330,7 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
 
   //wait for the port index to change with the client requested timeout
   //the maximum timeout is one minute
-  if (portindex == (int64_t)m_portindex && timeout > 0 && !m_stop)
+  if (portindex == (int64_t)m_portindex && timeout > 0 && !m_stop && uuid == m_bobdsp.GetUUID())
     m_condition.Wait(Min(timeout, 60000) * 1000, m_portindex, portindex);
 
   m_waitingthreads--;

@@ -78,7 +78,8 @@ class CClientsManager : public CMessagePump, public CJSONSettings
                                           controlmap& controlvalues, bool checkmissing);
     CJackLadspa*            FindClient(const std::string& name);
     void                    WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
-                                          JSONMap::iterator& clientindex, JSONMap::iterator& controlindex);
+                                          JSONMap::iterator& clientindex, JSONMap::iterator& controlindex,
+                                          JSONMap::iterator& uuid);
 };
 
 #endif //CLIENTSMANAGER_H
