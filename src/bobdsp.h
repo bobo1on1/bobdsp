@@ -49,6 +49,8 @@ class CBobDSP
     CClientsManager& ClientsManager()  { return m_clientsmanager; }
     CVisualizer&     Visualizer()      { return m_visualizer;     }
 
+    void             GetUUID(CJSONGenerator* generator);
+
   private:
     CPortConnector  m_portconnector;
     CPluginManager  m_pluginmanager;
@@ -59,9 +61,11 @@ class CBobDSP
     int             m_signalfd;
     int             m_stdout[2];
     int             m_stderr[2];
+    std::string     m_uuid;
 
     void PrintHelpMessage();
     void SetupRT(int64_t memsize);
+    void CreateUUID();
     void SetupSignals();
     void RoutePipe(FILE*& file, int* pipe);
     void ProcessMessages(int64_t timeout);

@@ -223,6 +223,7 @@ CJSONGenerator* CPortConnector::PortIndexToJSON()
   CLock lock(m_condition);
   generator->AddInt(m_portindex);
   lock.Leave();
+  m_bobdsp.GetUUID(generator);
   generator->MapClose();
 
   return generator;
@@ -238,6 +239,7 @@ CJSONGenerator* CPortConnector::PortsToJSON()
 
   generator->AddString("index");
   generator->AddInt(m_portindex);
+  m_bobdsp.GetUUID(generator);
   generator->AddString("ports");
   generator->ArrayOpen();
 

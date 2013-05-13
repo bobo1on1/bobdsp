@@ -28,6 +28,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <cassert>
 #include <malloc.h>
 #include <poll.h>
 #include <unistd.h>
@@ -36,6 +37,7 @@
 #include <sys/signalfd.h>
 #include <locale.h>
 #include <getopt.h>
+#include <uuid/uuid.h>
 
 #include "util/log.h"
 #include "util/misc.h"
@@ -165,6 +167,9 @@ void CBobDSP::Setup()
 
   //init the logfile
   SetLogFile("bobdsp.log");
+
+  //generate a uuid for this instance of bobdsp
+  CreateUUID();
 
   //get paths to load ladspa plugins from
   vector<string> ladspapaths;
@@ -300,6 +305,24 @@ void CBobDSP::SetupRT(int64_t memsize)
   //calls come from the memory pool reserved and locked above. Issuing free() and delete()
   //does NOT make this locking undone. So, with this locking mechanism we can build C++ applications
   //that will never run into a major/minor pagefault, even with swapping enabled.
+}
+
+void CBobDSP::CreateUUID()
+{
+  assert(m_uuid.empty());
+  uuid_t uuid;
+  char   uuidstr[37];
+  uuid_generate(uuid);
+  uuid_unparse_lower(uuid, uuidstr);
+  m_uuid.assign(uuidstr);
+  LogDebug("Generated uuid %s", m_uuid.c_str());
+}
+
+void CBobDSP::GetUUID(CJSONGenerator* generator)
+{
+  assert(m_uuid.length() > 0);
+  generator->AddString("uuid");
+  generator->AddString(m_uuid.c_str());
 }
 
 void CBobDSP::SetupSignals()

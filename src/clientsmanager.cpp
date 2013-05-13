@@ -619,6 +619,7 @@ CJSONGenerator* CClientsManager::ClientsToJSON(bool tofile)
     generator->AddInt(m_clientindex);
     generator->AddString("controlindex");
     generator->AddInt(m_controlindex);
+    m_bobdsp.GetUUID(generator);
   }
 
   generator->AddString("clients");

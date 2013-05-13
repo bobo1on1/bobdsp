@@ -48,6 +48,7 @@ def configure(conf):
   conf.check(header_name='time.h')
   conf.check(header_name='unistd.h')
   conf.check(header_name='uriparser/Uri.h')
+  conf.check(header_name='uuid/uuid.h')
   conf.check(header_name='x86intrin.h', mandatory=False)
   conf.check(header_name='yajl/yajl_gen.h')
   conf.check(header_name='yajl/yajl_parse.h')
@@ -68,6 +69,7 @@ def configure(conf):
   conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
   conf.check(lib='samplerate', uselib_store='samplerate')
   conf.check(lib='uriparser', uselib_store='uriparser')
+  conf.check(lib='uuid', uselib_store='uuid')
   conf.check(lib='yajl', uselib_store='yajl')
 
   conf.check(function_name='pthread_setname_np', header_name='pthread.h', lib='pthread', mandatory=False)
@@ -106,7 +108,7 @@ def build(bld):
                       src/util/mutex.cpp\
                       src/util/thread.cpp\
                       src/util/timeutils.cpp',
-              use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'yajl'],        
+              use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'uuid', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')
