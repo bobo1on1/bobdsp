@@ -160,6 +160,7 @@ function BobDSPConnections(connectionelements)
   }
 
   var portindex = -1;
+  var uuid      = "";
 
   function portsErrorHandler()
   {
@@ -169,6 +170,9 @@ function BobDSPConnections(connectionelements)
 
     //reset index
     portindex = -1;
+
+    //reset uuid
+    uuid = "";
 
     //try to get the ports again
     setTimeout(loadPorts, 1000);
@@ -186,9 +190,9 @@ function BobDSPConnections(connectionelements)
 
   function parsePorts(data)
   {
-    //bobdsp will only send the ports if the index changed
-    //on a timeout, it will only send the index
-    if (portindex != data.index)
+    //bobdsp will only send the ports if the index or uuid changed
+    //on a timeout, it will only send the index and uuid
+    if (portindex != data.index || uuid != data.uuid)
     {
       var selectedoutports = outports.children(".ui-selected");
       var selectedinports = inports.children(".ui-selected");
@@ -218,13 +222,14 @@ function BobDSPConnections(connectionelements)
       }
 
       portindex = data.index;
+      uuid      = data.uuid;
     }
 
-    //get json again, but set the timeout to 60 seconds and pass the index
+    //get json again, but set the timeout to 60 seconds and pass the index and uuid
     //this way, bobdsp will wait for the ports to change or the timeout to occur
     //before sending the ports
     var timeout = 60000;
-    var postjson = JSON.stringify({"timeout" : timeout, "index" : data.index});
+    var postjson = JSON.stringify({"timeout" : timeout, "index" : portindex, "uuid" : uuid});
 
     $.ajax({ 
       type: "POST",

@@ -7,6 +7,7 @@ function BobDSPPlugins(pluginelements)
   var clients = new Array();
   var clientindex  = -1;
   var controlindex = -1;
+  var uuid         = "";
 
   function loadClients()
   {
@@ -41,8 +42,9 @@ function BobDSPPlugins(pluginelements)
   function loadPostFail()
   {
     //reset state
-    clientindex = -1;
+    clientindex  = -1;
     controlindex = -1;
+    uuid         = "";
 
     //remove old clients
     for (var i = 0; i < clients.length; i++)
@@ -60,7 +62,7 @@ function BobDSPPlugins(pluginelements)
     parseClients(data);
 
     var timeout = 60000;
-    var postjson = {action: "wait", timeout: timeout, clientindex: clientindex, controlindex: controlindex};
+    var postjson = {action: "wait", timeout: timeout, clientindex: clientindex, controlindex: controlindex, uuid: uuid};
 
     $.ajax({ 
       type: "POST",
@@ -168,11 +170,12 @@ function BobDSPPlugins(pluginelements)
 
   function parseClients(data)
   {
-    if (data.clientindex > clientindex)
+    if (data.clientindex > clientindex || data.uuid != uuid)
     {
       //clients changed, remove all and rebuild
-      clientindex = data.clientindex;
+      clientindex  = data.clientindex;
       controlindex = data.controlindex;
+      uuid         = data.uuid;
       makeClients(data);
     }
     else if (data.controlindex > controlindex)
