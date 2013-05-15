@@ -74,7 +74,9 @@ bool CHttpServer::Start()
   string threadname = CThread::GetCurrentThreadName();
   CThread::SetCurrentThreadName("httpserver");
 
-  unsigned int timeout = 60; //one minute timeout
+  //two minutes timeout, has to be higher than one minute
+  //since waiting for a change has a maximum timeout of one minute
+  unsigned int timeout = 120;
   unsigned int limittotal = 500;
   unsigned int limitindividual = 100;
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
