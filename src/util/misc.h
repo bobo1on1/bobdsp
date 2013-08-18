@@ -46,6 +46,7 @@ namespace UTILNAMESPACE
   std::string ToLower(const std::string& in);
   std::string ToLower(const std::string& in, std::string& out);
   std::string Capitalize(const std::string& in);
+  std::string RemoveDuplicates(std::string in, char chr);
   bool StrToBool(const std::string& data, bool& value);
   int  DirLevel(const std::string& url);
 

@@ -139,7 +139,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
   uriUnescapeInPlaceA(tmpurl);
 
   //make sure any url has a slash at the start
-  string strurl = PutSlashAtStart(tmpurl);
+  string strurl = PutSlashAtStart(RemoveDuplicates(tmpurl, '/'));
   delete[] tmpurl;
 
   if (strcmp(method, "GET") == 0)

@@ -165,6 +165,24 @@ namespace UTILNAMESPACE
     return out;
   }
   
+  std::string RemoveDuplicates(std::string in, char chr)
+  {
+    string::iterator it = in.begin();
+    while (it != in.end())
+    {
+      if (*it == chr)
+      {
+        string::iterator it2 = it + 1;
+        while (it2 != in.end() && *it2 == chr)
+          it2 = in.erase(it2);
+      }
+
+      it++;
+    }
+
+    return in;
+  }
+
   bool StrToBool(const std::string& data, bool& value)
   {
     std::string data2 = data;
