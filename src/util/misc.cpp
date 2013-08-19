@@ -167,17 +167,19 @@ namespace UTILNAMESPACE
   
   std::string RemoveDuplicates(std::string in, char chr)
   {
-    string::iterator it = in.begin();
-    while (it != in.end())
+    size_t pos = 0;
+    while (pos < in.size() - 1)
     {
-      if (*it == chr)
+      if (in[pos] == chr)
       {
-        string::iterator it2 = it + 1;
-        while (it2 != in.end() && *it2 == chr)
-          it2 = in.erase(it2);
+        size_t end = in.find_first_not_of(chr, pos + 1);
+        if (end == string::npos)
+          in.erase(pos + 1);
+        else
+          in.erase(pos + 1, end - pos - 1);
       }
 
-      it++;
+      pos++;
     }
 
     return in;
