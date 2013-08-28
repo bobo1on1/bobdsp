@@ -140,12 +140,12 @@ function BobDSPConnections(connectionelements)
     if (action != undefined)
       postjson.action = action;
 
-    $.post("/connections", JSON.stringify(postjson), parseConnections);
+    $.post("connections", JSON.stringify(postjson), parseConnections);
   }
 
   function sendAction(action)
   {
-    $.post("/connections", JSON.stringify({action : action}), parseConnections);
+    $.post("connections", JSON.stringify({action : action}), parseConnections);
   }
 
   function loadPorts()
