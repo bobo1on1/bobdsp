@@ -24,7 +24,7 @@
 #include "util/lock.h"
 
 #ifndef _GNU_SOURCE
-  #define _GNU_SOURCE //for pipe2
+  #define _GNU_SOURCE //for canonicalize_file_name
 #endif //_GNU_SOURCE
 #include <unistd.h>
 #include <fcntl.h>
@@ -33,6 +33,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdlib.h>
 #include <memory>
 
 using namespace std;
@@ -57,7 +58,17 @@ CHttpServer::~CHttpServer()
 
 void CHttpServer::SetHtmlDirectory(const char* dir)
 {
-  m_htmldir = RemoveSlashAtEnd(dir);
+  char* path = canonicalize_file_name(dir);
+  if (path == NULL)
+  {
+    LogError("canonicalize_file_name(): \"%s\": %s", dir, GetErrno().c_str());
+    m_htmldir = RemoveSlashAtEnd(dir);
+  }
+  else
+  {
+    m_htmldir = path;
+    free(path);
+  }
 }
 
 bool CHttpServer::Start()
@@ -90,7 +101,7 @@ bool CHttpServer::Start()
   CThread::SetCurrentThreadName(threadname);
 
   if (m_daemon)
-    Log("Started webserver on port %i", m_port);
+    Log("Started webserver on port %i, using \"%s\" as html root directory", m_port, m_htmldir.c_str());
   else if (m_wasstarted || g_printdebuglevel)
     LogError("Unable to start webserver on port %i reason: \"%s\"", m_port, GetErrno().c_str());
 

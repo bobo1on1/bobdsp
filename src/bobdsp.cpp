@@ -78,6 +78,7 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   int         optionindex = 0;
   int         c;
   bool        daemonize = false;
+  const char* htmldirectory = NULL;
 
   while ((c = getopt_long(argc, argv, shortoptions, longoptions, &optionindex)) != -1)
   {
@@ -102,7 +103,7 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     }
     else if (c == 't')
     {
-      m_httpserver.SetHtmlDirectory(optarg);
+      htmldirectory = optarg;
     }
     else if (c == 'h')
     {
@@ -114,6 +115,11 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
       exit(1);
     }
   }
+
+  //this has to be done before daemonizing, because that changes the current working directory
+  //and one should be able to pass a relative path here
+  if (htmldirectory)
+    m_httpserver.SetHtmlDirectory(htmldirectory);
 
   if (daemonize)
     Daemonize();
