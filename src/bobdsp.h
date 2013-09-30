@@ -65,6 +65,7 @@ class CBobDSP
     std::string     m_uuid;
 
     void PrintHelpMessage();
+    void Daemonize();
     void SetupRT(int64_t memsize);
     void CreateUUID();
     void SetupSignals();

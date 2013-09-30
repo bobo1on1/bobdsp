@@ -77,7 +77,7 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
   const char* shortoptions = "dfhp:t:";
   int         optionindex = 0;
   int         c;
-  bool        dofork = false;
+  bool        daemonize = false;
 
   while ((c = getopt_long(argc, argv, shortoptions, longoptions, &optionindex)) != -1)
   {
@@ -87,7 +87,7 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     }
     else if (c == 'f')
     {
-      dofork = true;
+      daemonize = true;
     }
     else if (c == 'p')
     {
@@ -115,28 +115,8 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     }
   }
 
-  if (dofork)
-  {
-    g_logtostderr = false;
-
-    if (g_printdebuglevel)
-    {
-      //route stdout to our log
-      RoutePipe(stdout, m_stdout);
-      //route stderr to our log
-      RoutePipe(stderr, m_stderr);
-    }
-    else
-    {
-      fclose(stdout);
-      stdout = fopen("/dev/null", "w");
-      fclose(stderr);
-      stderr = fopen("/dev/null", "w");
-    }
-
-    if (fork())
-      exit(0);
-  }
+  if (daemonize)
+    Daemonize();
 }
 
 CBobDSP::~CBobDSP()
@@ -158,6 +138,42 @@ void CBobDSP::PrintHelpMessage()
          "    -t, --html-dir=DIR set the html directory\n"
          "\n"
          );
+}
+
+void CBobDSP::Daemonize()
+{
+  //fork a child process
+  pid_t pid = fork();
+  if (pid == -1)
+    LogError("fork(): %s", GetErrno().c_str());
+  else if (pid > 0)
+    exit(0); //this is the parent process, exit
+
+  //detach the child process from the parent
+  if (setsid() < 0)
+    LogError("setsid(): %s", GetErrno().c_str());
+
+  //change the working directory to / so that the directory this is started from
+  //is not locked by the daemon process
+  if ((chdir("/")) < 0)
+    LogError("chdir(): %s", GetErrno().c_str());
+
+  //disable log printing to stderr
+  g_logtostderr = false;
+
+  if (g_printdebuglevel)
+  {
+    //route stdout and stderr to the log
+    RoutePipe(stdout, m_stdout);
+    RoutePipe(stderr, m_stderr);
+  }
+  else
+  {
+    fclose(stdout);
+    stdout = fopen("/dev/null", "w");
+    fclose(stderr);
+    stderr = fopen("/dev/null", "w");
+  }
 }
 
 void CBobDSP::Setup()
