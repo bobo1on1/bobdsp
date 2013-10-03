@@ -45,6 +45,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
 {
   m_daemon = NULL;
   m_port = 8080;
+  m_ipv6 = true;
   m_postdatasize = 0;
   m_stop = false;
   m_htmldir = RemoveSlashAtEnd(PREFIX) + "/share/bobdsp/html";
@@ -76,7 +77,11 @@ bool CHttpServer::Start()
   if (m_daemon)
     return true;
 
-  unsigned int options = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_IPv6;
+  unsigned int options = MHD_USE_THREAD_PER_CONNECTION;
+
+  if (m_ipv6)
+    options |= MHD_USE_IPv6;
+
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 

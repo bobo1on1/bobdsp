@@ -71,10 +71,11 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
    {"help",     no_argument,       NULL, 'h'},
    {"port",     required_argument, NULL, 'p'},
    {"html-dir", required_argument, NULL, 't'},
+   {"no-ipv6",  no_argument,       NULL, 'n'},
    {0, 0, 0, 0}
   };
 
-  const char* shortoptions = "dfhp:t:";
+  const char* shortoptions = "dfhp:t:n";
   int         optionindex = 0;
   int         c;
   bool        daemonize = false;
@@ -104,6 +105,10 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
     else if (c == 't')
     {
       htmldirectory = optarg;
+    }
+    else if (c == 'n')
+    {
+      m_httpserver.SetIpv6(false);
     }
     else if (c == 'h')
     {
@@ -142,6 +147,7 @@ void CBobDSP::PrintHelpMessage()
          "    -p, --port=PORT    set the port for the http server\n"
          "    -h, --help         print this message\n"
          "    -t, --html-dir=DIR set the html directory\n"
+         "    -n, --no-ipv6      disable ipv6 support\n"
          "\n"
          );
 }

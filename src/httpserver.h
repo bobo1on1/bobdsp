@@ -61,6 +61,7 @@ class CHttpServer
     ~CHttpServer();
 
     void SetPort(int port) { m_port = port; }
+    void SetIpv6(bool ipv6) { m_ipv6 = ipv6; }
     void SetHtmlDirectory(const char* dir);
 
     bool Start();
@@ -71,6 +72,7 @@ class CHttpServer
   private:
     struct MHD_Daemon* m_daemon;
     int                m_port;
+    bool               m_ipv6;
     CBobDSP&           m_bobdsp;
     CMutex             m_mutex;
     int64_t            m_postdatasize;
