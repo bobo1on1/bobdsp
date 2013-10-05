@@ -43,6 +43,7 @@
 #include "util/misc.h"
 #include "util/timeutils.h"
 #include "util/JSON.h"
+#include "util/ssedefs.h"
 
 #define CONNECTINTERVAL   1000000
 #define PORTCHECKINTERVAL  100000
@@ -128,6 +129,11 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
 
   if (daemonize)
     Daemonize();
+
+#ifdef USE_SSE
+  //set the flush-to-zero flag, denormal floats will be written as zero
+  _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
+#endif
 }
 
 CBobDSP::~CBobDSP()

@@ -19,6 +19,7 @@
 #include "util/misc.h"
 #include "util/log.h"
 #include "util/floatbufferops.h"
+#include "util/ssedefs.h"
 #include "ladspainstance.h"
 
 #include <cstdlib>
@@ -218,6 +219,12 @@ void CLadspaInstance::AllocateBuffers(int buffersize)
 //this is called from the jack client thread
 void CLadspaInstance::Run(jack_nframes_t jackframes, int frames, int offset, float pregain, float postgain)
 {
+#ifdef USE_SSE
+  //set the flush-to-zero flag, denormal floats will be written as zero
+  //set it each time before running a plugin to make sure it's always set here
+  _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
+#endif
+
   for (vector<CPort>::iterator it = m_ports.begin(); it != m_ports.end(); it++)
   {
     float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), jackframes) + offset;
@@ -257,8 +264,10 @@ void CLadspaInstance::Run(jack_nframes_t jackframes, int frames, int offset, flo
     {
       float* jackptr = (float*)jack_port_get_buffer(it->GetJackPort(), jackframes) + offset;
 
+#ifndef USE_SSE
       //set denormals of output buffers to zero
       DenormalsToZero(jackptr, frames);
+#endif
 
       //apply gain for output ports if needed
       if (postgain != 1.0f)
