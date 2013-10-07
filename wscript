@@ -122,7 +122,6 @@ def build(bld):
 #install html files
   bld.install_files('${PREFIX}/share/bobdsp', bld.path.ant_glob('html/**/*'), relative_trick=True)
 
-#set cxxshlib_PATTERN to produce bobdsp.so from target='bobdsp'
   ladspasource = 'src/ladspa/biquad.cpp\
                     src/ladspa/biquadcoefs.cpp\
                     src/ladspa/dither.cpp\
@@ -131,6 +130,7 @@ def build(bld):
   if "USE_SPEEX" in bld.env:
     ladspasource += ' src/ladspa/echocancellation.cpp'
 
+#set cxxshlib_PATTERN to produce bobdsp.so from target='bobdsp'
   bld.env.cxxshlib_PATTERN = '%s.so'
   bld.shlib(source=ladspasource,
             use=['m', 'speexdsp'],

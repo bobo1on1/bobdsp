@@ -18,10 +18,15 @@
 
 #include <ladspa.h>
 #include <stddef.h>
+#include "config.h"
 #include "biquad.h"
 #include "dither.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
+
+#ifdef USE_SPEEX
+  #include "echocancellation.h"
+#endif
 
 using namespace BobDSPLadspa;
 
@@ -40,6 +45,10 @@ LADSPA_Handle BobDSPLadspa::Instantiate(const struct _LADSPA_Descriptor* Descrip
     return new CBiquad((EFILTER)Descriptor->UniqueID, samplerate);
   else if (Descriptor->UniqueID == DITHER)
     return new CDither();
+#ifdef USE_SPEEX
+  else if (Descriptor->UniqueID == ECHOCANCELLATION)
+    return new CEchoCancellation(samplerate);
+#endif
   else
     return NULL;
 }

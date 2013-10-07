@@ -17,6 +17,7 @@
  */
 
 #include <stddef.h>
+#include "config.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
@@ -125,7 +126,46 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+#ifdef USE_SPEEX
+  {
+    ECHOCANCELLATION,
+    "speexechocancellation",
+    0,
+    "Speex echo cancellation",
+    "Bob",
+    "GPLv3",
+    4,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL
+    },
+    (const char*[])
+    {
+      "Input",
+      "Echo",
+      "Output",
+      "Filter length"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_DEFAULT_MIDDLE,
+        0.0f,
+        1.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
+#endif //USE_SPEEX
 };
 
 const LADSPA_Descriptor* CFilterDescriptions::Descriptor(unsigned long index)
