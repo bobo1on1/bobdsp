@@ -37,6 +37,7 @@ def configure(conf):
   conf.check(header_name='pthread.h')
   conf.check(header_name='samplerate.h')
   conf.check(header_name='signal.h')
+  conf.check(header_name='speex/speex_echo.h', mandatory=False)
   conf.check(header_name='stddef.h')
   conf.check(header_name='stdio.h')
   conf.check(header_name='stdlib.h')
@@ -71,6 +72,7 @@ def configure(conf):
   conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='uuid', uselib_store='uuid')
   conf.check(lib='yajl', uselib_store='yajl')
+  conf.check(lib='speexdsp', uselib_store='speexdsp', mandatory=False)
 
   conf.check(function_name='pthread_setname_np', header_name='pthread.h', lib='pthread', mandatory=False)
   conf.check(function_name='clock_gettime', header_name='time.h', mandatory=False)
@@ -81,7 +83,11 @@ def configure(conf):
   conf.check(fragment=fragment, msg='Checking for __sync_bool_compare_and_swap',
              define_name='HAVE_SYNC_BOOL_COMPARE_AND_SWAP', mandatory=False)
 
-  conf.define("PREFIX", conf.env["PREFIX"]);
+  if "LIB_speexdsp" in conf.env and "HAVE_SPEEX_SPEEX_ECHO_H" in conf.env:
+    conf.define("USE_SPEEX", 1)
+    conf.env["USE_SPEEX"] = 1
+
+  conf.define("PREFIX", conf.env["PREFIX"])
 
   conf.write_config_header('config.h')
 
@@ -117,13 +123,17 @@ def build(bld):
   bld.install_files('${PREFIX}/share/bobdsp', bld.path.ant_glob('html/**/*'), relative_trick=True)
 
 #set cxxshlib_PATTERN to produce bobdsp.so from target='bobdsp'
-  bld.env.cxxshlib_PATTERN = '%s.so'
-  bld.shlib(source='src/ladspa/biquad.cpp\
+  ladspasource = 'src/ladspa/biquad.cpp\
                     src/ladspa/biquadcoefs.cpp\
                     src/ladspa/dither.cpp\
                     src/ladspa/filterdescriptions.cpp\
-                    src/ladspa/filterinterface.cpp',
-            use=['m'],
+                    src/ladspa/filterinterface.cpp'
+  if "USE_SPEEX" in bld.env:
+    ladspasource += ' src/ladspa/echocancellation.cpp'
+
+  bld.env.cxxshlib_PATTERN = '%s.so'
+  bld.shlib(source=ladspasource,
+            use=['m', 'speexdsp'],
             includes='./src',
             cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPLadspa',
             target='bobdsp',
