@@ -48,7 +48,9 @@ void CEchoCancellation::Activate()
 {
 }
 
-inline void OPTIMIZE FloatToInt16(float* in, int16_t* out, unsigned long samplecount)
+#define INLINE inline __attribute__((always_inline))
+
+void INLINE OPTIMIZE FloatToInt16(float* in, int16_t* out, unsigned long samplecount)
 {
   float*   inptr  = in;
   float*   inend  = in + samplecount;
@@ -58,7 +60,7 @@ inline void OPTIMIZE FloatToInt16(float* in, int16_t* out, unsigned long samplec
     *(outptr++) = Clamp(Round32(*(inptr++) * 32768.0f), INT16_MIN, INT16_MAX);
 }
 
-inline void OPTIMIZE Int16ToFloat(int16_t* in, float* out, unsigned long samplecount)
+void INLINE OPTIMIZE Int16ToFloat(int16_t* in, float* out, unsigned long samplecount)
 {
   int16_t* inptr  = in;
   int16_t* inend  = in + samplecount;
