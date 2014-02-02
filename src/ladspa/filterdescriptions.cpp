@@ -238,6 +238,56 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    SWITCH,
+    "switch",
+    0,
+    "BobDSP Switch",
+    "Bob",
+    "GPLv3",
+    5,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+    },
+    (const char*[])
+    {
+      "Input",
+      "Output",
+      "Level",
+      "Turn on delay",
+      "Turn off delay"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_DEFAULT_0,
+        -30.0f,
+        30.0f
+      },
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_DEFAULT_1 | LADSPA_HINT_LOGARITHMIC,
+        0.1f,
+        300.0f
+      },
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_DEFAULT_1 | LADSPA_HINT_LOGARITHMIC,
+        0.1f,
+        300.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 
