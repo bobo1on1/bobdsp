@@ -19,8 +19,12 @@
 #ifndef NOISEMETERWEIGHTING_H
 #define NOISEMETERWEIGHTING_H
 
+#include "util/inclstdint.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
+#include "noisemeter/acfilter.h"
+#include "noisemeter/itu468filter.h"
+#include "noisemeter/lpeq20filter.h"
 
 namespace BobDSPLadspa
 {
@@ -36,7 +40,15 @@ namespace BobDSPLadspa
       void Deactivate();
 
     private:
-      LADSPA_Data* m_ports[3];
+      void          InitFilter();
+
+      LADSPA_Data*  m_ports[3];
+      int32_t       m_type;
+      unsigned long m_samplerate;
+
+      ACfilter      m_acfilter;
+      Itu468filter  m_itu468filter;
+      LPeq20filter  m_lpeq20filter;
   };
 }
 

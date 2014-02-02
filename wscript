@@ -127,7 +127,10 @@ def build(bld):
                     src/ladspa/dither.cpp\
                     src/ladspa/filterdescriptions.cpp\
                     src/ladspa/filterinterface.cpp\
-                    src/ladspa/noisemeterweighting.cpp'
+                    src/ladspa/noisemeterweighting.cpp\
+                    src/ladspa/noisemeter/acfilter.cc\
+                    src/ladspa/noisemeter/itu468filter.cc\
+                    src/ladspa/noisemeter/lpeq20filter.cc'
   if "USE_SPEEX" in bld.env:
     ladspasource += ' src/ladspa/echocancellation.cpp'
 
