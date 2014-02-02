@@ -22,6 +22,7 @@
 #include "biquad.h"
 #include "dither.h"
 #include "noisemeterweighting.h"
+#include "noisemeterdetect.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
@@ -52,6 +53,8 @@ LADSPA_Handle BobDSPLadspa::Instantiate(const struct _LADSPA_Descriptor* Descrip
 #endif
   else if (Descriptor->UniqueID == NOISEMETERWEIGHTING)
     return new CNoiseMeterWeighting(samplerate);
+  else if (Descriptor->UniqueID == NOISEMETERDETECT)
+    return new CNoiseMeterDetect(samplerate);
   else
     return NULL;
 }

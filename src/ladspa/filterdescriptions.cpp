@@ -199,6 +199,45 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    NOISEMETERDETECT,
+    "noisemeterdetect",
+    LADSPA_PROPERTY_HARD_RT_CAPABLE,
+    "noisemeter detect",
+    "Bob, original weighting code by Fons Adriaensen",
+    "GPLv3",
+    4,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+    },
+    (const char*[])
+    {
+      "Input",
+      "Output",
+      "Detect: 0=ITU468, 1=RMS, 2=average",
+      "Slow"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_INTEGER | LADSPA_HINT_DEFAULT_1,
+        0.0f,
+        2.0f
+      },
+      {
+        LADSPA_HINT_TOGGLED | LADSPA_HINT_DEFAULT_0
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 
