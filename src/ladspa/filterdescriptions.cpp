@@ -164,8 +164,42 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
-  }
+  },
 #endif //USE_SPEEX
+  {
+    NOISEMETERWEIGHTING,
+    "noisemeterweighting",
+    LADSPA_PROPERTY_HARD_RT_CAPABLE,
+    "noisemeter weighting",
+    "Bob, original weighting code by Fons Adriaensen",
+    "GPLv3",
+    3,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+    },
+    (const char*[])
+    {
+      "Input",
+      "Output",
+      "Weighting: 0=flat, 1=20k low pass, 2=A weighing, 3=C weighting, 4=ITU-R468, 5=ITU-R468 Dolby variant",
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_INTEGER | LADSPA_HINT_DEFAULT_0,
+        0.0f,
+        5.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
+  }
 };
 
 const LADSPA_Descriptor* CFilterDescriptions::Descriptor(unsigned long index)

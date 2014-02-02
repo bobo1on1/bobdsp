@@ -21,6 +21,7 @@
 #include "config.h"
 #include "biquad.h"
 #include "dither.h"
+#include "noisemeterweighting.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
@@ -49,6 +50,8 @@ LADSPA_Handle BobDSPLadspa::Instantiate(const struct _LADSPA_Descriptor* Descrip
   else if (Descriptor->UniqueID == ECHOCANCELLATION)
     return new CEchoCancellation(samplerate);
 #endif
+  else if (Descriptor->UniqueID == NOISEMETERWEIGHTING)
+    return new CNoiseMeterWeighting(samplerate);
   else
     return NULL;
 }
