@@ -40,7 +40,7 @@ namespace BobDSPLadspa
       void Setup();
 
       unsigned long m_samplerate;
-      LADSPA_Data*  m_ports[5];
+      LADSPA_Data*  m_ports[6];
       LADSPA_Data   m_prevports[3];
       uint32_t      m_samplecounter;
       float         m_level;

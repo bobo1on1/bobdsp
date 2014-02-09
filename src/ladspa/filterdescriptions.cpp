@@ -246,10 +246,11 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     "BobDSP Switch",
     "Bob",
     "GPLv3",
-    5,
+    6,
     (const int[])
     {
       LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
       LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
       LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
       LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
@@ -259,12 +260,14 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     {
       "Input",
       "Output",
+      "Trigger",
       "Level",
       "Turn on delay",
       "Turn off delay"
     },
     (const LADSPA_PortRangeHint[])
     {
+      {},
       {},
       {},
       {

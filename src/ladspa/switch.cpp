@@ -56,7 +56,7 @@ void CSwitch::Run(unsigned long samplecount)
 {
   for (int i = 0; i < 3; i++)
   {
-    if (*(m_ports[i + 2]) != m_prevports[i])
+    if (*(m_ports[i + 3]) != m_prevports[i])
     {
       Setup();
       break;
@@ -66,11 +66,13 @@ void CSwitch::Run(unsigned long samplecount)
   LADSPA_Data* in = m_ports[0];
   LADSPA_Data* inend = in + samplecount;
   LADSPA_Data* out = m_ports[1];
+  LADSPA_Data* trigger = m_ports[2];
 
   while(in != inend)
   {
     if (m_state > 0.5f)
     {
+      *(trigger++) = 1.0f - ((float)m_samplecounter / (float)m_turnoffdelay);
       if (Abs(*in) < m_level)
       {
         m_samplecounter++;
@@ -80,13 +82,14 @@ void CSwitch::Run(unsigned long samplecount)
           m_samplecounter = 0;
         }
       }
-      else
+      else if (m_samplecounter > 0)
       {
-        m_samplecounter = 0;
+        m_samplecounter--;
       }
     }
     else
     {
+      *(trigger++) = (float)m_samplecounter / (float)m_turnondelay;
       if (Abs(*in) > m_level)
       {
         m_samplecounter++;
@@ -96,9 +99,9 @@ void CSwitch::Run(unsigned long samplecount)
           m_samplecounter = 0;
         }
       }
-      else
+      else if (m_samplecounter > 0)
       {
-        m_samplecounter = 0;
+        m_samplecounter--;
       }
     }
 
@@ -114,10 +117,10 @@ void CSwitch::Deactivate()
 void CSwitch::Setup()
 {
   for (int i = 0; i < 3; i++)
-    m_prevports[i] = *(m_ports[i + 2]);
+    m_prevports[i] = *(m_ports[i + 3]);
 
-  m_level = pow(10.0, *(m_ports[2]) / 20.0f);
-  m_turnondelay = *(m_ports[3]) * m_samplerate;
-  m_turnoffdelay = *(m_ports[3]) * m_samplerate;
+  m_level = pow(10.0, *(m_ports[3]) / 20.0f);
+  m_turnondelay = *(m_ports[4]) * m_samplerate;
+  m_turnoffdelay = *(m_ports[5]) * m_samplerate;
 }
 
