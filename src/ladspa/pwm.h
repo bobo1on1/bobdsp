@@ -38,6 +38,12 @@ namespace BobDSPLadspa
 
     private:
       unsigned long m_samplerate;
+      LADSPA_Data*  m_ports[3];
+      float         m_state;
+      uint32_t      m_samplecounter;
+      double        m_accumulator;
+      uint32_t      m_accumsamples;
+      int32_t       m_outval;
   };
 }
 
