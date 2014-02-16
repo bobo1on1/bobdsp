@@ -1,6 +1,6 @@
 /*
  * bobdsp
- * Copyright (C) Bob 2012
+ * Copyright (C) Bob 2014
  * 
  * bobdsp is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,35 +16,29 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FILTERDESCRIPTIONS_H
-#define FILTERDESCRIPTIONS_H
+#ifndef PWM_H
+#define PWM_H
 
-#include <ladspa.h>
-
-//bobdsp has ladspa plugin id's 4901 to 4940 reserved
-
-enum EFILTER
-{
-  LINKWITZTRANSFORM = 4901,
-  DITHER,
-  ECHOCANCELLATION,
-  NOISEMETERWEIGHTING,
-  NOISEMETERDETECT,
-  SWITCH,
-  PWM
-};
+#include "util/inclstdint.h"
+#include "filterdescriptions.h"
+#include "filterinterface.h"
 
 namespace BobDSPLadspa
 {
-  class CFilterDescriptions
+  class CPwm : public IFilter
   {
     public:
-      static const LADSPA_Descriptor* Descriptor(unsigned long index);
-      static unsigned long NrDescriptors();
+      CPwm(unsigned long samplerate);
+      ~CPwm();
+
+      void ConnectPort(unsigned long port, LADSPA_Data* datalocation);
+      void Activate();
+      void Run(unsigned long samplecount);
+      void Deactivate();
 
     private:
-      static const LADSPA_Descriptor m_descriptors[];
+      unsigned long m_samplerate;
   };
 }
 
-#endif //FILTERDESCRIPTIONS_H
+#endif //PWM_H

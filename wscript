@@ -127,6 +127,7 @@ def build(bld):
                     src/ladspa/dither.cpp\
                     src/ladspa/filterdescriptions.cpp\
                     src/ladspa/filterinterface.cpp\
+                    src/ladspa/pwm.cpp\
                     src/ladspa/switch.cpp\
                     src/ladspa/noisemeterweighting.cpp\
                     src/ladspa/noisemeterdetect.cpp\

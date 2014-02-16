@@ -291,6 +291,40 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    PWM,
+    "pwm",
+    0,
+    "BobDSP pwm",
+    "Bob",
+    "GPLv3",
+    3,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+    },
+    (const char*[])
+    {
+      "Input",
+      "Output",
+      "Samples"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_DEFAULT_MIDDLE | LADSPA_HINT_INTEGER,
+        1.0f,
+        512.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 
