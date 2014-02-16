@@ -58,7 +58,7 @@ void CPwm::Run(unsigned long samplecount)
   LADSPA_Data* inend = in + samplecount;
   LADSPA_Data* out = m_ports[1];
 
-  int32_t period = Clamp(Round32(*(m_ports[2])), 1, 0xFFFFFFF);
+  uint32_t period = Clamp(Round32(*(m_ports[2])), 1, 0xFFFFFFF);
 
   while (in != inend)
   {
@@ -74,7 +74,7 @@ void CPwm::Run(unsigned long samplecount)
     {
       m_samplecounter = 0;
       m_state *= -1.0f;
-      m_outval = Round32((m_accumulator / m_accumsamples) * (double)period);
+      m_outval = Clamp(Round32((m_accumulator / m_accumsamples) * (double)period), 0, 0xFFFFFFF);
       m_accumulator = 0.0;
       m_accumsamples = 0;
     }

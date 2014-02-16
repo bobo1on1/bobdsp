@@ -43,7 +43,7 @@ namespace BobDSPLadspa
       uint32_t      m_samplecounter;
       double        m_accumulator;
       uint32_t      m_accumsamples;
-      int32_t       m_outval;
+      uint32_t       m_outval;
   };
 }
 
