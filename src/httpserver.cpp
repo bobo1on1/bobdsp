@@ -120,6 +120,7 @@ void CHttpServer::Stop()
 {
   if (m_daemon)
   {
+    Log("Stopping webserver");
     MHD_stop_daemon(m_daemon);
     m_daemon = NULL;
   }
