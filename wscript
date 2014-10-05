@@ -35,7 +35,6 @@ def configure(conf):
   conf.check(header_name='pcrecpp.h')
   conf.check(header_name='poll.h')
   conf.check(header_name='pthread.h')
-  conf.check(header_name='samplerate.h')
   conf.check(header_name='signal.h')
   conf.check(header_name='speex/speex_echo.h', mandatory=False)
   conf.check(header_name='stddef.h')
@@ -68,7 +67,6 @@ def configure(conf):
   conf.check(lib='microhttpd', uselib_store='microhttpd')
   conf.check(lib='pcrecpp', uselib_store='pcrecpp')
   conf.check(lib='pthread', uselib_store='pthread', mandatory=False)
-  conf.check(lib='samplerate', uselib_store='samplerate')
   conf.check(lib='uriparser', uselib_store='uriparser')
   conf.check(lib='uuid', uselib_store='uuid')
   conf.check(lib='yajl', uselib_store='yajl')
@@ -104,7 +102,6 @@ def build(bld):
                       src/ladspaplugin.cpp\
                       src/pluginmanager.cpp\
                       src/portconnector.cpp\
-                      src/visualizer.cpp\
                       src/util/JSON.cpp\
                       src/util/alphanum.cpp\
                       src/util/condition.cpp\
@@ -114,7 +111,7 @@ def build(bld):
                       src/util/mutex.cpp\
                       src/util/thread.cpp\
                       src/util/timeutils.cpp',
-              use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'samplerate', 'uriparser', 'uuid', 'yajl'],        
+              use=['m','pthread','rt','dl','jack', 'pcrecpp', 'microhttpd', 'uriparser', 'uuid', 'yajl'],        
               includes='./src',
               cxxflags='-Wall -g -DUTILNAMESPACE=BobDSPUtil',
               target='bobdsp')

@@ -32,7 +32,6 @@
 #include "clientmessage.h"
 #include "pluginmanager.h"
 #include "clientsmanager.h"
-#include "visualizer.h"
 
 class CBobDSP
 {
@@ -47,7 +46,6 @@ class CBobDSP
     CPortConnector&    PortConnector()  { return m_portconnector;  }
     CPluginManager&    PluginManager()  { return m_pluginmanager;  }
     CClientsManager&   ClientsManager() { return m_clientsmanager; }
-    CVisualizer&       Visualizer()     { return m_visualizer;     }
 
     void               GetUUID(CJSONGenerator* generator);
     const std::string& GetUUID();
@@ -56,7 +54,6 @@ class CBobDSP
     CPortConnector  m_portconnector;
     CPluginManager  m_pluginmanager;
     CClientsManager m_clientsmanager;
-    CVisualizer     m_visualizer;
     CHttpServer     m_httpserver;
     bool            m_stop;
     int             m_signalfd;

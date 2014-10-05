@@ -212,7 +212,7 @@ void CBobDSP::Setup()
   //load ladspa plugins
   m_pluginmanager.LoadPlugins(ladspapaths);
 
-  //load clients, connections and visualizers settings
+  //load clients, and connections settings
   LoadSettings();
 
   //set up signal handlers
@@ -227,8 +227,6 @@ void CBobDSP::Process()
 {
   //set up timestamp so we connect on the first iteration
   int64_t lastconnect = GetTimeUs() - CONNECTINTERVAL;
-
-  m_visualizer.Start();
 
   while(!m_stop)
   {
@@ -279,10 +277,8 @@ void CBobDSP::Process()
 void CBobDSP::Cleanup()
 {
   m_httpserver.SignalStop();
-  m_visualizer.AsyncStopThread();
   m_portconnector.Stop();
   m_clientsmanager.Stop();
-  m_visualizer.StopThread();
   m_httpserver.Stop();
   m_pluginmanager.UnloadPlugins();
 
@@ -451,9 +447,9 @@ void CBobDSP::ProcessMessages(int64_t timeout)
   int nrclientpipes = m_clientsmanager.ClientPipes(fds, extra);
   unsigned int nrfds = nrclientpipes;
 
-  int pipes[extra] = { m_stdout[0], m_stderr[0], m_signalfd, m_portconnector.MsgPipe(),
-                       m_clientsmanager.MsgPipe(), m_visualizer.MsgPipe()};
-  int pipenrs[extra] = { -1, -1, -1, -1, -1, -1 };
+  int pipes[extra] = { m_stdout[0], m_stderr[0], m_signalfd,
+                       m_portconnector.MsgPipe(), m_clientsmanager.MsgPipe()};
+  int pipenrs[extra] = { -1, -1, -1, -1, -1 };
 
   for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
   {
@@ -510,10 +506,6 @@ void CBobDSP::ProcessMessages(int64_t timeout)
     //check for message from the clients manager
     if (pipenrs[4] != -1 && (fds[pipenrs[4]].revents & POLLIN))
       ProcessManagerMessages(m_clientsmanager);
-
-    //check for message from the clients manager
-    if (pipenrs[5] != -1 && (fds[pipenrs[5]].revents & POLLIN))
-      ProcessManagerMessages(m_visualizer);
   }
 
   delete[] fds;
@@ -674,7 +666,6 @@ void CBobDSP::LoadSettings()
 {
   m_clientsmanager.LoadFile(false);
   m_portconnector.LoadFile(false);
-  m_visualizer.LoadFile(false);
 }
 
 void CBobDSP::JackError(const char* jackerror)

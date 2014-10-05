@@ -42,7 +42,7 @@ CJackClient::CJackClient(const std::string& name, const std::string& logname,
   m_exitstatus   = (jack_status_t)0;
 
   //save a pointer to this instance, in case all clients need to be disconnected from jack
-  //saving it to a static list means that the portconnect and visualizer will
+  //saving it to a static list means that the portconnect will
   //also be saved here
   m_clientinstances.push_back(this);
 }

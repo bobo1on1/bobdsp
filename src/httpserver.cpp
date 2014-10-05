@@ -22,6 +22,7 @@
 #include "util/log.h"
 #include "util/misc.h"
 #include "util/lock.h"
+#include "util/thread.h"
 
 #ifndef _GNU_SOURCE
   #define _GNU_SOURCE //for canonicalize_file_name
@@ -185,10 +186,6 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     {
       return CreateJSONDownload(connection, httpserver->m_bobdsp.ClientsManager().ClientsToJSON(false));
     }
-    else if (strurl == "/visualizers")
-    {
-      return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON());
-    }
     else
     {
       return CreateFileDownload(connection, strurl, httpserver->m_htmldir.c_str());
@@ -257,10 +254,6 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
       {
         CJSONGenerator* generator = httpserver->m_bobdsp.ClientsManager().LoadString(postdata, host, true);
         return CreateJSONDownload(connection, generator);
-      }
-      else if (strurl == "/visualizers")
-      {
-        return CreateJSONDownload(connection, httpserver->m_bobdsp.Visualizer().JSON(postdata, host));
       }
     }
   }
