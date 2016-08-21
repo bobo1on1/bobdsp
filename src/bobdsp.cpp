@@ -441,15 +441,13 @@ void CBobDSP::RoutePipe(FILE*& file, int* pipefds)
 
 void CBobDSP::ProcessMessages(int64_t timeout)
 {
-  const int extra = 6;
+  int pipes[] = { m_stdout[0], m_stderr[0], m_signalfd,
+                       m_portconnector.MsgPipe(), m_clientsmanager.MsgPipe()};
+  int pipenrs[] = { -1, -1, -1, -1, -1 };
 
   pollfd* fds;
-  int nrclientpipes = m_clientsmanager.ClientPipes(fds, extra);
+  int nrclientpipes = m_clientsmanager.ClientPipes(fds, sizeof(pipes) / sizeof(pipes[0]));
   unsigned int nrfds = nrclientpipes;
-
-  int pipes[extra] = { m_stdout[0], m_stderr[0], m_signalfd,
-                       m_portconnector.MsgPipe(), m_clientsmanager.MsgPipe()};
-  int pipenrs[extra] = { -1, -1, -1, -1, -1 };
 
   for (size_t i = 0; i < sizeof(pipes) / sizeof(pipes[0]); i++)
   {
