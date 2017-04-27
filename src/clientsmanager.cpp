@@ -217,7 +217,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
 
   if (instances < 1)
   {
-    LogError("%sinvalid value for instances: %"PRIi64, source.c_str(), instances);
+    LogError("%sinvalid value for instances: %" PRIi64, source.c_str(), instances);
     return;
   }
 
@@ -248,7 +248,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   m_clientindex++;
   m_condition.Broadcast();
 
-  Log("Added client \"%s\" instances:%"PRIi64" pregain:%.3f postgain:%.3f",
+  Log("Added client \"%s\" instances:%" PRIi64 " pregain:%.3f postgain:%.3f",
       name.c_str(), instances, gain[0], gain[1]);
 }
 
@@ -289,7 +289,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   {
     if (instances < 1)
     {
-      LogError("%sinvalid value for instances: %"PRIi64, source.c_str(), instances);
+      LogError("%sinvalid value for instances: %" PRIi64, source.c_str(), instances);
       return;
     }
     instancesupdated = true;
@@ -323,7 +323,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   if (instancesupdated && instances != jackclient->NrInstances())
   {
     //apply new instances, then tell the main thread to restart this client
-    Log("Client \"%s\" setting instances to %"PRIi64, name.c_str(), instances);
+    Log("Client \"%s\" setting instances to %" PRIi64, name.c_str(), instances);
     jackclient->SetNrInstances(instances);
     jackclient->MarkRestart();
     m_checkclients = true;
@@ -450,13 +450,13 @@ CLadspaPlugin* CClientsManager::LoadPlugin(const std::string& source, JSONMap& c
                                                                    filename->second->AsString());
   if (ladspaplugin == NULL)
   {
-    LogError("%sdid not find plugin %s %"PRIi64" in %s", source.c_str(),
+    LogError("%sdid not find plugin %s %" PRIi64 " in %s", source.c_str(),
              label->second->AsString().c_str(), uniqueid->second->ToInt64(),
              filename->second->AsString().c_str());
   }
   else
   {
-    LogDebug("Found plugin %s %"PRIi64" in %s", label->second->AsString().c_str(),
+    LogDebug("Found plugin %s %" PRIi64 " in %s", label->second->AsString().c_str(),
              uniqueid->second->ToInt64(), ladspaplugin->FileName().c_str());
   }
 
