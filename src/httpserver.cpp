@@ -229,7 +229,7 @@ int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection
     }
     else 
     {
-      auto_ptr<CPostData> datadelete((CPostData*)*con_cls);
+      unique_ptr<CPostData> datadelete((CPostData*)*con_cls);
 
       if (((CPostData*)*con_cls)->error)
         return CreateError(connection, MHD_HTTP_INSUFFICIENT_STORAGE);
