@@ -267,7 +267,7 @@ CJSONGenerator* CPortConnector::PortsToJSON(const std::string& postjson, const s
 {
   string* error;
   CJSONElement* json = ParseJSON(postjson, error);
-  auto_ptr<CJSONElement> jsonauto(json);
+  unique_ptr<CJSONElement> jsonauto(json);
 
   //parse portindex, timeout and uuid
   //if they're invalid, these defaults will be used instead
