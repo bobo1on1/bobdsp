@@ -52,7 +52,7 @@ void CJSONSettings::LoadFile(bool reload)
 
   string* error;
   CJSONElement* json = ParseJSONFile(filename, error);
-  auto_ptr<CJSONElement> jsonauto(json);
+  unique_ptr<CJSONElement> jsonauto(json);
 
   if (error)
   {
@@ -75,7 +75,7 @@ CJSONGenerator* CJSONSettings::LoadString(const std::string& strjson, const std:
 {
   string* error;
   CJSONElement* json = ParseJSON(strjson, error);
-  auto_ptr<CJSONElement> jsonauto(json);
+  unique_ptr<CJSONElement> jsonauto(json);
 
   //lock here to make the returned settings always match the settings that were just loaded
   CLock lock(m_mutex);
