@@ -326,7 +326,7 @@ int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
 {
   string errorstr = ToString(errorcode) + "\n";
 
-  struct MHD_Response* response = MHD_create_response_from_data(errorstr.length(), (void*)errorstr.c_str(), MHD_NO, MHD_YES);
+  struct MHD_Response* response = MHD_create_response_from_buffer(errorstr.length(), (void*)errorstr.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "text/plain");
   MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
 
@@ -346,7 +346,7 @@ int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::st
   html += location;
   html += "</a>.</p> </body> </html>";
 
-  struct MHD_Response* response = MHD_create_response_from_data(html.length(), (void*)html.c_str(), MHD_NO, MHD_YES);
+  struct MHD_Response* response = MHD_create_response_from_buffer(html.length(), (void*)html.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "text/html");
   MHD_add_response_header(response, "Location", location.c_str());
   MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
@@ -459,7 +459,7 @@ void CHttpServer::FileReadFreeCallback(void* cls)
 
 int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std::string& json)
 {
-  struct MHD_Response* response = MHD_create_response_from_data(json.length(), (void*)json.c_str(), MHD_NO, MHD_YES);
+  struct MHD_Response* response = MHD_create_response_from_buffer(json.length(), (void*)json.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "application/json");
   MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
   int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
