@@ -25,6 +25,7 @@ using namespace BobDSPLadspa;
 CBiquadCoef::CBiquadCoef()
 {
   m_initialized = false;
+  memset(m_oldsettings, 0, sizeof(m_oldsettings));
   Passthrough();
 }
 
