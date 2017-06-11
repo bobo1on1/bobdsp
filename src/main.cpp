@@ -19,8 +19,6 @@
 #include "bobdsp.h"
 #include "util/thread.h"
 
-using namespace std;
-
 int main (int argc, char *argv[])
 {
   CBobDSP bobdsp(argc, argv);
