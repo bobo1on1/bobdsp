@@ -328,7 +328,6 @@ int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
 
   struct MHD_Response* response = MHD_create_response_from_buffer(errorstr.length(), (void*)errorstr.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "text/plain");
-  MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
 
   int returnv = MHD_queue_response(connection, errorcode, response);
   MHD_destroy_response(response);
@@ -349,7 +348,6 @@ int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::st
   struct MHD_Response* response = MHD_create_response_from_buffer(html.length(), (void*)html.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "text/html");
   MHD_add_response_header(response, "Location", location.c_str());
-  MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
 
   int returnv = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
   MHD_destroy_response(response);
@@ -421,7 +419,6 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
   struct MHD_Response* response = MHD_create_response_from_callback(size, block, FileReadCallback,
                                                                     (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
-  MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
   returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
 
@@ -461,7 +458,6 @@ int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std
 {
   struct MHD_Response* response = MHD_create_response_from_buffer(json.length(), (void*)json.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "application/json");
-  MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
   int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
 
@@ -479,7 +475,6 @@ int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGene
     struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),
                                                                       JSONReadCallback, generator, JSONReadFreeCallback);
     MHD_add_response_header(response, "Content-Type", "application/json");
-    MHD_add_response_header(response, "Access-Control-Allow-Origin", "*");
     int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
     MHD_destroy_response(response);
 
