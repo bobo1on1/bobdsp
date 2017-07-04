@@ -22,6 +22,9 @@
 #include "floatbufferops.h"
 #include "ssedefs.h"
 
+namespace UTILNAMESPACE
+{
+
 #ifdef USE_SSE
 
 static bool IsAligned(float* ptr, int samples, float*& leadinend)
@@ -355,4 +358,6 @@ void OPTIMIZE HighestAbs(float* data, int samples, float& value)
 {
   ProcessFloatStats(data, samples, value, HighestAbsProcess, HighestAbsProcessSSE);
 }
+
+} //namespace UTILNAMESPACE
 

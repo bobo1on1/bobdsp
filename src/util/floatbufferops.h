@@ -18,11 +18,16 @@
 #ifndef FLOATBUFFEROPS_H
 #define FLOATBUFFEROPS_H
 
-void ApplyGain(float* data, int samples, float gain);
-void CopyApplyGain(float* in, float* out, int samples, float gain);
-void DenormalsToZero(float* data, int samples);
-void AvgSquare(float* data, int samples, float& avg);
-void AvgAbs(float* data, int samples, float& avg);
-void HighestAbs(float* data, int samples, float& value);
+namespace UTILNAMESPACE
+{
+  void ApplyGain(float* data, int samples, float gain);
+  void CopyApplyGain(float* in, float* out, int samples, float gain);
+  void DenormalsToZero(float* data, int samples);
+  void AvgSquare(float* data, int samples, float& avg);
+  void AvgAbs(float* data, int samples, float& avg);
+  void HighestAbs(float* data, int samples, float& value);
+}
+
+using namespace UTILNAMESPACE;
 
 #endif //FLOATBUFFEROPS_H
