@@ -20,6 +20,7 @@
 #define SSEDEFS_H
 
 #include "config.h"
+#include "inclstdint.h"
 
 #define ALIGN 16
 

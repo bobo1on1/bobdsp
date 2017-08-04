@@ -325,6 +325,56 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    DPL2ENCODER,
+    "dpl2encoder",
+    0,
+    "BobDSP Dolby Pro Logic II Encoder",
+    "Bob",
+    "GPLv3",
+    10,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO
+    },
+    (const char*[])
+    {
+      "FL",
+      "FR",
+      "C",
+      "RL",
+      "RR",
+      "LT",
+      "RT",
+      "NULL",
+      "NULL",
+      "NULL"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 
