@@ -68,6 +68,8 @@ void OPTIMIZE CDPL2Encoder::Run(unsigned long samplecount)
 
   float limval;
 
+  bool pulsecompat = !!lroundf(*m_ports[PULSECTL]);
+
   for (unsigned long i = 0; i < samplecount; i++)
   {
     //read input samples from the delay buffers for the front channels,
@@ -87,24 +89,54 @@ void OPTIMIZE CDPL2Encoder::Run(unsigned long samplecount)
     lt = fl + ce * CE_COEF + rl * -SH_COEF + rr * -SL_COEF;
     rt = fr + ce * CE_COEF + rr *  SH_COEF + rl *  SL_COEF;
 
-    //because the output might clip, pass the samples through a limiter with 50 ms hold and release times
-    limval = std::max(fabsf(lt * m_limgain), fabsf(rt * m_limgain));
-    if (limval > 1.0f)
+    if (pulsecompat)
     {
-      m_limgain    = m_limgain / limval;
-      m_limpos     = m_limsamples * 2;
-      m_limgainmul = powf(1.0f / m_limgain, 1.0f / (float)m_limsamples);
+      //when connecting this ladspa plugin in pulseaudio to a stereo sink, by default it mixes the
+      //center channel and the surround channels to left and right, and decreases the volume to prevent clipping
+      //by applying this mix that effect will be undone, so that the full volume is available
+      fl = lt * 1.25f - rt * 0.25f;
+      fr = rt * 1.25f - lt * 0.25f;
+      ce = (lt + rt) * 0.5f;
+      rl = lt;
+      rr = rt;
+
+      //because the output might clip, pass the samples through a limiter with 50 ms hold and release times
+      limval = std::max(fabsf(fl * m_limgain), fabsf(fr * m_limgain));
+      limval = std::max(limval, fabsf(ce * m_limgain));
+      limval = std::max(limval, fabsf(rl * m_limgain));
+      limval = std::max(limval, fabsf(rr * m_limgain));
+      if (limval > 1.0f)
+      {
+        m_limgain    = m_limgain / limval;
+        m_limpos     = m_limsamples * 2;
+        m_limgainmul = powf(1.0f / m_limgain, 1.0f / (float)m_limsamples);
+      }
+
+      //write all output ports
+      m_ports[LT_OUT][i]    = fl * m_limgain;
+      m_ports[RT_OUT][i]    = fr * m_limgain;
+      m_ports[LTRT2_OUT][i] = ce * m_limgain;
+      m_ports[LTS_OUT][i]   = rl * m_limgain;
+      m_ports[RTS_OUT][i]   = rr * m_limgain;
     }
+    else
+    {
+      //because the output might clip, pass the samples through a limiter with 50 ms hold and release times
+      limval = std::max(fabsf(lt * m_limgain), fabsf(rt * m_limgain));
+      if (limval > 1.0f)
+      {
+        m_limgain    = m_limgain / limval;
+        m_limpos     = m_limsamples * 2;
+        m_limgainmul = powf(1.0f / m_limgain, 1.0f / (float)m_limsamples);
+      }
 
-    //write the output samples, it's important that these are written after
-    //all input values have been read, because the buffers for input and output might be the same
-    //otherwise the LADSPA_IS_INPLACE_BROKEN property should be set on this plugin, but that's not necessary
-    m_ports[LT_OUT][i] = lt * m_limgain;
-    m_ports[RT_OUT][i] = rt * m_limgain;
-
-    //set all other output ports to 0, these ports exist because pulseaudio needs the same number of input ports as output ports
-    for (int c = RT_OUT + 1; c < NUMPORTS; c++)
-      m_ports[c][i] = 0.0f;
+      //write LT and RT, set the other ports to zero
+      m_ports[LT_OUT][i]    = lt * m_limgain;
+      m_ports[RT_OUT][i]    = rt * m_limgain;
+      m_ports[LTRT2_OUT][i] = 0.0f;
+      m_ports[LTS_OUT][i]   = 0.0f;
+      m_ports[RTS_OUT][i]   = 0.0f;
+    }
 
     m_delaybufpos++;
     if (m_delaybufpos >= DELAYSAMPLES)

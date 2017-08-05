@@ -26,16 +26,20 @@
 
 #include <math.h>
 
-#define NUMPORTS 10
+#define NUMPORTS 11
 
 //this channel map is compatible with the default pulseaudio channel map
-#define FL_IN  0
-#define FR_IN  1
-#define CE_IN  2
-#define RL_IN  3
-#define RR_IN  4
-#define LT_OUT 5
-#define RT_OUT 6
+#define FL_IN     0
+#define FR_IN     1
+#define CE_IN     2
+#define RL_IN     3
+#define RR_IN     4
+#define LT_OUT    5
+#define RT_OUT    6
+#define LTRT2_OUT 7
+#define LTS_OUT   8
+#define RTS_OUT   9
+#define PULSECTL 10
 
 #define DELAYSAMPLES  (FILTERSIZE / 2)
 #define DELAYCHANNELS (3)

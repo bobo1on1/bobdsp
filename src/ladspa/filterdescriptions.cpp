@@ -333,7 +333,7 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     "BobDSP Dolby Pro Logic II Encoder",
     "Bob",
     "GPLv3",
-    10,
+    11,
     (const int[])
     {
       LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
@@ -345,7 +345,8 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
       LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
       LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
-      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL
     },
     (const char*[])
     {
@@ -356,9 +357,10 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       "RR",
       "LT",
       "RT",
-      "NULL",
-      "NULL",
-      "NULL"
+      "LTRT/2",
+      "LTS",
+      "RTS",
+      "Pulseaudio compatible mix"
     },
     (const LADSPA_PortRangeHint[])
     {
@@ -371,7 +373,8 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       {},
       {},
       {},
-      {}
+      {},
+      {LADSPA_HINT_TOGGLED | LADSPA_HINT_DEFAULT_0, 0.0f, 1.0f}
     },
     NULL,
     FUNCTIONPTRS
