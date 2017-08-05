@@ -29,6 +29,7 @@ namespace BobDSPLadspa
     public:
       CHilbertTransform();
       ~CHilbertTransform();
+      void  Reset();
       float Process(float in);
 
     private:

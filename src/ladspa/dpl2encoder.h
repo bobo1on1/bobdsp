@@ -58,6 +58,8 @@ namespace BobDSPLadspa
       void Deactivate();
 
     private:
+      void Reset();
+
       LADSPA_Data*      m_ports[NUMPORTS];
 
       float             m_delaybuf[DELAYCHANNELS][DELAYSAMPLES];

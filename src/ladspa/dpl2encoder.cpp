@@ -33,17 +33,25 @@ using namespace BobDSPLadspa;
 CDPL2Encoder::CDPL2Encoder(unsigned long samplerate)
 {
   memset(m_ports, 0, sizeof(m_ports));
-  memset(m_delaybuf, 0, sizeof(m_delaybuf));
-  m_delaybufpos = 0;
-
   m_limsamples = lroundf((float)samplerate * LIMITERTIME);
-  m_limpos     = 0;
-  m_limgain    = 1.0f;
-  m_limgainmul = 0.0f;
+  Reset();
 }
 
 CDPL2Encoder::~CDPL2Encoder()
 {
+}
+
+void CDPL2Encoder::Reset()
+{
+  for (int i = 0; i < 2; i++)
+    m_hilberttransform[i].Reset();
+
+  memset(m_delaybuf, 0, sizeof(m_delaybuf));
+  m_delaybufpos = 0;
+
+  m_limpos     = 0;
+  m_limgain    = 1.0f;
+  m_limgainmul = 0.0f;
 }
 
 void CDPL2Encoder::ConnectPort(unsigned long port, LADSPA_Data* datalocation)
@@ -54,6 +62,7 @@ void CDPL2Encoder::ConnectPort(unsigned long port, LADSPA_Data* datalocation)
 
 void CDPL2Encoder::Activate()
 {
+  Reset();
 }
 
 void OPTIMIZE CDPL2Encoder::Run(unsigned long samplecount)

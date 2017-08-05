@@ -178,6 +178,12 @@ CHilbertTransform::~CHilbertTransform()
     free(m_buf[i]);
 }
 
+void CHilbertTransform::Reset()
+{
+  for (int i = 0; i < 2; i++)
+    memset(m_buf[i], 0, BUFSIZE * sizeof(float));
+}
+
 float OPTIMIZE CHilbertTransform::Process(float in)
 {
   //move all samples back one position, and store the new sample
