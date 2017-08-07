@@ -378,6 +378,44 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    HILBERTTRANSFORM,
+    "hilberttransform",
+    LADSPA_PROPERTY_HARD_RT_CAPABLE,
+    "BobDSP Hilbert tranform",
+    "Bob",
+    "GPLv3",
+    6,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL
+    },
+    (const char*[])
+    {
+      "Left-In",
+      "Right-In",
+      "Left-Out",
+      "Right-Out",
+      "Dry/Wet Left",
+      "Dry/Wet Right"
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {},
+      {},
+      {LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1, 0.0f, 1.0f},
+      {LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE | LADSPA_HINT_DEFAULT_1, 0.0f, 1.0f}
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 

@@ -26,6 +26,7 @@
 #include "switch.h"
 #include "pwm.h"
 #include "dpl2encoder.h"
+#include "hilberttransformplugin.h"
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
@@ -64,6 +65,8 @@ LADSPA_Handle BobDSPLadspa::Instantiate(const struct _LADSPA_Descriptor* Descrip
     return new CPwm(samplerate);
   else if (Descriptor->UniqueID == DPL2ENCODER)
     return new CDPL2Encoder(samplerate);
+  else if (Descriptor->UniqueID == HILBERTTRANSFORM)
+    return new CHilbertTransformPlugin();
   else
     return NULL;
 }

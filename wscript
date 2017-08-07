@@ -128,6 +128,7 @@ def build(bld):
                     src/ladspa/switch.cpp\
                     src/ladspa/dpl2encoder.cpp\
                     src/ladspa/hilberttransform.cpp\
+                    src/ladspa/hilberttransformplugin.cpp\
                     src/ladspa/noisemeterweighting.cpp\
                     src/ladspa/noisemeterdetect.cpp\
                     src/ladspa/noisemeter/acfilter.cc\
