@@ -114,7 +114,7 @@ void OPTIMIZE CDPL2Encoder::Run(unsigned long samplecount)
       limval = std::max(limval, fabsf(ce * m_limgain));
       limval = std::max(limval, fabsf(rl * m_limgain));
       limval = std::max(limval, fabsf(rr * m_limgain));
-      if (limval > 1.0f)
+      if (limval >= 1.0f)
       {
         m_limgain    = m_limgain / limval;
         m_limpos     = m_limsamples * 2;
@@ -132,7 +132,7 @@ void OPTIMIZE CDPL2Encoder::Run(unsigned long samplecount)
     {
       //because the output might clip, pass the samples through a limiter with 50 ms hold and release times
       limval = std::max(fabsf(lt * m_limgain), fabsf(rt * m_limgain));
-      if (limval > 1.0f)
+      if (limval >= 1.0f)
       {
         m_limgain    = m_limgain / limval;
         m_limpos     = m_limsamples * 2;
