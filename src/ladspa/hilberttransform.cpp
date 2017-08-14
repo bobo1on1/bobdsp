@@ -188,7 +188,7 @@ float OPTIMIZE CHilbertTransform::Process(float in)
 {
   //move all samples back one position, and store the new sample
   memmove(m_buf[m_bufindex], m_buf[m_bufindex] + 1, (BUFSIZE - 1) * sizeof(float));
-  m_buf[m_bufindex][FILTERSIZE / 2 - 1] = in / GAIN;
+  m_buf[m_bufindex][BUFSIZE - 1] = in / GAIN;
 
   //change the buffer for the current filter run
   m_bufindex = !m_bufindex;
