@@ -374,7 +374,9 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
       {},
       {},
       {},
-      {LADSPA_HINT_TOGGLED | LADSPA_HINT_DEFAULT_0, 0.0f, 1.0f}
+      {
+        LADSPA_HINT_TOGGLED | LADSPA_HINT_DEFAULT_0
+      }
     },
     NULL,
     FUNCTIONPTRS
