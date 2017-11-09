@@ -52,6 +52,11 @@
         vertical-align: top;
       }
 
+      #pluginselect-menu
+      {
+        max-height: 300px;
+      }
+
     </style>
 
     <script type="text/javascript" src="jquery-ui-1.11.1.custom/external/jquery/jquery.js"></script>
@@ -78,6 +83,7 @@
         $("#spinner").spinner("value", 1);
         $("#clientsave").button();
         $("#clientrestore").button();
+        $("#pluginselect").selectmenu();
 
         var connectionelements =
         {
@@ -99,7 +105,8 @@
         {
           clientsdiv          : $("#clientsdiv"),
           clientsavebutton    : $("#clientsave"),
-          clientrestorebutton : $("#clientrestore")
+          clientrestorebutton : $("#clientrestore"),
+          pluginselect        : $("#pluginselect")
         };
 
         BobDSPPlugins(pluginElements);
@@ -115,12 +122,14 @@
       <div id="pluginsdiv">
         <button id="clientsave">Save</button>
         <button id="clientrestore">Restore saved settings</button>
+        <br>
+        <br>
+        <select id="pluginselect"></select>
         <div id="clientsdiv">
         </div>
       </div>
       <div id="connectionsdiv">
 
-        <br>
         <button id="conapply">Apply</button>
         <button id="conapplyandsave">Apply and save</button>
         <button id="conrestore">Restore saved settings</button>

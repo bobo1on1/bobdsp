@@ -1,5 +1,57 @@
 function BobDSPPlugins(pluginelements)
 {
+  var pluginselect = pluginelements.pluginselect;
+  var plugins = new Array();
+
+  function SetPluginSelectText(text)
+  {
+    pluginselect.empty();
+    var selecttext = document.createElement("option");
+    selecttext.text = text;
+    selecttext.value = -1;
+    selecttext.selected = true;
+    selecttext.disabled = true;
+    pluginselect.get(0).add(selecttext);
+    pluginselect.selectmenu("refresh");
+  }
+
+  function loadPlugins()
+  {
+    SetPluginSelectText("Loading LADSPA plugins");
+
+    $.ajax({
+        url: "plugins",
+        dataType: "json",
+        success: loadPluginsSuccess,
+        timeout: 10000,
+        error: loadPluginsFail});
+  }
+
+  function loadPluginsSuccess(data)
+  {
+    plugins = data.plugins;
+
+    SetPluginSelectText("Select a LADSPA plugin");
+
+    //add the name of each plugin
+    for (var i = 0; i < plugins.length; i++)
+    {
+      var option = document.createElement("option");
+      option.text = plugins[i].name;
+      option.value = i;
+      pluginselect.get(0).add(option);
+    }
+
+    pluginselect.selectmenu("refresh");
+  }
+
+  function loadPluginsFail()
+  {
+    plugins = new Array();
+    SetPluginSelectText("Unable to load LADSPA plugins");
+    setTimeout(loadPlugins, 1000); //retry in one second
+  }
+
   var clientsdiv = pluginelements.clientsdiv;
   var clientsavebutton = pluginelements.clientsavebutton;
   var clientrestorebutton = pluginelements.clientrestorebutton;
@@ -14,32 +66,32 @@ function BobDSPPlugins(pluginelements)
     $.ajax({
         url: "clients",
         dataType: "json",
-        success: loadPostSuccess,
+        success: loadClientsSuccess,
         timeout: 10000,
-        error: loadPostFail});
+        error: loadClientsFail});
   }
 
-  function postReload()
+  function postClientsReload()
   {
     //post a reload action, the long poll will handle the actual reload
     var postjson = {action: "reload"};
     $.post("clients", JSON.stringify(postjson));
   }
 
-  function postSave()
+  function postClientsSave()
   {
     var postjson = {action: "save"};
     $.post("clients", JSON.stringify(postjson));
   }
 
-  function postDelete(client)
+  function postClientDelete(client)
   {
     //post a deletion of a client, the long poll will handle the re-rendering of the page
     var postjson = {clients: [{name: client.client.name, action: "delete"}]};
     $.post("clients", JSON.stringify(postjson));
   }
 
-  function loadPostFail()
+  function loadClientsFail()
   {
     //reset state
     clientindex  = -1;
@@ -57,7 +109,7 @@ function BobDSPPlugins(pluginelements)
     setTimeout(loadClients, 1000);
   }
 
-  function loadPostSuccess(data)
+  function loadClientsSuccess(data)
   {
     parseClients(data);
 
@@ -69,9 +121,9 @@ function BobDSPPlugins(pluginelements)
       url: "clients", 
       data: JSON.stringify(postjson),
       dataType: "json", 
-      success: loadPostSuccess, 
+      success: loadClientsSuccess, 
       timeout: timeout + 10000,
-      error: loadPostFail
+      error: loadClientsFail
     });
   }
 
@@ -288,7 +340,7 @@ function BobDSPPlugins(pluginelements)
     var deletebutton = document.createElement("button");
     $(deletebutton).button({icons:{primary:"ui-icon-close"}, text:false});
     title.appendChild(deletebutton);
-    $(deletebutton).click(function() {postDelete(client);});
+    $(deletebutton).click(function() {postClientDelete(client);});
 
     title.appendChild(document.createTextNode(client.client.name));
 
@@ -539,8 +591,9 @@ function BobDSPPlugins(pluginelements)
     return controlrow;
   }
 
-  clientrestorebutton.click(function() {postReload();});
-  clientsavebutton.click(function() {postSave();});
+  clientrestorebutton.click(function() {postClientsReload();});
+  clientsavebutton.click(function() {postClientsSave();});
 
   loadClients();
+  loadPlugins();
 }
