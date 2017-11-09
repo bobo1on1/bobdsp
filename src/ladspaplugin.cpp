@@ -40,7 +40,7 @@ CLadspaPlugin::~CLadspaPlugin()
 bool CLadspaPlugin::Sort(CLadspaPlugin* first, CLadspaPlugin* second)
 {
   //sort by name, uniqueid, and filename
-  int sort = strcmp(first->Name(), second->Name());
+  int sort = strcasecmp(first->Name(), second->Name());
   if (sort != 0)
   {
     return sort < 0;
