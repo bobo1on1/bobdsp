@@ -224,6 +224,9 @@ function BobDSPPlugins(pluginelements)
   {
     if (data.clientindex > clientindex || data.uuid != uuid)
     {
+      if (data.uuid != uuid)
+        loadPlugins(); //reload the plugins list if the server uuid changed
+
       //clients changed, remove all and rebuild
       clientindex  = data.clientindex;
       controlindex = data.controlindex;
