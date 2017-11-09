@@ -203,16 +203,21 @@ CJSONGenerator* CPluginManager::PluginsToJSON()
 
     generator->AddString("name");
     generator->AddString((*it)->Name());
-    generator->AddString("label");
-    generator->AddString((*it)->Label());
     generator->AddString("maker");
     generator->AddString((*it)->Maker());
     generator->AddString("copyright");
     generator->AddString((*it)->Copyright());
+
+    //this is stored in a separate object, so that in javascript, the whole object can be copied to a new client
+    generator->AddString("plugin");
+    generator->MapOpen();
+    generator->AddString("label");
+    generator->AddString((*it)->Label());
     generator->AddString("uniqueid");
     generator->AddInt((*it)->UniqueID());
     generator->AddString("filename");
     generator->AddString((*it)->FileName());
+    generator->MapClose();
 
     generator->AddString("ports");
     generator->ArrayOpen();
