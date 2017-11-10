@@ -224,8 +224,10 @@ function BobDSPPlugins(pluginelements)
   {
     if (data.clientindex > clientindex || data.uuid != uuid)
     {
+      //reload the plugins list if the server uuid changed
+      //this also triggers the first fetch of the plugins
       if (data.uuid != uuid)
-        loadPlugins(); //reload the plugins list if the server uuid changed
+        loadPlugins();
 
       //clients changed, remove all and rebuild
       clientindex  = data.clientindex;
@@ -598,5 +600,4 @@ function BobDSPPlugins(pluginelements)
   clientsavebutton.click(function() {postClientsSave();});
 
   loadClients();
-  loadPlugins();
 }
