@@ -2,6 +2,7 @@ function BobDSPPlugins(pluginelements)
 {
   var pluginselect = pluginelements.pluginselect;
   var plugins = new Array();
+  var plugininfo = pluginelements.plugininfodiv;
 
   function SetPluginSelectText(text)
   {
@@ -10,7 +11,6 @@ function BobDSPPlugins(pluginelements)
     selecttext.text = text;
     selecttext.value = -1;
     selecttext.selected = true;
-    selecttext.disabled = true;
     pluginselect.get(0).add(selecttext);
     pluginselect.selectmenu("refresh");
   }
@@ -42,6 +42,7 @@ function BobDSPPlugins(pluginelements)
       pluginselect.get(0).add(option);
     }
 
+    pluginselect.on("selectmenuchange", onPluginSelect);
     pluginselect.selectmenu("refresh");
   }
 
@@ -50,6 +51,86 @@ function BobDSPPlugins(pluginelements)
     plugins = new Array();
     SetPluginSelectText("Unable to load LADSPA plugins");
     setTimeout(loadPlugins, 1000); //retry in one second
+  }
+
+  function makePluginRow(name, value, type = "td")
+  {
+    var row = document.createElement("tr");
+
+    var namecell = document.createElement(type);
+    row.appendChild(namecell);
+    namecell.innerHTML  = name;
+
+    var valuecell = document.createElement(type);
+    row.appendChild(valuecell);
+    valuecell.innerHTML = value;
+
+    return row;
+  }
+
+  function numAudioPorts(plugin)
+  {
+    var numports = {input : 0, output : 0};
+
+    for (var i = 0; i < plugin.ports.length; i++)
+    {
+      if (plugin.ports[i].type == "audio")
+      {
+        if (plugin.ports[i].direction == "input")
+          numports.input++;
+        else if (plugin.ports[i].direction == "output")
+          numports.output++;
+      }
+    }
+
+    numports.total = numports.input + numports.output;
+    numports.max = Math.max(numports.input, numports.output);
+
+    return numports;
+  }
+
+  function getAudioPortName(plugin, direction, n)
+  {
+    var portnum = 0;
+
+    for (var i = 0; i < plugin.ports.length; i++)
+    {
+      if (plugin.ports[i].type == "audio" && plugin.ports[i].direction == direction)
+      {
+        if (portnum == n)
+          return plugin.ports[i].name;
+        else
+          portnum++;
+      }
+    }
+
+    return "";
+  }
+
+  function onPluginSelect(event, ui)
+  {
+    plugininfo.get(0).innerHTML = "";
+
+    var selected = pluginselect.get(0).value;
+    if (selected != -1)
+    {
+      var table = document.createElement("table");
+      plugininfo.get(0).appendChild(table);
+
+      table.appendChild(makePluginRow("Plugin info:", "", "th"));
+
+      table.appendChild(makePluginRow("Name:",     plugins[selected].name));
+      table.appendChild(makePluginRow("Label:",    plugins[selected].plugin.label));
+      table.appendChild(makePluginRow("Uniqueid:", plugins[selected].plugin.uniqueid));
+      table.appendChild(makePluginRow("Filename:", plugins[selected].plugin.filename));
+
+      table.appendChild(makePluginRow(" ", " "));
+      table.appendChild(makePluginRow("<b>Inputs:</b>", "<b>Outputs:</b>"));
+
+      var numports = numAudioPorts(plugins[selected]);
+      for (var i = 0; i < numports.max; i++)
+        table.appendChild(makePluginRow(getAudioPortName(plugins[selected], "input", i), getAudioPortName(plugins[selected], "output", i)));
+    }
   }
 
   var clientsdiv = pluginelements.clientsdiv;
