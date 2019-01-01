@@ -52,6 +52,11 @@
         vertical-align: top;
       }
 
+      .pluginscell
+      {
+        vertical-align: top;
+      }
+
       #pluginselect-menu
       {
         max-height: 300px;
@@ -84,6 +89,7 @@
         $("#clientsave").button();
         $("#clientrestore").button();
         $("#pluginselect").selectmenu();
+        $("#pluginadd").button();
 
         var connectionelements =
         {
@@ -107,6 +113,7 @@
           clientsavebutton    : $("#clientsave"),
           clientrestorebutton : $("#clientrestore"),
           pluginselect        : $("#pluginselect"),
+          pluginadd           : $("#pluginadd"),
           plugininfodiv       : $("#plugininfodiv")
         };
 
@@ -125,11 +132,21 @@
         <button id="clientrestore">Restore saved settings</button>
         <br>
         <br>
-        <select id="pluginselect"></select>
-        <br>
-        <div id="plugininfodiv"></div>
-        <div id="clientsdiv">
-        </div>
+
+        <table id="pluginstable">
+          <tr>
+            <td class="pluginscell">
+              <select id="pluginselect"></select>
+              <br>
+              <button id="pluginadd">Add</button>
+            </td>
+            <td class="pluginscell">
+              <div id="plugininfodiv"></div>
+            </td>
+          </tr>
+        </table>
+
+        <div id="clientsdiv"></div>
       </div>
       <div id="connectionsdiv">
 

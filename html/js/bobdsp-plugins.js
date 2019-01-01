@@ -31,7 +31,7 @@ function BobDSPPlugins(pluginelements)
   {
     plugins = data.plugins;
 
-    SetPluginSelectText("Select a LADSPA plugin");
+    SetPluginSelectText("Select a LADSPA plugin to add");
 
     //add the name of each plugin
     for (var i = 0; i < plugins.length; i++)
@@ -54,16 +54,23 @@ function BobDSPPlugins(pluginelements)
   }
 
   function makePluginRow(name, value, type = "td")
-  {
+  { //creates a table row with one or two cells
     var row = document.createElement("tr");
 
     var namecell = document.createElement(type);
     row.appendChild(namecell);
     namecell.innerHTML  = name;
 
-    var valuecell = document.createElement(type);
-    row.appendChild(valuecell);
-    valuecell.innerHTML = value;
+    if (value.length > 0)
+    { //if value is passed, add it as a cell
+      var valuecell = document.createElement(type);
+      row.appendChild(valuecell);
+      valuecell.innerHTML = value;
+    }
+    else
+    { //if value is not passed, make the name cell span two columns
+      namecell.colSpan = 2;
+    }
 
     return row;
   }
@@ -117,11 +124,11 @@ function BobDSPPlugins(pluginelements)
       var table = document.createElement("table");
       plugininfo.get(0).appendChild(table);
 
-      table.appendChild(makePluginRow("Plugin info:", "", "th"));
+      table.appendChild(makePluginRow("<b>Plugin info:</b>", ""));
 
       table.appendChild(makePluginRow("Name:",     plugins[selected].name));
       table.appendChild(makePluginRow("Label:",    plugins[selected].plugin.label));
-      table.appendChild(makePluginRow("Uniqueid:", plugins[selected].plugin.uniqueid));
+      table.appendChild(makePluginRow("Uniqueid:", plugins[selected].plugin.uniqueid.toString()));
       table.appendChild(makePluginRow("Filename:", plugins[selected].plugin.filename));
 
       table.appendChild(makePluginRow(" ", " "));
@@ -130,6 +137,11 @@ function BobDSPPlugins(pluginelements)
       var numports = numAudioPorts(plugins[selected]);
       for (var i = 0; i < numports.max; i++)
         table.appendChild(makePluginRow(getAudioPortName(plugins[selected], "input", i), getAudioPortName(plugins[selected], "output", i)));
+
+      table.appendChild(makePluginRow(" ", " "));
+      table.appendChild(makePluginRow("<b>Controls:</b>", ""));
+      for (var i = 0; i < plugins[selected].controls.length; i++)
+        table.appendChild(makePluginRow(plugins[selected].controls[i].name, ""));
     }
   }
 
