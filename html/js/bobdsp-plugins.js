@@ -3,6 +3,8 @@ function BobDSPPlugins(pluginelements)
   var pluginselect = pluginelements.pluginselect;
   var plugins = new Array();
   var plugininfo = pluginelements.plugininfodiv;
+  var pluginname = pluginelements.pluginname;
+  var pluginadd  = pluginelements.pluginadd;
 
   function SetPluginSelectText(text)
   {
@@ -121,6 +123,10 @@ function BobDSPPlugins(pluginelements)
     var selected = pluginselect.get(0).value;
     if (selected != -1)
     {
+      pluginname.get(0).value = plugins[selected].name;
+      pluginname.show();
+      pluginadd.show();
+
       var table = document.createElement("table");
       plugininfo.get(0).appendChild(table);
 
@@ -142,6 +148,12 @@ function BobDSPPlugins(pluginelements)
       table.appendChild(makePluginRow("<b>Controls:</b>", ""));
       for (var i = 0; i < plugins[selected].controls.length; i++)
         table.appendChild(makePluginRow(plugins[selected].controls[i].name, ""));
+    }
+    else
+    {
+      pluginname.get(0).value = "";
+      pluginname.hide();
+      pluginadd.hide();
     }
   }
 

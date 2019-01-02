@@ -89,7 +89,8 @@
         $("#clientsave").button();
         $("#clientrestore").button();
         $("#pluginselect").selectmenu();
-        $("#pluginadd").button();
+        $("#pluginadd").button().hide();
+        $("#pluginname").button().hide();
 
         var connectionelements =
         {
@@ -114,7 +115,9 @@
           clientrestorebutton : $("#clientrestore"),
           pluginselect        : $("#pluginselect"),
           pluginadd           : $("#pluginadd"),
-          plugininfodiv       : $("#plugininfodiv")
+          plugininfodiv       : $("#plugininfodiv"),
+          pluginname          : $("#pluginname"),
+          pluginadd           : $("#pluginadd")
         };
 
         BobDSPPlugins(pluginElements);
@@ -128,23 +131,32 @@
         <li><a href="#connectionsdiv">Connections</a></li>
       </ul>
       <div id="pluginsdiv">
-        <button id="clientsave">Save</button>
-        <button id="clientrestore">Restore saved settings</button>
-        <br>
-        <br>
 
-        <table id="pluginstable">
+        <table style="width:500px">
           <tr>
-            <td class="pluginscell">
-              <select id="pluginselect"></select>
-              <br>
-              <button id="pluginadd">Add</button>
+            <td>
+              <button id="clientsave" style="width:100%;box-sizing: border-box;">Save</button>
             </td>
-            <td class="pluginscell">
-              <div id="plugininfodiv"></div>
+            <td>
+              <button id="clientrestore">Restore saved settings</button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan=2>
+              <select id="pluginselect" style="width:100%"></select>
+            </td>
+          </tr>
+          <tr>
+            <td style="width:80px;">
+              <button id="pluginadd" style="width:100%;box-sizing: border-box;">Add as:</button>
+            </td>
+            <td>
+              <input id="pluginname" value="" style="width:100%;box-sizing: border-box;"></input>
             </td>
           </tr>
         </table>
+
+        <div id="plugininfodiv"></div>
 
         <div id="clientsdiv"></div>
       </div>
