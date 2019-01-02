@@ -157,6 +157,27 @@ function BobDSPPlugins(pluginelements)
     }
   }
 
+  function postAddPlugin()
+  {
+    //adds the selected plugin as a bobdsp client, by doing a post
+    var selected = pluginselect.get(0).value;
+    if (selected != -1)
+    {
+      var postjson = {};
+      postjson.clients = new Array();
+
+      var client =
+      {
+        action : "add",
+        name   : pluginname.get(0).value,
+        plugin : plugins[selected].plugin
+      };
+      postjson.clients.push(client);
+
+      $.post("clients", JSON.stringify(postjson));
+    }
+  }
+
   var clientsdiv = pluginelements.clientsdiv;
   var clientsavebutton = pluginelements.clientsavebutton;
   var clientrestorebutton = pluginelements.clientrestorebutton;
@@ -703,6 +724,7 @@ function BobDSPPlugins(pluginelements)
 
   clientrestorebutton.click(function() {postClientsReload();});
   clientsavebutton.click(function() {postClientsSave();});
+  pluginadd.click(function() {postAddPlugin();});
 
   loadClients();
 }
