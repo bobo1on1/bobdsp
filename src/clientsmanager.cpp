@@ -236,8 +236,7 @@ void CClientsManager::AddClient(JSONMap& client, const std::string& name, const 
   if (!LoadControls(source, client, controlvalues))
     return; //control values invalid
 
-  if (!CheckControls(source, ladspaplugin, controlvalues, true))
-    return; //control values don't match the plugin
+  CheckControls(source, ladspaplugin, controlvalues, true);
 
   //everything ok, allocate a new client
   CJackLadspa* jackclient = new CJackLadspa(ladspaplugin, name, instances,
@@ -315,8 +314,7 @@ void CClientsManager::UpdateClient(JSONMap& client, const std::string& name, con
   if (!LoadControls(source, client, controlvalues))
     return; //invalid control values
 
-  if (!CheckControls(source, jackclient->Plugin(), controlvalues, false))
-    return; //one or more control values don't exist in the plugin
+  CheckControls(source, jackclient->Plugin(), controlvalues, false);
 
   bool controlupdated = false;
 
@@ -528,11 +526,11 @@ bool CClientsManager::LoadControls(const std::string& source, JSONMap& client, c
   return true;
 }
 
-bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
-                                    controlmap& controlvalues, bool checkmissing)
+void CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
+                                    controlmap& controlvalues, bool addmissing)
 {
-  bool allcontrolsok = true;
   //check if all controls exist in the ladspa plugin
+  //remove any controls from the map that are not present
   for (controlmap::iterator it = controlvalues.begin(); it != controlvalues.end(); it++)
   {
     bool found = false;
@@ -548,27 +546,22 @@ bool CClientsManager::CheckControls(const std::string& source, CLadspaPlugin* la
     if (!found)
     {
       LogError("Did not find control port \"%s\" in plugin \"%s\"", it->first.c_str(), ladspaplugin->Label());
-      allcontrolsok = false;
+      it = controlvalues.erase(it);
     }
   }
 
-  //check if all control input ports of the ladspa plugin are mapped
-  if (checkmissing)
-  {
+  if (addmissing)
+  { //check if all control input ports of the ladspa plugin are mapped
     for (unsigned long port = 0; port < ladspaplugin->PortCount(); port++)
     {
       if (ladspaplugin->IsControlInput(port))
       {
+        //if a control value is not mapped, add the default value
         if (controlvalues.find(ladspaplugin->PortName(port)) == controlvalues.end())
-        {
-          LogError("Control port \"%s\" of plugin \"%s\" is not mapped", ladspaplugin->PortName(port), ladspaplugin->Label());
-          allcontrolsok = false;
-        }
+          controlvalues[ladspaplugin->PortName(port)] = (double)ladspaplugin->DefaultValue(port, m_bobdsp.PluginManager().GetSamplerate());
       }
     }
   }
-
-  return allcontrolsok;
 }
 
 CJackLadspa* CClientsManager::FindClient(const std::string& name)

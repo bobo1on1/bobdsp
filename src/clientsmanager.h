@@ -74,8 +74,8 @@ class CClientsManager : public CMessagePump, public CJSONSettings
     LOADSTATE               LoadInt64(JSONMap& client, int64_t& value, const std::string& name, const std::string& source);
     CLadspaPlugin*          LoadPlugin(const std::string& source, JSONMap& client);
     bool                    LoadControls(const std::string& source, JSONMap& client, controlmap& controlvalues);
-    bool                    CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
-                                          controlmap& controlvalues, bool checkmissing);
+    void                    CheckControls(const std::string& source, CLadspaPlugin* ladspaplugin,
+                                          controlmap& controlvalues, bool addmissing);
     CJackLadspa*            FindClient(const std::string& name);
     void                    WaitForChange(JSONMap& root, JSONMap::iterator& timeout,
                                           JSONMap::iterator& clientindex, JSONMap::iterator& controlindex,

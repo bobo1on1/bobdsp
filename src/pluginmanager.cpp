@@ -301,3 +301,8 @@ void CPluginManager::SetSamplerate(int samplerate)
   }
 }
 
+int CPluginManager::GetSamplerate()
+{
+  CLock lock(m_mutex);
+  return m_samplerate;
+}
