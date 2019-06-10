@@ -87,8 +87,11 @@ bool CJackClient::ConnectInternal()
   //let the derived class set some things up
   PreConnect();
 
+  //limit the name length to what jack allows
+  string name = m_name.substr(0, jack_client_name_size() - 2);
+
   //try to connect to jackd
-  m_client = jack_client_open(m_name.substr(0, jack_client_name_size() - 1).c_str(), JackNoStartServer, NULL);
+  m_client = jack_client_open(name.c_str(), JackNoStartServer, NULL);
   if (m_client == NULL)
   {
     if (m_wasconnected || g_printdebuglevel)
