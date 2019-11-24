@@ -418,6 +418,54 @@ const LADSPA_Descriptor CFilterDescriptions::m_descriptors[] =
     },
     NULL,
     FUNCTIONPTRS
+  },
+  {
+    DISTANCEDELAY,
+    "distancedelay",
+    LADSPA_PROPERTY_HARD_RT_CAPABLE,
+    "BobDSP distance delay",
+    "Bob",
+    "GPLv3",
+    6,
+    (const int[])
+    {
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_OUTPUT | LADSPA_PORT_AUDIO,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL,
+      LADSPA_PORT_INPUT  | LADSPA_PORT_CONTROL
+    },
+    (const char*[])
+    {
+      "Left-In",
+      "Right-In",
+      "Left-Out",
+      "Right-Out",
+      "Distance(m) Left",
+      "Distance(m) Right",
+    },
+    (const LADSPA_PortRangeHint[])
+    {
+      {},
+      {},
+      {},
+      {},
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_LOGARITHMIC   | LADSPA_HINT_DEFAULT_1,
+        0.0f,
+        100.0f
+      },
+      {
+        LADSPA_HINT_BOUNDED_BELOW | LADSPA_HINT_BOUNDED_ABOVE |
+        LADSPA_HINT_LOGARITHMIC   | LADSPA_HINT_DEFAULT_1,
+        0.0f,
+        100.0f
+      }
+    },
+    NULL,
+    FUNCTIONPTRS
   }
 };
 

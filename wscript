@@ -120,23 +120,24 @@ def build(bld):
   bld.install_files('${PREFIX}/share/bobdsp', bld.path.ant_glob('html/**/*'), relative_trick=True)
 
   ladspasource = 'src/ladspa/biquad.cpp\
-                    src/ladspa/biquadcoefs.cpp\
-                    src/ladspa/dither.cpp\
-                    src/ladspa/filterdescriptions.cpp\
-                    src/ladspa/filterinterface.cpp\
-                    src/ladspa/pwm.cpp\
-                    src/ladspa/switch.cpp\
-                    src/ladspa/dpl2encoder.cpp\
-                    src/ladspa/hilberttransform.cpp\
-                    src/ladspa/hilberttransformplugin.cpp\
-                    src/ladspa/noisemeterweighting.cpp\
-                    src/ladspa/noisemeterdetect.cpp\
-                    src/ladspa/noisemeter/acfilter.cc\
-                    src/ladspa/noisemeter/itu468filter.cc\
-                    src/ladspa/noisemeter/lpeq20filter.cc\
-                    src/ladspa/noisemeter/itu468detect.cc\
-                    src/ladspa/noisemeter/rmsdetect.cc\
-                    src/ladspa/noisemeter/vumdetect.cc'
+                  src/ladspa/biquadcoefs.cpp\
+                  src/ladspa/dither.cpp\
+                  src/ladspa/filterdescriptions.cpp\
+                  src/ladspa/filterinterface.cpp\
+                  src/ladspa/pwm.cpp\
+                  src/ladspa/switch.cpp\
+                  src/ladspa/dpl2encoder.cpp\
+                  src/ladspa/distancedelay.cpp\
+                  src/ladspa/hilberttransform.cpp\
+                  src/ladspa/hilberttransformplugin.cpp\
+                  src/ladspa/noisemeterweighting.cpp\
+                  src/ladspa/noisemeterdetect.cpp\
+                  src/ladspa/noisemeter/acfilter.cc\
+                  src/ladspa/noisemeter/itu468filter.cc\
+                  src/ladspa/noisemeter/lpeq20filter.cc\
+                  src/ladspa/noisemeter/itu468detect.cc\
+                  src/ladspa/noisemeter/rmsdetect.cc\
+                  src/ladspa/noisemeter/vumdetect.cc'
   if "USE_SPEEX" in bld.env:
     ladspasource += ' src/ladspa/echocancellation.cpp'
 
