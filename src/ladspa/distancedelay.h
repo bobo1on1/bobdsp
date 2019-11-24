@@ -22,6 +22,8 @@
 #include "filterdescriptions.h"
 #include "filterinterface.h"
 
+#define DISTANCECHANNELS 2
+
 namespace BobDSPLadspa
 {
   class CDistanceDelay : public IFilter
@@ -36,6 +38,11 @@ namespace BobDSPLadspa
       void Deactivate();
 
     private:
+      LADSPA_Data  m_samplerate;
+      LADSPA_Data* m_ports[6];
+      LADSPA_Data* m_delaybuf[DISTANCECHANNELS];
+      int          m_delaybufsize;
+      int          m_delaybufpos;
   };
 }
 #endif //DISTANCEDELAY_H
