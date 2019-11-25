@@ -62,6 +62,11 @@ void CDistanceDelay::Run(unsigned long samplecount)
   {
     delays[c] = Round32(Clamp(*m_ports[c + DISTANCECHANNELS * 2], 0.0, MAX_DISTANCE) /
                         SPEED_OF_SOUND * m_samplerate);
+
+    if (delays[c] >= m_delaybufsize)
+      delays[c] = m_delaybufsize - 1;
+    if (delays[c] < 0)
+      delays[c] = 0;
   }
 
   //calculate where in the delay buffer to write and read samples
