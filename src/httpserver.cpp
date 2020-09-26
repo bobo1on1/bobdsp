@@ -81,7 +81,7 @@ bool CHttpServer::Start()
   unsigned int options = MHD_USE_THREAD_PER_CONNECTION;
 
   if (m_ipv6)
-    options |= MHD_USE_IPv6;
+    options |= MHD_USE_DUAL_STACK;
 
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
