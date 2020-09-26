@@ -79,7 +79,7 @@ bool CHttpServer::Start()
   if (m_daemon)
     return true;
 
-  unsigned int options = MHD_USE_THREAD_PER_CONNECTION;
+  unsigned int options = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD;
 
   if (m_ipv6)
     options |= MHD_USE_DUAL_STACK;
