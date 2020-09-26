@@ -159,7 +159,7 @@ void CBobDSP::PrintHelpMessage()
          "    -b, --bind=addr    bind the http server to this address\n"
          "    -h, --help         print this message\n"
          "    -t, --html-dir=DIR set the html directory\n"
-         "    -n, --no-ipv6      disable ipv6 support\n"
+         "    -n, --no-ipv6      disable ipv6 support, ignored when using --bind\n"
          "\n"
          );
 }

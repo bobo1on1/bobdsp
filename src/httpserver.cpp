@@ -81,9 +81,6 @@ bool CHttpServer::Start()
 
   unsigned int options = MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD;
 
-  if (m_ipv6)
-    options |= MHD_USE_DUAL_STACK;
-
   if (g_printdebuglevel)
     options |= MHD_USE_DEBUG;
 
@@ -131,6 +128,9 @@ bool CHttpServer::Start()
 
 void CHttpServer::StartDaemonAny(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual)
 {
+  if (m_ipv6)
+    options |= MHD_USE_DUAL_STACK;
+
   //start the http server bound to all interfaces
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
                               &AnswerToConnection, this,
@@ -156,15 +156,25 @@ void CHttpServer::StartDaemonSpecific(unsigned int options, unsigned int timeout
   addrinfo* listptr = m_bindaddrinfo;
   while (listptr)
   {
+    unsigned int famoptions = options;
+
     //set the port as speficied, the m_port argument passed to MHD_start_daemon
     //is ignored when MHD_OPTION_SOCK_ADDR is passed
     if (listptr->ai_addr->sa_family == AF_INET)
+    {
       ((sockaddr_in*)listptr->ai_addr)->sin_port = htons(m_port);
+    }
     else if (listptr->ai_addr->sa_family == AF_INET6)
+    {
       ((sockaddr_in6*)listptr->ai_addr)->sin6_port = htons(m_port);
 
+      //MHD_start_daemon does not check the sa_family member, instead MHD_USE_IPv6
+      //should be passed when using an ipv6 interface
+      famoptions |= MHD_USE_IPv6;
+    }
+
     //try to start the http server bound to a specific interface
-    m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
+    m_daemon = MHD_start_daemon(famoptions, m_port, NULL, NULL,
                                 &AnswerToConnection, this,
                                 MHD_OPTION_CONNECTION_TIMEOUT, timeout,
                                 MHD_OPTION_CONNECTION_LIMIT, limittotal,
