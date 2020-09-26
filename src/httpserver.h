@@ -60,6 +60,7 @@ class CHttpServer
     CHttpServer(CBobDSP& bobdsp);
     ~CHttpServer();
 
+    void SetBindAddr(std::string bindaddr) { m_bindaddr = bindaddr; }
     void SetPort(int port) { m_port = port; }
     void SetIpv6(bool ipv6) { m_ipv6 = ipv6; }
     void SetHtmlDirectory(const char* dir);
@@ -71,6 +72,8 @@ class CHttpServer
 
   private:
     struct MHD_Daemon* m_daemon;
+    std::string        m_bindaddr;
+    struct addrinfo*   m_bindaddrinfo;
     int                m_port;
     bool               m_ipv6;
     CBobDSP&           m_bobdsp;
@@ -79,6 +82,9 @@ class CHttpServer
     bool               m_stop;
     std::string        m_htmldir;
     bool               m_wasstarted;
+
+    void             StartDaemonAny(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
+    void             StartDaemonSpecific(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
 
     static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
                                          const char *url, const char *method,

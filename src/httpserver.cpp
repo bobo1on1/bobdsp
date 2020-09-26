@@ -45,6 +45,7 @@ CHttpServer::CHttpServer(CBobDSP& bobdsp):
   m_bobdsp(bobdsp)
 {
   m_daemon = NULL;
+  m_bindaddrinfo = NULL;
   m_port = 8080;
   m_ipv6 = true;
   m_postdatasize = 0;
@@ -96,6 +97,41 @@ bool CHttpServer::Start()
   unsigned int timeout = 120;
   unsigned int limittotal = 500;
   unsigned int limitindividual = 100;
+
+  if (m_bindaddrinfo)
+  {
+    freeaddrinfo(m_bindaddrinfo);
+    m_bindaddrinfo = NULL;
+  }
+
+  //start the webserver on all interface if no interface was passed via the command line,
+  //otherwise start the webserver on the specified interface
+  if (m_bindaddr.empty())
+    StartDaemonAny(options, timeout, limittotal, limitindividual);
+  else
+    StartDaemonSpecific(options, timeout, limittotal, limitindividual);
+
+  CThread::SetCurrentThreadName(threadname);
+
+  string bindaddr;
+  if (m_bindaddr.empty())
+    bindaddr = "port ";
+  else
+    bindaddr = m_bindaddr + ":";
+
+  if (m_daemon)
+    Log("Started webserver on %s%i, using \"%s\" as html root directory", bindaddr.c_str(), m_port, m_htmldir.c_str());
+  else if (m_wasstarted || g_printdebuglevel)
+    LogError("Unable to start webserver on %s%i reason: \"%s\"", bindaddr.c_str(), m_port, GetErrno().c_str());
+
+  m_wasstarted = m_daemon != NULL;
+
+  return m_daemon != NULL;
+}
+
+void CHttpServer::StartDaemonAny(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual)
+{
+  //start the http server bound to all interfaces
   m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
                               &AnswerToConnection, this,
                               MHD_OPTION_CONNECTION_TIMEOUT, timeout,
@@ -103,17 +139,45 @@ bool CHttpServer::Start()
                               MHD_OPTION_PER_IP_CONNECTION_LIMIT, limitindividual,
                               MHD_OPTION_NOTIFY_COMPLETED, RequestCompleted, NULL,
                               MHD_OPTION_END);
+}
 
-  CThread::SetCurrentThreadName(threadname);
+void CHttpServer::StartDaemonSpecific(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual)
+{
+  //obtain information about m_bindaddr, a linked list in m_bindaddrinfo is returned
+  int retval = getaddrinfo(m_bindaddr.c_str(), NULL, NULL, &m_bindaddrinfo);
+  if (retval != 0)
+  {
+    LogError("Unable to find address \"%s\" to bind http server to, getaddrinfo() returned %i: %s",
+             m_bindaddr.c_str(), retval, gai_strerror(retval));
+    return;
+  }
 
-  if (m_daemon)
-    Log("Started webserver on port %i, using \"%s\" as html root directory", m_port, m_htmldir.c_str());
-  else if (m_wasstarted || g_printdebuglevel)
-    LogError("Unable to start webserver on port %i reason: \"%s\"", m_port, GetErrno().c_str());
+  //iterate over the linked list, try to bind the http server to an interface
+  addrinfo* listptr = m_bindaddrinfo;
+  while (listptr)
+  {
+    //set the port as speficied, the m_port argument passed to MHD_start_daemon
+    //is ignored when MHD_OPTION_SOCK_ADDR is passed
+    if (listptr->ai_addr->sa_family == AF_INET)
+      ((sockaddr_in*)listptr->ai_addr)->sin_port = htons(m_port);
+    else if (listptr->ai_addr->sa_family == AF_INET6)
+      ((sockaddr_in6*)listptr->ai_addr)->sin6_port = htons(m_port);
 
-  m_wasstarted = m_daemon != NULL;
+    //try to start the http server bound to a specific interface
+    m_daemon = MHD_start_daemon(options, m_port, NULL, NULL, 
+                                &AnswerToConnection, this,
+                                MHD_OPTION_CONNECTION_TIMEOUT, timeout,
+                                MHD_OPTION_CONNECTION_LIMIT, limittotal,
+                                MHD_OPTION_PER_IP_CONNECTION_LIMIT, limitindividual,
+                                MHD_OPTION_NOTIFY_COMPLETED, RequestCompleted, NULL,
+                                MHD_OPTION_SOCK_ADDR, listptr->ai_addr,
+                                MHD_OPTION_END);
 
-  return m_daemon != NULL;
+    if (m_daemon)
+      break;
+    else
+      listptr = listptr->ai_next;
+  }
 }
 
 void CHttpServer::Stop()

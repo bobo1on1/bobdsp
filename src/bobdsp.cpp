@@ -71,12 +71,13 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
    {"fork",     no_argument,       NULL, 'f'},
    {"help",     no_argument,       NULL, 'h'},
    {"port",     required_argument, NULL, 'p'},
+   {"bind",     required_argument, NULL, 'b'},
    {"html-dir", required_argument, NULL, 't'},
    {"no-ipv6",  no_argument,       NULL, 'n'},
    {0, 0, 0, 0}
   };
 
-  const char* shortoptions = "dfhp:t:n";
+  const char* shortoptions = "dfhp:b:t:n";
   int         optionindex = 0;
   int         c;
   bool        daemonize = false;
@@ -102,6 +103,10 @@ CBobDSP::CBobDSP(int argc, char *argv[]):
       }
 
       m_httpserver.SetPort(port);
+    }
+    else if (c == 'b')
+    {
+      m_httpserver.SetBindAddr(optarg);
     }
     else if (c == 't')
     {
@@ -151,6 +156,7 @@ void CBobDSP::PrintHelpMessage()
          "    -d, --debug        enable debug logging\n"
          "    -f, --fork         daemonize, suppresses logging to stderr\n"
          "    -p, --port=PORT    set the port for the http server\n"
+         "    -b, --bind=addr    bind the http server to this address\n"
          "    -h, --help         print this message\n"
          "    -t, --html-dir=DIR set the html directory\n"
          "    -n, --no-ipv6      disable ipv6 support\n"
