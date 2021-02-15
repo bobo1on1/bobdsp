@@ -40,6 +40,11 @@
   #define ARGHTSIZE int
 #endif
 
+//Backwards compatiblity, MHD_YES and MHD_NO were changed from #define to enum values.
+#if defined(MHD_YES) && defined(MHD_NO)
+  #define MHD_Result int
+#endif
+
 class CBobDSP;
 
 class CPostData
@@ -83,30 +88,30 @@ class CHttpServer
     std::string        m_htmldir;
     bool               m_wasstarted;
 
-    void             StartDaemonAny(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
-    void             StartDaemonSpecific(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
+    void               StartDaemonAny(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
+    void               StartDaemonSpecific(unsigned int options, unsigned int timeout, unsigned int limittotal, unsigned int limitindividual);
 
-    static int       AnswerToConnection (void *cls, struct MHD_Connection *connection,
-                                         const char *url, const char *method,
-                                         const char *version, const char *upload_data,
-                                         size_t *upload_data_size, void **con_cls);
+    static MHD_Result  AnswerToConnection(void *cls, struct MHD_Connection *connection,
+                                          const char *url, const char *method,
+                                          const char *version, const char *upload_data,
+                                          size_t *upload_data_size, void **con_cls);
 
-    static void      RequestCompleted(void* cls, struct MHD_Connection* connection,
-                                      void** con_cls, enum MHD_RequestTerminationCode toe);
-    static void      SenderInfo(struct MHD_Connection* connection, std::string& host, std::string& port);
+    static void        RequestCompleted(void* cls, struct MHD_Connection* connection,
+                                        void** con_cls, enum MHD_RequestTerminationCode toe);
+    static void        SenderInfo(struct MHD_Connection* connection, std::string& host, std::string& port);
 
-    static int       CreateError(struct MHD_Connection *connection, int errorcode);
-    static int       CreateRedirect(struct MHD_Connection *connection, const std::string& location);
-    static int       CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
-                                        const std::string& root = "", const char* mime = NULL,
-                                        bool checksize = true);
-    static RETHTSIZE FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
-    static void      FileReadFreeCallback(void* cls);
+    static MHD_Result  CreateError(struct MHD_Connection *connection, int errorcode);
+    static MHD_Result  CreateRedirect(struct MHD_Connection *connection, const std::string& location);
+    static MHD_Result  CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
+                                          const std::string& root = "", const char* mime = NULL,
+                                          bool checksize = true);
+    static RETHTSIZE   FileReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
+    static void        FileReadFreeCallback(void* cls);
 
-    static int       CreateJSONDownload(struct MHD_Connection* connection, const std::string& json);
-    static int       CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator);
-    static RETHTSIZE JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
-    static void      JSONReadFreeCallback(void* cls);
+    static MHD_Result  CreateJSONDownload(struct MHD_Connection* connection, const std::string& json);
+    static MHD_Result  CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator);
+    static RETHTSIZE   JSONReadCallback(void *cls, uint64_t pos, char *buf, ARGHTSIZE max);
+    static void        JSONReadFreeCallback(void* cls);
 };
 
 #endif //HTTPSERVER_H

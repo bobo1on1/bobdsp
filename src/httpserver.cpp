@@ -205,10 +205,10 @@ void CHttpServer::SignalStop()
   m_stop = true;
 }
 
-int CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,
-                                    const char *url, const char *method,
-                                    const char *version, const char *upload_data,
-                                    size_t *upload_data_size, void **con_cls)
+MHD_Result CHttpServer::AnswerToConnection(void *cls, struct MHD_Connection *connection,
+                                           const char *url, const char *method,
+                                           const char *version, const char *upload_data,
+                                           size_t *upload_data_size, void **con_cls)
 {
   CHttpServer* httpserver = (CHttpServer*)cls;
 
@@ -396,20 +396,20 @@ void CHttpServer::SenderInfo(struct MHD_Connection* connection, std::string& hos
   }
 }
 
-int CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
+MHD_Result CHttpServer::CreateError(struct MHD_Connection *connection, int errorcode)
 {
   string errorstr = ToString(errorcode) + "\n";
 
   struct MHD_Response* response = MHD_create_response_from_buffer(errorstr.length(), (void*)errorstr.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "text/plain");
 
-  int returnv = MHD_queue_response(connection, errorcode, response);
+  MHD_Result returnv = MHD_queue_response(connection, errorcode, response);
   MHD_destroy_response(response);
 
   return returnv;
 }
 
-int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::string& location)
+MHD_Result CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::string& location)
 {
   LogDebug("Creating redirect to %s", location.c_str());
 
@@ -423,13 +423,13 @@ int CHttpServer::CreateRedirect(struct MHD_Connection *connection, const std::st
   MHD_add_response_header(response, "Content-Type", "text/html");
   MHD_add_response_header(response, "Location", location.c_str());
 
-  int returnv = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
+  MHD_Result returnv = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
   MHD_destroy_response(response);
 
   return returnv;
 }
 
-int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
+MHD_Result CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std::string& url,
                                     const std::string& root /*= ""*/, const char* mime /*= NULL*/,
                                     bool checksize /*= true*/)
 {
@@ -442,10 +442,9 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
     return CreateError(connection, MHD_HTTP_FORBIDDEN);
   }
 
-  int returnv;
   struct stat64 statinfo;
-  returnv = stat64(filename.c_str(), &statinfo);
-  if (returnv == -1)
+  int statval = stat64(filename.c_str(), &statinfo);
+  if (statval == -1)
   {
     LogError("Unable to stat \"%s\": \"%s\"", filename.c_str(), GetErrno().c_str());
     return CreateError(connection, MHD_HTTP_NOT_FOUND);
@@ -493,7 +492,7 @@ int CHttpServer::CreateFileDownload(struct MHD_Connection *connection, const std
   struct MHD_Response* response = MHD_create_response_from_callback(size, block, FileReadCallback,
                                                                     (void*)hfd, FileReadFreeCallback);
   MHD_add_response_header(response, "Content-Type", mime);
-  returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
+  MHD_Result returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
 
   return returnv;
@@ -528,11 +527,11 @@ void CHttpServer::FileReadFreeCallback(void* cls)
   delete fd;
 }
 
-int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std::string& json)
+MHD_Result CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std::string& json)
 {
   struct MHD_Response* response = MHD_create_response_from_buffer(json.length(), (void*)json.c_str(), MHD_RESPMEM_MUST_COPY);
   MHD_add_response_header(response, "Content-Type", "application/json");
-  int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
+  MHD_Result returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
 
   return returnv;
@@ -541,7 +540,7 @@ int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, const std
 //accepts a CJSONGenerator which is allocated in one of the managers
 //this way the callback can read directly from the libyajl buffer
 //and delete the CJSONGenerator afterwards
-int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator)
+MHD_Result CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGenerator* generator)
 {
   if (generator)
   {
@@ -549,7 +548,7 @@ int CHttpServer::CreateJSONDownload(struct MHD_Connection* connection, CJSONGene
     struct MHD_Response* response = MHD_create_response_from_callback(size, Clamp(size, (uint64_t)1, (uint64_t)10 * 1024 * 1024),
                                                                       JSONReadCallback, generator, JSONReadFreeCallback);
     MHD_add_response_header(response, "Content-Type", "application/json");
-    int returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_Result returnv = MHD_queue_response(connection, MHD_HTTP_OK, response);
     MHD_destroy_response(response);
 
     return returnv;
