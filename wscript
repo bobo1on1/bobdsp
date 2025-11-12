@@ -72,9 +72,9 @@ def configure(conf):
   conf.check(lib='yajl', uselib_store='yajl')
   conf.check(lib='speexdsp', uselib_store='speexdsp', mandatory=False)
 
-  conf.check(function_name='pthread_setname_np', header_name='pthread.h', lib='pthread', mandatory=False)
-  conf.check(function_name='clock_gettime', header_name='time.h', mandatory=False)
-  conf.check(function_name='clock_gettime', header_name='time.h', lib='rt', uselib_store='rt', mandatory=False,
+  conf.check(function='pthread_setname_np', header_name='pthread.h', lib='pthread', mandatory=False)
+  conf.check(function='clock_gettime', header_name='time.h', mandatory=False)
+  conf.check(function='clock_gettime', header_name='time.h', lib='rt', uselib_store='rt', mandatory=False,
              msg='Checking for clock_gettime in librt')
 
   fragment = 'int main(int argc, char *argv[]) {unsigned long x; __sync_bool_compare_and_swap(&x, 0, 1); return 0;}'
